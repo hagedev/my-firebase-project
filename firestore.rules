@@ -1,0 +1,57 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to get user's role and tenantId from custom claims
+    function getRole(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.role;
+    }
+    
+    function getTenantId(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.tenantId;
+    }
+
+    function isSuperAdmin(uid) {
+      return getRole(uid) == 'superadmin';
+    }
+
+    function isAdminOfTenant(uid, tenantId) {
+      return getRole(uid) == 'admin_cafe' && getTenantId(uid) == tenantId;
+    }
+
+    // Superadmins can manage tenants and users
+    match /tenants/{tenantId} {
+      allow read: if true;
+      allow write: if request.auth != null && isSuperAdmin(request.auth.uid);
+      
+      // Cafe admins can only update their own tenant document
+      allow update: if request.auth != null && isAdminOfTenant(request.auth.uid, tenantId);
+    }
+    
+    match /users/{userId} {
+      allow read, write: if request.auth != null && isSuperAdmin(request.auth.uid);
+    }
+    
+    // Multi-tenant subcollections
+    match /tenants/{tenantId}/{collection}/{docId} {
+      // Public read access for menus and categories
+      allow get, list: if collection == 'menus' || collection == 'categories';
+
+      // Order creation for anonymous users with token verification
+      allow create: if collection == 'orders' && request.auth == null
+                    && request.resource.data.verificationToken == get(/databases/$(database)/documents/tenants/$(tenantId)).data.dailyToken;
+      
+      // Anonymous users can read an order they just created (requires client-side logic to store orderId)
+      allow get: if collection == 'orders' && request.auth == null;
+
+      // Cafe admin access
+      allow read, write: if request.auth != null && isAdminOfTenant(request.auth.uid, tenantId) 
+                        && (collection == 'menus' || collection == 'categories' || collection == 'tables' || collection == 'orders');
+      
+      // Superadmin global read-only access for analytics
+      allow list: if request.auth != null && isSuperAdmin(request.auth.uid) && collection == 'orders';
+    }
+  }
+}
