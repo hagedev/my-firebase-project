@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Coffee } from "lucide-react";
+import { Coffee, ShieldCheck } from "lucide-react";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import Logo from "@/components/Logo";
 
@@ -48,8 +48,9 @@ export default function Home() {
               </Link>
             </Button>
             <Button size="lg" variant="secondary" asChild>
-              <Link href="/air-cafe-demo/admin/dashboard">
-                Admin Dashboard
+              <Link href="/admin/register">
+                <ShieldCheck className="mr-2" />
+                Create Super Admin
               </Link>
             </Button>
           </div>
