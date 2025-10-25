@@ -1,0 +1,384 @@
+{
+  "entities": {
+    "Tenant": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Tenant",
+      "type": "object",
+      "description": "Represents a cafe tenant in the AirCafe application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the tenant entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the cafe."
+        },
+        "slug": {
+          "type": "string",
+          "description": "A unique URL-friendly string identifying the cafe."
+        },
+        "logoUrl": {
+          "type": "string",
+          "description": "URL of the cafe's logo image.",
+          "format": "uri"
+        },
+        "qrisImageUrl": {
+          "type": "string",
+          "description": "URL of the cafe's QRIS image for payments.",
+          "format": "uri"
+        },
+        "tokenHarian": {
+          "type": "string",
+          "description": "The daily verification token for anti-spam."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "slug",
+        "logoUrl",
+        "qrisImageUrl",
+        "tokenHarian"
+      ]
+    },
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the AirCafe application, including admins.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user entity. This corresponds to the Firebase Auth UID."
+        },
+        "tenantId": {
+          "type": "string",
+          "description": "Reference to Tenant. The ID of the tenant this user belongs to. (Relationship: Tenant 1:N User)"
+        },
+        "role": {
+          "type": "string",
+          "description": "The role of the user (e.g., superadmin, admin_kafe)."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the user.",
+          "format": "email"
+        }
+      },
+      "required": [
+        "id",
+        "tenantId",
+        "role",
+        "email"
+      ]
+    },
+    "Menu": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Menu",
+      "type": "object",
+      "description": "Represents a menu item offered by a cafe.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the menu item."
+        },
+        "tenantId": {
+          "type": "string",
+          "description": "Reference to Tenant. The ID of the tenant that owns this menu item. (Relationship: Tenant 1:N Menu)"
+        },
+        "categoryId": {
+          "type": "string",
+          "description": "Reference to Category. The ID of the category this menu item belongs to. (Relationship: Category 1:N Menu)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the menu item."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the menu item."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL of the menu item's image.",
+          "format": "uri"
+        },
+        "price": {
+          "type": "number",
+          "description": "The price of the menu item."
+        },
+        "stockStatus": {
+          "type": "string",
+          "description": "The stock status of the menu item (e.g., Available, Out of Stock)."
+        }
+      },
+      "required": [
+        "id",
+        "tenantId",
+        "categoryId",
+        "name",
+        "description",
+        "imageUrl",
+        "price",
+        "stockStatus"
+      ]
+    },
+    "Category": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Category",
+      "type": "object",
+      "description": "Represents a category of menu items.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the category."
+        },
+        "tenantId": {
+          "type": "string",
+          "description": "Reference to Tenant. The ID of the tenant that owns this category. (Relationship: Tenant 1:N Category)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the category."
+        }
+      },
+      "required": [
+        "id",
+        "tenantId",
+        "name"
+      ]
+    },
+    "Order": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Order",
+      "type": "object",
+      "description": "Represents an order placed by a customer.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the order."
+        },
+        "tenantId": {
+          "type": "string",
+          "description": "Reference to Tenant. The ID of the tenant that owns this order. (Relationship: Tenant 1:N Order)"
+        },
+        "tableId": {
+          "type": "string",
+          "description": "Reference to Table. The ID of the table where the order was placed. (Relationship: Table 1:N Order)"
+        },
+        "menuItemIds": {
+          "type": "array",
+          "description": "References to Menus.  An array of menu item IDs included in the order. (Relationship: Order 1:N Menu)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "The total amount of the order."
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "The payment method used for the order (e.g., Cash, QRIS)."
+        },
+        "paymentStatus": {
+          "type": "string",
+          "description": "The payment status of the order (e.g., Pending, Confirmed)."
+        },
+        "orderStatus": {
+          "type": "string",
+          "description": "The status of the order (e.g., Received, Preparing, Ready to Serve)."
+        },
+        "verificationToken": {
+          "type": "string",
+          "description": "The verification token entered by the customer for anti-spam."
+        },
+        "uniqueCode": {
+          "type": "string",
+          "description": "Unique code added to total price, if payment method is QRIS"
+        }
+      },
+      "required": [
+        "id",
+        "tenantId",
+        "tableId",
+        "menuItemIds",
+        "totalAmount",
+        "paymentMethod",
+        "paymentStatus",
+        "orderStatus",
+        "verificationToken"
+      ]
+    },
+    "Table": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Table",
+      "type": "object",
+      "description": "Represents a table in a cafe.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the table."
+        },
+        "tenantId": {
+          "type": "string",
+          "description": "Reference to Tenant. The ID of the tenant that owns this table. (Relationship: Tenant 1:N Table)"
+        },
+        "tableNumber": {
+          "type": "number",
+          "description": "The table number."
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the table (e.g., Empty, Occupied)."
+        }
+      },
+      "required": [
+        "id",
+        "tenantId",
+        "tableNumber",
+        "status"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/tenants/{tenantId}",
+        "definition": {
+          "entityName": "Tenant",
+          "schema": {
+            "$ref": "#/backend/entities/Tenant"
+          },
+          "description": "Stores cafe tenant profiles and configuration data.",
+          "params": [
+            {
+              "name": "tenantId",
+              "description": "The unique identifier for the tenant."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profiles, including role and tenant assignment.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user (Firebase Auth UID)."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/tenants/{tenantId}/menus/{menuId}",
+        "definition": {
+          "entityName": "Menu",
+          "schema": {
+            "$ref": "#/backend/entities/Menu"
+          },
+          "description": "Stores menu items for a specific tenant. Includes denormalized 'tenantId' for authorization independence.",
+          "params": [
+            {
+              "name": "tenantId",
+              "description": "The unique identifier for the tenant."
+            },
+            {
+              "name": "menuId",
+              "description": "The unique identifier for the menu item."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/tenants/{tenantId}/categories/{categoryId}",
+        "definition": {
+          "entityName": "Category",
+          "schema": {
+            "$ref": "#/backend/entities/Category"
+          },
+          "description": "Stores menu categories for a specific tenant. Includes denormalized 'tenantId' for authorization independence.",
+          "params": [
+            {
+              "name": "tenantId",
+              "description": "The unique identifier for the tenant."
+            },
+            {
+              "name": "categoryId",
+              "description": "The unique identifier for the menu category."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/tenants/{tenantId}/orders/{orderId}",
+        "definition": {
+          "entityName": "Order",
+          "schema": {
+            "$ref": "#/backend/entities/Order"
+          },
+          "description": "Stores orders placed at a specific tenant. Includes denormalized 'tenantId' for authorization independence.",
+          "params": [
+            {
+              "name": "tenantId",
+              "description": "The unique identifier for the tenant."
+            },
+            {
+              "name": "orderId",
+              "description": "The unique identifier for the order."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/tenants/{tenantId}/tables/{tableId}",
+        "definition": {
+          "entityName": "Table",
+          "schema": {
+            "$ref": "#/backend/entities/Table"
+          },
+          "description": "Stores tables for a specific tenant. Includes denormalized 'tenantId' for authorization independence.",
+          "params": [
+            {
+              "name": "tenantId",
+              "description": "The unique identifier for the tenant."
+            },
+            {
+              "name": "tableId",
+              "description": "The unique identifier for the table."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/roles_superadmin/{userId}",
+        "definition": {
+          "entityName": "roles_superadmin",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Collection to store superadmin user IDs for role-based access control (DBAC). Existence of document denotes superadmin privileges.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user (Firebase Auth UID)."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to support a multi-tenant SaaS application (AirCafe) with a focus on security, scalability, and ease of management. The key principle applied is Authorization Independence via Denormalization, ensuring that security rules do not rely on potentially expensive and complex `get()` operations. Structural Segregation is employed to maintain a homogeneous security posture within each collection.\n\nTenants are stored at the root level in the `/tenants` collection. Each tenant document contains cafe-specific information like name, logo URL, QRIS image URL, and a daily verification token. User roles (superadmin, admin_kafe) and tenant assignments are managed in the `/users` collection, with `tenantId` and `role` fields specifying the user's affiliation. Superadmins have access to all tenant data, while admin_kafe users are restricted to their assigned tenant.\n\nAll cafe-specific data (menus, categories, tables, and orders) are stored as subcollections under the respective `/tenants/{tenantId}` document. This ensures clear ownership and isolation of data per tenant. Menu items and categories are stored in `/tenants/{tenantId}/menus` and `/tenants/{tenantId}/categories` respectively, linked by the `categoryId` field in the menu. Tables are managed in `/tenants/{tenantId}/tables`, while orders are placed in `/tenants/{tenantId}/orders`. The `Order` documents include a `verificationToken` field for anti-spam measures, which must match the `tokenHarian` field in the corresponding `/tenants/{tenantId}` document.\n\nTo achieve Authorization Independence, the `tenantId` is duplicated in all subcollections (menus, categories, tables, orders) under the tenants document. For the Superadmin role the collection `/roles_superadmin/{userId}` is used to denote superadmin privileges (DBAC). This allows security rules to efficiently validate tenant-level access without requiring `get()` calls to the tenant document. The anti-spam security rule directly compares the `verificationToken` in the `Order` document with the `tokenHarian` in the `Tenant` document using `get()` since this is enforced only at order creation.\n\nThis structure also supports the required QAPs. For listing menus and categories the path based structure of `/tenants/{tenantId}/menus` and `/tenants/{tenantId}/categories` ensures that unauthenticated users can only list menus and categories for a specific tenant. The anti-spam measure implemented through the `verificationToken` ensures that only valid orders are created. Superadmin access to orders is granted at `/orders` level and enabled by role-based access control (DBAC) via `/roles_superadmin/{userId}`."
+  }
+}
