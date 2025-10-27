@@ -72,11 +72,10 @@ export default function SuperAdminRegisterPage() {
 
     } catch (error: any) {
         // This will catch auth errors (e.g., email already in use)
-        console.error('Registration failed:', error);
         toast({
             variant: 'destructive',
-            title: 'Registration Failed',
-            description: error.message || 'An unknown error occurred. Please try again.',
+            title: 'Pendaftaran Gagal',
+            description: 'Email ini sudah digunakan. Silakan gunakan email lain.',
         });
         setIsLoading(false);
     } 
@@ -92,8 +91,8 @@ export default function SuperAdminRegisterPage() {
         </div>
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl">Create Super Admin</CardTitle>
-            <CardDescription>Create the first super admin account for AirCafe.</CardDescription>
+            <CardTitle className="text-2xl">Buat Akun Super Admin</CardTitle>
+            <CardDescription>Buat akun super admin pertama untuk AirCafe.</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
@@ -125,7 +124,7 @@ export default function SuperAdminRegisterPage() {
                   )}
                 />
                 <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Create Account'}
+                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Buat Akun'}
                 </Button>
               </form>
             </Form>
