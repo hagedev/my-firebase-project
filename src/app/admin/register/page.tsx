@@ -41,10 +41,9 @@ export default function SuperAdminRegisterPage() {
 
   const onSubmit = async (data: RegisterFormValues) => {
     setIsLoading(true);
-    let userCredential; // Define userCredential here to be accessible in the catch block
-
+    
     try {
-      userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
 
       const superAdminData = {
@@ -54,16 +53,16 @@ export default function SuperAdminRegisterPage() {
       };
       const superAdminRef = doc(firestore, `roles_superadmin/${user.uid}`);
 
-      // Non-blocking write with error handling
       setDoc(superAdminRef, superAdminData)
         .then(() => {
             toast({
                 title: 'Pendaftaran Berhasil',
-                description: 'Akun super admin telah dibuat. Anda dapat login sekarang.',
+                description: 'Akun super admin telah dibuat. Anda akan diarahkan ke halaman login.',
             });
             router.push(`/air-cafe-demo/admin/login`);
         })
         .catch(async (serverError) => {
+            // Firestore write failed, so we need to roll back user creation.
             const permissionError = new FirestorePermissionError({
               path: superAdminRef.path,
               operation: 'create',
@@ -71,28 +70,34 @@ export default function SuperAdminRegisterPage() {
             });
             errorEmitter.emit('permission-error', permissionError);
 
-            // Rollback user creation
-            if (auth.currentUser) {
-                await deleteUser(auth.currentUser);
+            try {
+                if (auth.currentUser && auth.currentUser.uid === user.uid) {
+                    await deleteUser(auth.currentUser);
+                }
+            } catch (deleteError) {
+                 console.error("Failed to rollback user creation:", deleteError);
             }
 
             toast({
               variant: 'destructive',
               title: 'Pendaftaran Gagal',
-              description: 'Gagal memberikan peran super admin. Silakan periksa aturan keamanan Anda.',
+              description: 'Gagal memberikan peran super admin. Akun pengguna telah dibatalkan. Silakan periksa aturan keamanan Anda dan coba lagi.',
             });
-
             setIsLoading(false);
         });
 
     } catch (error: any) {
-        // This will catch auth errors (e.g., email already in use)
+        let description = 'Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.';
+        if (error.code === 'auth/email-already-in-use') {
+            description = 'Email ini sudah digunakan. Jika Anda gagal mendaftar sebelumnya, hapus pengguna dari Firebase Authentication Console dan coba lagi.';
+        } else if (error.message) {
+            description = error.message;
+        }
+        
         toast({
             variant: 'destructive',
             title: 'Pendaftaran Gagal',
-            description: error.code === 'auth/email-already-in-use' 
-              ? 'Email ini sudah digunakan. Silakan gunakan email lain.'
-              : error.message,
+            description: description,
         });
         setIsLoading(false);
     } 
