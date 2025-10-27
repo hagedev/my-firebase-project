@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore, FirestorePermissionError, errorEmitter } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import Logo from '@/components/Logo';
@@ -45,28 +45,41 @@ export default function SuperAdminRegisterPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
 
-      // Add user to roles_superadmin collection
-      await setDoc(doc(firestore, `roles_superadmin/${user.uid}`), {
+      const superAdminData = {
         email: user.email,
         role: 'superadmin',
         uid: user.uid,
-      });
+      };
+      const superAdminRef = doc(firestore, `roles_superadmin/${user.uid}`);
 
-      toast({
-        title: 'Registration Successful',
-        description: 'Super admin account created. You can now log in.',
-      });
-      router.push(`/air-cafe-demo/admin/login`);
+      setDoc(superAdminRef, superAdminData)
+        .then(() => {
+            toast({
+                title: 'Registration Successful',
+                description: 'Super admin account created. You can now log in.',
+            });
+            router.push(`/air-cafe-demo/admin/login`);
+        })
+        .catch(async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+              path: superAdminRef.path,
+              operation: 'create',
+              requestResourceData: superAdminData,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            setIsLoading(false);
+        });
+
     } catch (error: any) {
-      console.error('Registration failed:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Registration Failed',
-        description: error.message || 'An unknown error occurred. Please try again.',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+        // This will catch auth errors (e.g., email already in use)
+        console.error('Registration failed:', error);
+        toast({
+            variant: 'destructive',
+            title: 'Registration Failed',
+            description: error.message || 'An unknown error occurred. Please try again.',
+        });
+        setIsLoading(false);
+    } 
   };
 
   return (
