@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth, useFirestore, FirestorePermissionError, errorEmitter } from '@/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, deleteUser } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import Logo from '@/components/Logo';
 import { Loader2 } from 'lucide-react';
@@ -41,8 +41,10 @@ export default function SuperAdminRegisterPage() {
 
   const onSubmit = async (data: RegisterFormValues) => {
     setIsLoading(true);
+    let userCredential; // Define userCredential here to be accessible in the catch block
+
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
 
       const superAdminData = {
@@ -52,11 +54,12 @@ export default function SuperAdminRegisterPage() {
       };
       const superAdminRef = doc(firestore, `roles_superadmin/${user.uid}`);
 
+      // Non-blocking write with error handling
       setDoc(superAdminRef, superAdminData)
         .then(() => {
             toast({
-                title: 'Registration Successful',
-                description: 'Super admin account created. You can now log in.',
+                title: 'Pendaftaran Berhasil',
+                description: 'Akun super admin telah dibuat. Anda dapat login sekarang.',
             });
             router.push(`/air-cafe-demo/admin/login`);
         })
@@ -67,6 +70,18 @@ export default function SuperAdminRegisterPage() {
               requestResourceData: superAdminData,
             });
             errorEmitter.emit('permission-error', permissionError);
+
+            // Rollback user creation
+            if (auth.currentUser) {
+                await deleteUser(auth.currentUser);
+            }
+
+            toast({
+              variant: 'destructive',
+              title: 'Pendaftaran Gagal',
+              description: 'Gagal memberikan peran super admin. Silakan periksa aturan keamanan Anda.',
+            });
+
             setIsLoading(false);
         });
 
@@ -75,7 +90,9 @@ export default function SuperAdminRegisterPage() {
         toast({
             variant: 'destructive',
             title: 'Pendaftaran Gagal',
-            description: 'Email ini sudah digunakan. Silakan gunakan email lain.',
+            description: error.code === 'auth/email-already-in-use' 
+              ? 'Email ini sudah digunakan. Silakan gunakan email lain.'
+              : error.message,
         });
         setIsLoading(false);
     } 
