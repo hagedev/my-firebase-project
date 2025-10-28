@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query } from 'firebase/firestore';
-import { Building, Users, Loader2, AlertCircle, PackageWarning } from "lucide-react";
+import { Building, Users, Loader2, AlertCircle, Archive } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { Tenant, User } from '@/lib/types';
 
@@ -87,7 +87,7 @@ export default function AdminDashboard() {
                             <CardTitle className="text-sm font-medium">Statistik Lanjutan</CardTitle>
                             <CardDescription className="text-xs">Menu & Pesanan</CardDescription>
                            </div>
-                           <PackageWarning className="h-4 w-4 text-muted-foreground" />
+                           <Archive className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
                             <div className="text-sm text-muted-foreground pt-2">
