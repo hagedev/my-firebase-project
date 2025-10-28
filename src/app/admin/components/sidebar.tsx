@@ -23,7 +23,6 @@ import {
 import Logo from '@/components/Logo';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/firebase';
-import Link from 'next/link';
 
 const menuItems = [
   { href: '/admin', label: 'Dasbor', icon: Home },
@@ -58,16 +57,15 @@ export function AdminSidebar({ children }: { children: React.ReactNode }) {
           <SidebarMenu>
             {menuItems.map((item) => (
               <SidebarMenuItem key={item.label}>
-                <Link href={item.href} passHref legacyBehavior>
-                  <SidebarMenuButton
-                    as="a"
-                    isActive={pathname === item.href}
-                    tooltip={{children: item.label}}
-                  >
-                    <item.icon />
-                    <span>{item.label}</span>
-                  </SidebarMenuButton>
-                </Link>
+                <SidebarMenuButton
+                  href={item.href}
+                  as="a"
+                  isActive={pathname === item.href}
+                  tooltip={{children: item.label}}
+                >
+                  <item.icon />
+                  <span>{item.label}</span>
+                </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
