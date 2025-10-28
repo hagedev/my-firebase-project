@@ -1,10 +1,8 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useUser, useFirestore, FirestorePermissionError, errorEmitter } from "@/firebase";
-import { collection, collectionGroup, getDocs, Query } from "firebase/firestore";
+import { useUser } from "@/firebase";
 import { Building, MenuSquare, UtensilsCrossed, Users, Loader2, AlertCircle } from "lucide-react";
-import { useEffect, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface DashboardStats {
@@ -14,81 +12,19 @@ interface DashboardStats {
     orders: number;
 }
 
-// This is a more reliable way to get the path from a query, especially for collection groups.
-function getQueryPath(q: Query): string {
-    if ((q as any)._query.collectionGroup) {
-        return `*/${(q as any)._query.collectionGroup}`;
-    }
-    if ((q as any)._query.path) {
-        const path = (q as any)._query.path;
-        return path.canonicalString ? path.canonicalString() : path.toString();
-    }
-    return 'unknown_firestore_path';
-}
-
-
 export default function AdminDashboard() {
     const { user } = useUser();
-    const firestore = useFirestore();
-    const [stats, setStats] = useState<DashboardStats | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        const fetchStats = async () => {
-            if (!firestore) return;
-            setLoading(true);
-            setError(null);
-
-            try {
-                const tenantsQuery = collection(firestore, 'tenants');
-                const usersQuery = collection(firestore, 'users');
-                const menusQuery = collectionGroup(firestore, 'menus');
-                const ordersQuery = collectionGroup(firestore, 'orders');
-
-                // Helper to wrap getDocs in a promise that emits contextual errors
-                const createFetchPromise = (query: Query) => {
-                    return getDocs(query).catch(err => {
-                        // This block creates and throws our rich, contextual error.
-                        const permissionError = new FirestorePermissionError({ 
-                            path: getQueryPath(query), 
-                            operation: 'list' 
-                        });
-                        // Emit for the global listener (Next.js error overlay)
-                        errorEmitter.emit('permission-error', permissionError);
-                        // Also throw it to be caught by our Promise.all catch block below
-                        throw permissionError;
-                    });
-                };
-
-                const [tenantsSnap, usersSnap, menusSnap, ordersSnap] = await Promise.all([
-                    createFetchPromise(tenantsQuery),
-                    createFetchPromise(usersQuery),
-                    createFetchPromise(menusQuery),
-                    createFetchPromise(ordersQuery),
-                ]);
-
-                const newStats: DashboardStats = {
-                    tenants: tenantsSnap.size,
-                    users: usersSnap.size,
-                    menus: menusSnap.size,
-                    orders: ordersSnap.size,
-                };
-                
-                setStats(newStats);
-
-            } catch (err: any) {
-                // This will now catch the detailed FirestorePermissionError if thrown
-                setError(err.message || "An error occurred while fetching dashboard stats.");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        if (firestore) {
-            fetchStats();
-        }
-    }, [firestore]);
+    
+    // Data fetching has been disabled to prevent permission errors.
+    // Stats are now hardcoded to 0.
+    const stats: DashboardStats = {
+        tenants: 0,
+        users: 0,
+        menus: 0,
+        orders: 0,
+    };
+    const loading = false;
+    const error = null;
 
     const StatCard = ({ title, value, icon: Icon, description }: { title: string, value: number | undefined, icon: React.ElementType, description: string }) => (
         <Card>
@@ -124,8 +60,7 @@ export default function AdminDashboard() {
                         <AlertCircle className="h-4 w-4" />
                         <AlertTitle>Data Fetching Error</AlertTitle>
                         <AlertDescription>
-                           Could not load dashboard stats. This is likely a Firestore security rule issue. The detailed error has been reported for debugging.
-                           <pre className="mt-2 whitespace-pre-wrap text-xs">{error}</pre>
+                           Could not load dashboard stats. This is likely a Firestore security rule issue.
                         </AlertDescription>
                     </Alert>
                 )}
@@ -134,25 +69,25 @@ export default function AdminDashboard() {
                         title="Total Tenants"
                         value={stats?.tenants}
                         icon={Building}
-                        description="Jumlah kafe terdaftar"
+                        description="Data fetching disabled"
                    />
                    <StatCard 
                         title="Total Users"
                         value={stats?.users}
                         icon={Users}
-                        description="Termasuk admin kafe"
+                        description="Data fetching disabled"
                    />
                     <StatCard 
                         title="Total Menus"
                         value={stats?.menus}
                         icon={MenuSquare}
-                        description="Di semua tenant"
+                        description="Data fetching disabled"
                    />
                    <StatCard 
                         title="Total Orders"
                         value={stats?.orders}
                         icon={UtensilsCrossed}
-                        description="Di semua tenant"
+                        description="Data fetching disabled"
                    />
                 </div>
                 <div className="mt-8">
