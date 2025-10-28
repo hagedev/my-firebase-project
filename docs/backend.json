@@ -34,11 +34,8 @@
         }
       },
       "required": [
-        "id",
         "name",
         "slug",
-        "logoUrl",
-        "qrisImageUrl",
         "tokenHarian"
       ]
     },
@@ -68,7 +65,6 @@
       },
       "required": [
         "id",
-        "tenantId",
         "role",
         "email"
       ]
@@ -110,16 +106,17 @@
         },
         "stockStatus": {
           "type": "string",
+          "enum": [
+            "Available",
+            "Out of Stock"
+          ],
           "description": "The stock status of the menu item (e.g., Available, Out of Stock)."
         }
       },
       "required": [
-        "id",
         "tenantId",
         "categoryId",
         "name",
-        "description",
-        "imageUrl",
         "price",
         "stockStatus"
       ]
@@ -144,7 +141,6 @@
         }
       },
       "required": [
-        "id",
         "tenantId",
         "name"
       ]
@@ -163,15 +159,46 @@
           "type": "string",
           "description": "Reference to Tenant. The ID of the tenant that owns this order. (Relationship: Tenant 1:N Order)"
         },
-        "tableId": {
-          "type": "string",
-          "description": "Reference to Table. The ID of the table where the order was placed. (Relationship: Table 1:N Order)"
+        "tableNumber": {
+          "type": "number",
+          "description": "The table number where the order was placed."
         },
-        "menuItemIds": {
+        "items": {
           "type": "array",
-          "description": "References to Menus.  An array of menu item IDs included in the order. (Relationship: Order 1:N Menu)",
+          "description": "Array of items in the order.",
           "items": {
-            "type": "string"
+            "type": "object",
+            "properties": {
+              "menuId": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "quantity": {
+                "type": "number"
+              },
+              "price": {
+                "type": "number"
+              },
+              "variant": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "additionalPrice": {
+                    "type": "number"
+                  }
+                }
+              }
+            },
+            "required": [
+              "menuId",
+              "name",
+              "quantity",
+              "price"
+            ]
           }
         },
         "totalAmount": {
@@ -180,15 +207,30 @@
         },
         "paymentMethod": {
           "type": "string",
+          "enum": [
+            "Cash",
+            "QRIS"
+          ],
           "description": "The payment method used for the order (e.g., Cash, QRIS)."
         },
         "paymentStatus": {
           "type": "string",
-          "description": "The payment status of the order (e.g., Pending, Confirmed)."
+          "enum": [
+            "Unpaid",
+            "Paid"
+          ],
+          "description": "The payment status of the order (e.g., Unpaid, Paid)."
         },
         "orderStatus": {
           "type": "string",
-          "description": "The status of the order (e.g., Received, Preparing, Ready to Serve)."
+          "enum": [
+            "Received",
+            "Preparing",
+            "Ready",
+            "Completed",
+            "Cancelled"
+          ],
+          "description": "The status of the order (e.g., Received, Preparing, Ready)."
         },
         "verificationToken": {
           "type": "string",
@@ -197,18 +239,22 @@
         "uniqueCode": {
           "type": "string",
           "description": "Unique code added to total price, if payment method is QRIS"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
         }
       },
       "required": [
-        "id",
         "tenantId",
-        "tableId",
-        "menuItemIds",
+        "tableNumber",
+        "items",
         "totalAmount",
         "paymentMethod",
         "paymentStatus",
         "orderStatus",
-        "verificationToken"
+        "verificationToken",
+        "createdAt"
       ]
     },
     "Table": {
@@ -225,27 +271,29 @@
           "type": "string",
           "description": "Reference to Tenant. The ID of the tenant that owns this table. (Relationship: Tenant 1:N Table)"
         },
-        "tableNumber": {
+        "number": {
           "type": "number",
           "description": "The table number."
         },
         "status": {
           "type": "string",
+          "enum": [
+            "Empty",
+            "Occupied"
+          ],
           "description": "The status of the table (e.g., Empty, Occupied)."
         }
       },
       "required": [
-        "id",
         "tenantId",
-        "tableNumber",
+        "number",
         "status"
       ]
     }
   },
   "auth": {
     "providers": [
-      "password",
-      "anonymous"
+      "password"
     ]
   },
   "firestore": {
@@ -253,132 +301,68 @@
       {
         "path": "/tenants/{tenantId}",
         "definition": {
-          "entityName": "Tenant",
           "schema": {
-            "$ref": "#/backend/entities/Tenant"
+            "$ref": "#/entities/Tenant"
           },
-          "description": "Stores cafe tenant profiles and configuration data.",
-          "params": [
-            {
-              "name": "tenantId",
-              "description": "The unique identifier for the tenant."
-            }
-          ]
+          "description": "Stores cafe tenant profiles and configuration data."
         }
       },
       {
         "path": "/users/{userId}",
         "definition": {
-          "entityName": "User",
           "schema": {
-            "$ref": "#/backend/entities/User"
+            "$ref": "#/entities/User"
           },
-          "description": "Stores user profiles, including role and tenant assignment.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user (Firebase Auth UID)."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/tenants/{tenantId}/menus/{menuId}",
-        "definition": {
-          "entityName": "Menu",
-          "schema": {
-            "$ref": "#/backend/entities/Menu"
-          },
-          "description": "Stores menu items for a specific tenant. Includes denormalized 'tenantId' for authorization independence.",
-          "params": [
-            {
-              "name": "tenantId",
-              "description": "The unique identifier for the tenant."
-            },
-            {
-              "name": "menuId",
-              "description": "The unique identifier for the menu item."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/tenants/{tenantId}/categories/{categoryId}",
-        "definition": {
-          "entityName": "Category",
-          "schema": {
-            "$ref": "#/backend/entities/Category"
-          },
-          "description": "Stores menu categories for a specific tenant. Includes denormalized 'tenantId' for authorization independence.",
-          "params": [
-            {
-              "name": "tenantId",
-              "description": "The unique identifier for the tenant."
-            },
-            {
-              "name": "categoryId",
-              "description": "The unique identifier for the menu category."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/tenants/{tenantId}/orders/{orderId}",
-        "definition": {
-          "entityName": "Order",
-          "schema": {
-            "$ref": "#/backend/entities/Order"
-          },
-          "description": "Stores orders placed at a specific tenant. Includes denormalized 'tenantId' for authorization independence.",
-          "params": [
-            {
-              "name": "tenantId",
-              "description": "The unique identifier for the tenant."
-            },
-            {
-              "name": "orderId",
-              "description": "The unique identifier for the order."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/tenants/{tenantId}/tables/{tableId}",
-        "definition": {
-          "entityName": "Table",
-          "schema": {
-            "$ref": "#/backend/entities/Table"
-          },
-          "description": "Stores tables for a specific tenant. Includes denormalized 'tenantId' for authorization independence.",
-          "params": [
-            {
-              "name": "tenantId",
-              "description": "The unique identifier for the tenant."
-            },
-            {
-              "name": "tableId",
-              "description": "The unique identifier for the table."
-            }
-          ]
+          "description": "Stores user profiles, including role and tenant assignment."
         }
       },
       {
         "path": "/roles_superadmin/{userId}",
         "definition": {
-          "entityName": "roles_superadmin",
           "schema": {
-            "$ref": "#/backend/entities/User"
+            "$ref": "#/entities/User"
           },
-          "description": "Collection to store superadmin user IDs for role-based access control (DBAC). Existence of document denotes superadmin privileges.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user (Firebase Auth UID)."
-            }
-          ]
+          "description": "Collection to store superadmin user IDs for role-based access control (RBAC). Existence of a document denotes superadmin privileges."
+        }
+      },
+      {
+        "path": "/tenants/{tenantId}/menus/{menuId}",
+        "definition": {
+          "schema": {
+            "$ref": "#/entities/Menu"
+          },
+          "description": "Stores menu items for a specific tenant."
+        }
+      },
+      {
+        "path": "/tenants/{tenantId}/categories/{categoryId}",
+        "definition": {
+          "schema": {
+            "$ref": "#/entities/Category"
+          },
+          "description": "Stores menu categories for a specific tenant."
+        }
+      },
+      {
+        "path": "/tenants/{tenantId}/orders/{orderId}",
+        "definition": {
+          "schema": {
+            "$ref": "#/entities/Order"
+          },
+          "description": "Stores orders placed at a specific tenant."
+        }
+      },
+      {
+        "path": "/tenants/{tenantId}/tables/{tableId}",
+        "definition": {
+          "schema": {
+            "$ref": "#/entities/Table"
+          },
+          "description": "Stores tables for a specific tenant."
         }
       }
-    ],
-    "reasoning": "The Firestore data structure is designed to support a multi-tenant SaaS application (AirCafe) with a focus on security, scalability, and ease of management. The key principle applied is Authorization Independence via Denormalization, ensuring that security rules do not rely on potentially expensive and complex `get()` operations. Structural Segregation is employed to maintain a homogeneous security posture within each collection.\n\nTenants are stored at the root level in the `/tenants` collection. Each tenant document contains cafe-specific information like name, logo URL, QRIS image URL, and a daily verification token. User roles (superadmin, admin_kafe) and tenant assignments are managed in the `/users` collection, with `tenantId` and `role` fields specifying the user's affiliation. Superadmins have access to all tenant data, while admin_kafe users are restricted to their assigned tenant.\n\nAll cafe-specific data (menus, categories, tables, and orders) are stored as subcollections under the respective `/tenants/{tenantId}` document. This ensures clear ownership and isolation of data per tenant. Menu items and categories are stored in `/tenants/{tenantId}/menus` and `/tenants/{tenantId}/categories` respectively, linked by the `categoryId` field in the menu. Tables are managed in `/tenants/{tenantId}/tables`, while orders are placed in `/tenants/{tenantId}/orders`. The `Order` documents include a `verificationToken` field for anti-spam measures, which must match the `tokenHarian` field in the corresponding `/tenants/{tenantId}` document.\n\nTo achieve Authorization Independence, the `tenantId` is duplicated in all subcollections (menus, categories, tables, orders) under the tenants document. For the Superadmin role the collection `/roles_superadmin/{userId}` is used to denote superadmin privileges (DBAC). This allows security rules to efficiently validate tenant-level access without requiring `get()` calls to the tenant document. The anti-spam security rule directly compares the `verificationToken` in the `Order` document with the `tokenHarian` in the `Tenant` document using `get()` since this is enforced only at order creation.\n\nThis structure also supports the required QAPs. For listing menus and categories the path based structure of `/tenants/{tenantId}/menus` and `/tenants/{tenantId}/categories` ensures that unauthenticated users can only list menus and categories for a specific tenant. The anti-spam measure implemented through the `verificationToken` ensures that only valid orders are created. Superadmin access to orders is granted at `/orders` level and enabled by role-based access control (DBAC) via `/roles_superadmin/{userId}`."
+    ]
   }
 }
+
+    
