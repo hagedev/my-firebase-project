@@ -59,13 +59,13 @@ export function AdminSidebar({ children }: { children: React.ReactNode }) {
             {menuItems.map((item) => (
               <SidebarMenuItem key={item.label}>
                 <Link href={item.href} passHref legacyBehavior>
-                  <a className='block'>
+                  <a className="block">
                     <SidebarMenuButton
-                      isActive={pathname === item.href}
-                      tooltip={{children: item.label}}
+                        isActive={pathname === item.href}
+                        tooltip={{children: item.label}}
                     >
-                      <item.icon />
-                      <span>{item.label}</span>
+                        <item.icon />
+                        <span>{item.label}</span>
                     </SidebarMenuButton>
                   </a>
                 </Link>
