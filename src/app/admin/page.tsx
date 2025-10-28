@@ -16,14 +16,19 @@ interface DashboardStats {
 
 // Helper to get the path from a query for error reporting
 function getQueryPath(q: Query): string {
+    // This is a simplified but more robust way to get a representation of the query path
     if ((q as any)._query) {
-        // This is the standard way to get path from a v9 query object
-        const path = (q as any)._query.path;
-        return path.canonicalString ? path.canonicalString() : path.toString();
+        const queryInternal = (q as any)._query;
+        if (queryInternal.path) {
+            return queryInternal.path.canonicalString ? queryInternal.path.canonicalString() : queryInternal.path.toString();
+        }
+        if (queryInternal.collectionGroup) {
+            return `*/${queryInternal.collectionGroup}`;
+        }
     }
-    // Fallback for collection group queries or other types
-    if (q.type === 'collection-group') {
-        return `*/${(q as any)._query.collectionId}`;
+    // Fallback for collection group queries specifically
+    if ((q as any)._query?.collectionGroup) {
+        return `collectionGroup(${ (q as any)._query.collectionGroup })`
     }
     return 'unknown_path';
 }
@@ -89,7 +94,6 @@ export default function AdminDashboard() {
 
             } catch (error: any) {
                 // This block will now catch the re-thrown FirestorePermissionError
-                console.error("Error fetching dashboard stats:", error);
                 setError(error.message || "An error occurred while fetching data.");
             } finally {
                 setLoading(false);
