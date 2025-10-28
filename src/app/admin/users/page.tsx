@@ -22,7 +22,7 @@ import {
   useMemoFirebase,
   useAuth,
 } from '@/firebase';
-import { Auth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { Auth, createUserWithEmailAndPassword, deleteUser } from 'firebase/auth';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -159,7 +159,7 @@ function UserList({ firestore, auth }: { firestore: Firestore; auth: Auth }) {
     if (selectedUser) { // Update existing user
       const userRef = doc(firestore, 'users', selectedUser.id);
       const updatedData = { tenantId: data.tenantId };
-      updateDoc(userRef, updatedData)
+      await updateDoc(userRef, updatedData)
         .then(() => {
             toast({ title: 'Berhasil', description: 'Peran pengguna berhasil diperbarui.' });
             setIsFormOpen(false);
@@ -183,54 +183,68 @@ function UserList({ firestore, auth }: { firestore: Firestore; auth: Auth }) {
           return;
       }
       
+      let userCredential;
       try {
-        // 1. Create user in Firebase Auth - This can still fail and needs a try/catch
-        const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+        // Step 1: Create user in Firebase Auth
+        userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
         const newUser = userCredential.user;
 
-        // 2. Create user document in Firestore - non-blocking
+        // Step 2: Create user document in Firestore. Await this to handle errors properly.
         const userRef = doc(firestore, 'users', newUser.uid);
         const userData = {
             email: data.email,
-            role: 'admin_kafe',
+            role: 'admin_kafe' as const,
             tenantId: data.tenantId,
         };
-        setDoc(userRef, userData)
-          .then(() => {
-              toast({ title: 'Berhasil', description: 'Pengguna admin kafe baru berhasil dibuat.' });
-              setIsFormOpen(false);
-              setSelectedUser(null);
-          })
-          .catch(e => {
-              // This will now trigger the detailed error overlay
-              errorEmitter.emit('permission-error', new FirestorePermissionError({
-                  path: userRef.path,
-                  operation: 'create',
-                  requestResourceData: userData,
-              }));
-          });
-      } catch (e: any) {
-        // This catch is now primarily for Auth errors
-        console.error('Gagal membuat pengguna Auth:', e);
-        let description = 'Gagal membuat pengguna. Coba lagi.';
-        if (e.code === 'auth/email-already-in-use') {
+        await setDoc(userRef, userData);
+
+        // If both succeed:
+        toast({ title: 'Berhasil', description: 'Pengguna admin kafe baru berhasil dibuat.' });
+        setIsFormOpen(false);
+        setSelectedUser(null);
+
+      } catch (error: any) {
+        console.error("User creation failed:", error);
+        let title = 'Pendaftaran Gagal';
+        let description = 'Terjadi kesalahan yang tidak diketahui.';
+
+        if (error.code === 'auth/email-already-in-use') {
+            title = 'Kesalahan Autentikasi';
             description = 'Email ini sudah digunakan oleh pengguna lain.';
+        } else if (error.name === 'FirebaseError' && error.message.includes('permission-denied')) {
+            title = 'Kesalahan Izin';
+            description = 'Gagal menyimpan data pengguna ke database karena masalah izin.';
+            
+            // CRITICAL: Rollback user creation if Firestore write fails
+            if (userCredential) {
+              try {
+                await deleteUser(userCredential.user);
+                description += ' Pembuatan pengguna telah dibatalkan.';
+              } catch (deleteError) {
+                 console.error("Failed to rollback user creation:", deleteError);
+                 description += ' Gagal membatalkan pembuatan pengguna, mohon hapus manual dari Firebase Authentication.';
+              }
+            }
+        } else {
+            description = error.message;
         }
-        toast({ variant: 'destructive', title: 'Kesalahan Autentikasi', description });
+
+        toast({ variant: 'destructive', title, description });
       } finally {
         setIsSubmitting(false);
       }
     }
   };
 
-  const handleDelete = useCallback(() => {
+  const handleDelete = useCallback(async () => {
     if (!selectedUser) return;
     setIsSubmitting(true);
     
     const docRef = doc(firestore, 'users', selectedUser.id);
     
     // Note: This only deletes the Firestore record, not the Auth user.
-    deleteDoc(docRef)
+    // For a real app, you'd want a Cloud Function to handle this securely.
+    await deleteDoc(docRef)
       .then(() => {
         toast({ title: 'Berhasil', description: `Pengguna ${selectedUser.email} berhasil dihapus.` });
         setIsAlertOpen(false);
@@ -426,7 +440,7 @@ function UserList({ firestore, auth }: { firestore: Firestore; auth: Auth }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Apakah Anda yakin?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tindakan ini akan menghapus data pengguna "{selectedUser?.email}" dari database. Tindakan ini tidak dapat dibatalkan.
+              Tindakan ini akan menghapus data pengguna "{selectedUser?.email}" dari database. Tindakan ini tidak dapat dibatalkan. Untuk keamanan, akun otentikasi tidak akan dihapus secara otomatis.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -451,3 +465,5 @@ export default function UsersPage() {
     </div>
   );
 }
+
+    
