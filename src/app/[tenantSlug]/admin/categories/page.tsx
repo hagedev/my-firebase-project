@@ -204,7 +204,7 @@ function CategoryList({ firestore, tenantId }: { firestore: Firestore, tenantId:
         <div className="text-center py-10">
           <h3 className="text-lg font-medium">Belum Ada Kategori</h3>
           <p className="text-sm text-muted-foreground mt-2">
-            Klik tombol &quot;Tambah Kategori&quot; untuk membuat kategori menu pertama Anda.
+            Klik tombol "Tambah Kategori" untuk membuat kategori menu pertama Anda.
           </p>
         </div>
       );
