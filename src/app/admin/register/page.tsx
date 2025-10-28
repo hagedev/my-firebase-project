@@ -29,7 +29,7 @@ import {
   deleteUser,
   sendEmailVerification,
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import Logo from '@/components/Logo';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
@@ -67,59 +67,62 @@ export default function RegisterSuperAdminPage() {
 
   const onSubmit = async (data: RegisterFormValues) => {
     setIsLoading(true);
+    let userCredential;
 
     try {
       // 1. Buat pengguna di Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(
+      userCredential = await createUserWithEmailAndPassword(
         auth,
         data.email,
         data.password
       );
       const user = userCredential.user;
 
-      try {
-        // 2. Buat dokumen di Firestore untuk menetapkan peran
-        const userDocRef = doc(firestore, 'users', user.uid);
-        const roleDocRef = doc(firestore, 'roles_superadmin', user.uid);
+      // 2. Gunakan batch write untuk membuat dokumen peran dan pengguna
+      const batch = writeBatch(firestore);
+      
+      const userDocRef = doc(firestore, 'users', user.uid);
+      batch.set(userDocRef, {
+        email: user.email,
+        role: 'superadmin',
+        id: user.uid,
+      });
 
-        // Seharusnya ini transaksi, tapi untuk sederhana kita lakukan berurutan.
-        // Aturan keamanan harus mencegah keadaan yang tidak konsisten.
-        await setDoc(userDocRef, {
-          email: user.email,
-          role: 'superadmin',
-          id: user.uid,
+      const roleDocRef = doc(firestore, 'roles_superadmin', user.uid);
+      batch.set(roleDocRef, {
+        userId: user.uid,
+        assignedAt: serverTimestamp(),
+      });
+
+      // Commit the batch
+      await batch.commit();
+      
+      // 3. Kirim email verifikasi
+      await sendEmailVerification(user);
+
+      toast({
+        title: 'Pendaftaran Berhasil',
+        description: 'Super admin dibuat. Silakan verifikasi email Anda lalu login.',
+      });
+      router.push('/admin/login');
+
+    } catch (error: any) {
+      // Jika terjadi error, hapus pengguna yang mungkin sudah terbuat di Auth
+      if (userCredential) {
+        await deleteUser(userCredential.user).catch(delErr => {
+          console.error("Gagal menghapus pengguna setelah error registrasi:", delErr);
         });
-
-        await setDoc(roleDocRef, {
-          userId: user.uid,
-          assignedAt: serverTimestamp(),
-        });
-
-        await sendEmailVerification(user);
-
-        toast({
-          title: 'Pendaftaran Berhasil',
-          description:
-            'Super admin dibuat. Silakan verifikasi email Anda lalu login.',
-        });
-        router.push('/admin/login');
-      } catch (firestoreError: any) {
-        // Jika Firestore gagal, batalkan pembuatan pengguna Auth
-        await deleteUser(user);
-        throw firestoreError; // Lemparkan lagi untuk ditangkap oleh blok catch luar
       }
-    } catch (error: any)
-{
+
       console.error('Pendaftaran gagal:', error);
-      let description =
-        error.message || 'Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.';
+      let description = error.message || 'Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.';
+      
       if (error.code === 'auth/email-already-in-use') {
-        description =
-          'Email ini sudah digunakan. Silakan gunakan email lain.';
+        description = 'Email ini sudah digunakan. Silakan gunakan email lain.';
       } else if (error.code === 'permission-denied') {
-        description =
-          'Tidak dapat membuat super admin. Super admin awal mungkin sudah ada.';
+        description = 'Tidak dapat membuat super admin. Kemungkinan super admin awal sudah ada atau aturan keamanan salah.';
       }
+      
       toast({
         variant: 'destructive',
         title: 'Pendaftaran Gagal',
