@@ -14,20 +14,18 @@ interface DashboardStats {
     orders: number;
 }
 
-// A more robust helper to get the path from a query for error reporting.
-// This handles both regular collections and collection group queries.
+// This is a more reliable way to get the path from a query, especially for collection groups.
 function getQueryPath(q: Query): string {
-    // The internal _query property is not part of the public API, but it's the most reliable way to get this info.
     const internalQuery = (q as any)._query;
     if (internalQuery) {
-        if (internalQuery.path) { // This is a regular collection query
-            return internalQuery.path.canonicalString ? internalQuery.path.canonicalString() : internalQuery.path.toString();
+        if (internalQuery.path) { // For regular collection queries
+            return internalQuery.path.canonicalString ? internalQuery.path.canonicalString() : internal-Query.path.toString();
         }
-        if (internalQuery.collectionGroup) { // This is a collectionGroup query
+        if (internalQuery.collectionGroup) { // For collectionGroup queries
             return `*/${internalQuery.collectionGroup}`;
         }
     }
-    // Fallback if the internal structure changes, though it's unlikely.
+    // Fallback if the internal structure changes, but this is much safer.
     return 'unknown_firestore_path';
 }
 
@@ -50,17 +48,18 @@ export default function AdminDashboard() {
                 const menusQuery = collectionGroup(firestore, 'menus');
                 const ordersQuery = collectionGroup(firestore, 'orders');
 
+                // Helper to wrap getDocs in a promise that emits contextual errors
                 const createFetchPromise = (query: Query) => {
                     return getDocs(query).catch(err => {
-                        // This catch block creates and throws a rich, contextual error.
+                        // This block creates and throws our rich, contextual error.
                         const permissionError = new FirestorePermissionError({ 
                             path: getQueryPath(query), 
                             operation: 'list' 
                         });
-                        // Emit for the global listener
+                        // Emit for the global listener (Next.js error overlay)
                         errorEmitter.emit('permission-error', permissionError);
-                        // Throw it to be caught by the outer try-catch block
-                        throw permissionError; 
+                        // Also throw it to be caught by our Promise.all catch block below
+                        throw permissionError;
                     });
                 };
 
@@ -81,8 +80,8 @@ export default function AdminDashboard() {
                 setStats(newStats);
 
             } catch (err: any) {
-                // This will now catch the detailed FirestorePermissionError
-                setError(err.message || "An error occurred while fetching data.");
+                // This will now catch the detailed FirestorePermissionError if thrown
+                setError(err.message || "An error occurred while fetching dashboard stats.");
             } finally {
                 setLoading(false);
             }
@@ -127,7 +126,8 @@ export default function AdminDashboard() {
                         <AlertCircle className="h-4 w-4" />
                         <AlertTitle>Data Fetching Error</AlertTitle>
                         <AlertDescription>
-                            Could not load dashboard stats. This is likely a permission issue. The detailed error has been reported for debugging.
+                           Could not load dashboard stats. This is likely a Firestore security rule issue. The detailed error has been reported for debugging.
+                           <pre className="mt-2 whitespace-pre-wrap text-xs">{error}</pre>
                         </AlertDescription>
                     </Alert>
                 )}
