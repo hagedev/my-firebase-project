@@ -21,46 +21,55 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     }
 
     const checkAdminStatus = async () => {
-      // Allow unauthenticated users to access login and register pages
       const isPublicPage =
         pathname === '/admin/login' || pathname === '/admin/register';
 
       if (!user) {
         if (isPublicPage) {
-          setIsVerifying(false); // On a public page, no need to verify further
+          setIsVerifying(false);
         } else {
-          router.replace('/admin/login'); // Redirect to login if not on a public page
+          router.replace('/admin/login');
         }
         return;
       }
 
-      // User is authenticated, check their role
+      // User is authenticated, check their role from the 'users' collection
       const userRef = doc(firestore, `users/${user.uid}`);
       const userSnap = await getDoc(userRef);
 
-      if (userSnap.exists() && userSnap.data().role === 'superadmin') {
-        // User is a super admin
-        if (isPublicPage) {
-          router.replace('/admin/dashboard'); // Redirect from login/register to dashboard
-        } else {
-          setIsVerifying(false); // Allow access to protected pages
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        
+        // CHECK 1: Is the user a superadmin?
+        if (userData.role === 'superadmin') {
+          if (isPublicPage) {
+            router.replace('/admin/dashboard'); // Redirect from login/register to dashboard
+          } else {
+            setIsVerifying(false); // Allow access to protected pages
+          }
+          return; // Super admin verification successful
         }
-      } else {
-        // User is not a super admin, check if they are a cafe admin
-        if (userSnap.exists() && userSnap.data().role === 'admin_kafe') {
-            const tenantRef = doc(firestore, `tenants/${userSnap.data().tenantId}`);
+        
+        // CHECK 2: Is the user a cafe admin? (And trying to access super admin pages)
+        if (userData.role === 'admin_kafe') {
+            const tenantRef = doc(firestore, `tenants/${userData.tenantId}`);
             const tenantSnap = await getDoc(tenantRef);
             if (tenantSnap.exists()) {
-                // Redirect cafe admin to their own dashboard
+                // This user is a valid cafe admin, but is in the wrong part of the site.
+                // Redirect them to their own tenant dashboard.
                 router.replace(`/${tenantSnap.data().slug}/admin`);
-                return; // Important to return here to stop further execution
+            } else {
+                // Cafe admin with an invalid tenantId, sign them out.
+                await auth.signOut();
+                router.replace('/admin/login');
             }
+            return; // Stop further execution
         }
-
-        // If not a super admin or a valid cafe admin, sign them out and redirect to login
-        await auth.signOut();
-        router.replace('/admin/login');
-      }
+      } 
+        
+      // If user document doesn't exist, or role is not recognized, they are not authorized.
+      await auth.signOut();
+      router.replace('/admin/login');
     };
 
     checkAdminStatus();
