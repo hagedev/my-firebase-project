@@ -227,7 +227,7 @@ export default function TenantsPage() {
                 <FileWarning className="mx-auto h-12 w-12 text-destructive" />
                 <h3 className="mt-4 text-lg font-semibold text-destructive">Gagal Memuat Data</h3>
                 <p className="mt-2 text-sm text-destructive/80">
-                    Terjadi kesalahan saat mengambil data tenant. Ini kemungkinan besar disebabkan oleh masalah izin Firestore.
+                    Terjadi kesalahan saat mengambil data tenant. Ini kemungkinan besar disebabkan oleh masalah izin Firestore. Pastikan Anda telah mendaftar dan masuk sebagai Super Admin.
                 </p>
             </div>
         );
