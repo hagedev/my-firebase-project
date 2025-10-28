@@ -27,40 +27,45 @@ export default function AdminDashboard() {
             setLoading(true);
             setError(null);
 
-            const queries: { key: keyof DashboardStats; query: Query }[] = [
-                { key: 'tenants', query: collection(firestore, 'tenants') },
-                { key: 'users', query: collection(firestore, 'users') },
-                { key: 'menus', query: collectionGroup(firestore, 'menus') },
-                { key: 'orders', query: collectionGroup(firestore, 'orders') },
-            ];
-
             try {
-                const results = await Promise.all(
-                    queries.map(({ key, query }) =>
-                        getDocs(query).catch(err => {
-                            // This is where we create and emit the detailed error
-                            const path = query.type === 'collection-group' ? `*/${query.id}` : (query as any).path;
-                            const permissionError = new FirestorePermissionError({
-                                path: path,
-                                operation: 'list',
-                            });
-                            errorEmitter.emit('permission-error', permissionError);
-                            // We throw the original error to stop the Promise.all
-                            throw err;
-                        })
-                    )
-                );
+                const tenantsQuery = collection(firestore, 'tenants');
+                const usersQuery = collection(firestore, 'users');
+                const menusQuery = collectionGroup(firestore, 'menus');
+                const ordersQuery = collectionGroup(firestore, 'orders');
+
+                const getDocsWithContextualError = async (q: Query, operation: 'list') => {
+                    try {
+                        return await getDocs(q);
+                    } catch (err) {
+                        const path = (q as any)._query.path ? (q as any)._query.path.canonicalString() : (q as any).path || 'unknown path';
+                        const permissionError = new FirestorePermissionError({
+                            path: path,
+                            operation: operation,
+                        });
+                        errorEmitter.emit('permission-error', permissionError);
+                        throw err; // Re-throw to be caught by the outer catch block
+                    }
+                };
+                
+                const [tenantsSnap, usersSnap, menusSnap, ordersSnap] = await Promise.all([
+                    getDocsWithContextualError(tenantsQuery, 'list'),
+                    getDocsWithContextualError(usersQuery, 'list'),
+                    getDocsWithContextualError(menusQuery, 'list'),
+                    getDocsWithContextualError(ordersQuery, 'list'),
+                ]);
 
                 const newStats: DashboardStats = {
-                    tenants: results[0].size,
-                    users: results[1].size,
-                    menus: results[2].size,
-                    orders: results[3].size,
+                    tenants: tenantsSnap.size,
+                    users: usersSnap.size,
+                    menus: menusSnap.size,
+                    orders: ordersSnap.size,
                 };
                 
                 setStats(newStats);
 
             } catch (error: any) {
+                // This catch block now primarily handles UI updates, 
+                // as the contextual error has already been emitted.
                 console.error("Error fetching dashboard stats:", error);
                 setError(error.message || "An error occurred while fetching data.");
             } finally {
