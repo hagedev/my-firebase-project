@@ -27,7 +27,6 @@ export function TenantAdminSidebar({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   const params = useParams();
   const auth = useAuth();
-  const router = useRouter();
   const tenantSlug = params.tenantSlug as string;
 
   const menuItems = [
@@ -40,7 +39,7 @@ export function TenantAdminSidebar({ children }: { children: React.ReactNode }) 
 
   const handleLogout = async () => {
     await auth.signOut();
-    router.push(`/${tenantSlug}/admin/login`);
+    // Navigasi akan ditangani oleh TenantAdminLayout yang mendeteksi perubahan status auth
   };
 
   return (

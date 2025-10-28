@@ -38,11 +38,10 @@ const menuItems = [
 export function AdminSidebar({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const auth = useAuth();
-  const router = useRouter();
-
+  
   const handleLogout = async () => {
     await auth.signOut();
-    router.push('/admin/login');
+    // Navigasi akan ditangani oleh AdminLayout yang mendeteksi perubahan status auth
   };
 
   return (
