@@ -27,26 +27,33 @@ export default function AdminDashboard() {
             setLoading(true);
             setError(null);
 
+            const getDocsWithContextualError = async (q: Query, operation: 'list') => {
+                try {
+                    return await getDocs(q);
+                } catch (err: any) {
+                    // This is where we create and emit the detailed error
+                    let path = 'unknown_path';
+                    if ((q as any)._query) {
+                        path = (q as any)._query.path.canonicalString() || (q as any)._query.path.toString();
+                    } else if ((q as any).path) {
+                        path = (q as any).path;
+                    }
+                    
+                    const permissionError = new FirestorePermissionError({
+                        path: path,
+                        operation: operation,
+                    });
+                    errorEmitter.emit('permission-error', permissionError);
+                    // Re-throw to be caught by the outer catch block
+                    throw new Error(`Permission denied on path: ${path}`);
+                }
+            };
+
             try {
                 const tenantsQuery = collection(firestore, 'tenants');
                 const usersQuery = collection(firestore, 'users');
                 const menusQuery = collectionGroup(firestore, 'menus');
                 const ordersQuery = collectionGroup(firestore, 'orders');
-
-                const getDocsWithContextualError = async (q: Query, operation: 'list') => {
-                    try {
-                        return await getDocs(q);
-                    } catch (err) {
-                        // This is where we create and emit the detailed error
-                        const path = (q as any)._query?.path?.canonicalString() ?? 'unknown path';
-                        const permissionError = new FirestorePermissionError({
-                            path: path,
-                            operation: operation,
-                        });
-                        errorEmitter.emit('permission-error', permissionError);
-                        throw err; // Re-throw to be caught by the outer catch block
-                    }
-                };
                 
                 const [tenantsSnap, usersSnap, menusSnap, ordersSnap] = await Promise.all([
                     getDocsWithContextualError(tenantsQuery, 'list'),
@@ -74,7 +81,9 @@ export default function AdminDashboard() {
             }
         };
 
-        fetchStats();
+        if (firestore) {
+            fetchStats();
+        }
     }, [firestore]);
 
     const StatCard = ({ title, value, icon: Icon, description }: { title: string, value: number | undefined, icon: React.ElementType, description: string }) => (
@@ -111,7 +120,7 @@ export default function AdminDashboard() {
                         <AlertCircle className="h-4 w-4" />
                         <AlertTitle>Data Fetching Error</AlertTitle>
                         <AlertDescription>
-                            Could not load dashboard stats due to a permission error. The detailed error has been reported.
+                            Could not load dashboard stats. This is likely a permission issue. The detailed error has been reported for debugging.
                         </AlertDescription>
                     </Alert>
                 )}
