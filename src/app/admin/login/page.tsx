@@ -69,7 +69,7 @@ export default function AdminLoginPage() {
         title: 'Login Gagal',
         description:
           error.code === 'auth/invalid-credential'
-            ? 'Email atau kata sandi salah.'
+            ? 'Email atau kata sandi salah. Silakan periksa kembali.'
             : error.message ||
               'Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.',
       });
