@@ -41,7 +41,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           setIsVerifying(false);
         }
       } else {
-        // Not a superadmin, check for tenant admin role
+        // Not a superadmin, check for tenant admin role to redirect them
         const userRef = doc(firestore, `users/${user.uid}`);
         const userSnap = await getDoc(userRef);
 
@@ -52,13 +52,15 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             const tenantSnap = await getDoc(tenantRef);
             if (tenantSnap.exists()) {
               const tenantSlug = tenantSnap.data().slug;
+              // This user is a tenant admin, so they don't belong in the super admin section.
+              // Redirect them to their own dashboard.
               router.replace(`/${tenantSlug}/admin/dashboard`);
               return;
             }
           }
         }
         
-        // If not super admin or tenant admin, deny access by signing out
+        // If not super admin and not a known tenant admin, they have no access here.
         await auth.signOut();
         router.replace('/admin/login');
         setIsVerifying(false);
@@ -82,6 +84,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     return <>{children}</>;
   }
 
-  // For all other admin pages, show the sidebar
+  // For all other super admin pages, show the sidebar
   return <AdminSidebar>{children}</AdminSidebar>;
 }

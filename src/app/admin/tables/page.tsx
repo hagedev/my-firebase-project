@@ -9,7 +9,7 @@ export default function TablesPage() {
                 <CardHeader>
                     <CardTitle>Manage Tables</CardTitle>
                     <CardDescription>View and manage all tables across all tenants.</CardDescription>
-                </CardHeader>
+                </Header>
                 <CardContent>
                     <p>Table management will be implemented here.</p>
                 </CardContent>

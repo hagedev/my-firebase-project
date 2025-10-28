@@ -59,9 +59,9 @@ export default function SuperAdminRegisterPage() {
         .then(() => {
             toast({
                 title: 'Pendaftaran Berhasil',
-                description: 'Akun super admin telah dibuat. Anda akan diarahkan ke halaman login.',
+                description: 'Akun super admin telah dibuat. Anda akan diarahkan ke dasbor.',
             });
-            router.push(`/admin/login`);
+            router.push(`/admin`);
         })
         .catch(async (serverError) => {
             // Firestore write failed, so we need to roll back user creation.

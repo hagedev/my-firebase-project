@@ -1,14 +1,15 @@
 'use client';
 
-import { useUser, useFirestore } from '@/firebase';
+import { useUser, useFirestore, useAuth } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { useRouter, usePathname, useParams } from 'next/navigation';
 import { useEffect, useState, ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
+export default function TenantAdminLayout({ children }: { children: ReactNode }) {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const auth = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const params = useParams();
@@ -31,45 +32,46 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         return;
       }
       
+      // First, check if user is a super admin. If so, they should be at the /admin dashboard.
       const superAdminRef = doc(firestore, `roles_superadmin/${user.uid}`);
       const superAdminSnap = await getDoc(superAdminRef);
 
       if (superAdminSnap.exists()) {
-        if (pathname === `/${tenantSlug}/admin/login`) {
-          router.replace(`/${tenantSlug}/admin/dashboard`);
-        } else {
-          setIsVerifying(false);
-        }
-      } else {
-        // Not a superadmin, check for tenant admin role
-        const userRef = doc(firestore, `users/${user.uid}`);
-        const userSnap = await getDoc(userRef);
+        router.replace(`/admin`);
+        return;
+      }
 
-        if (userSnap.exists()) {
-          const userData = userSnap.data();
+      // Not a superadmin, check for tenant admin role for THIS tenant.
+      const userRef = doc(firestore, `users/${user.uid}`);
+      const userSnap = await getDoc(userRef);
+
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        if (userData.role === 'admin_kafe') {
           const tenantRef = doc(firestore, `tenants/${userData.tenantId}`);
           const tenantSnap = await getDoc(tenantRef);
           
-          if (tenantSnap.exists() && tenantSnap.data().slug === tenantSlug && userData.role === 'admin_kafe') {
-            // Is a tenant admin for this tenant
-             if (pathname === `/${tenantSlug}/admin/login`) {
+          if (tenantSnap.exists() && tenantSnap.data().slug === tenantSlug) {
+            // This is the correct tenant admin for this slug.
+            if (pathname === `/${tenantSlug}/admin/login`) {
                 router.replace(`/${tenantSlug}/admin/dashboard`);
-             } else {
+            } else {
                 setIsVerifying(false);
-             }
-             return;
+            }
+            return;
           }
         }
-        
-        // If not super admin or correct tenant admin, logout and redirect
-        await user.getIdToken(true); // force refresh token
-        router.replace(`/${tenantSlug}/admin/login`);
-        setIsVerifying(false);
       }
+        
+      // If they are not a super admin, and not the correct tenant admin for this slug,
+      // they don't have access.
+      await auth.signOut();
+      router.replace(`/${tenantSlug}/admin/login`);
+      setIsVerifying(false);
     };
 
     checkAdminStatus();
-  }, [user, isUserLoading, router, pathname, firestore, tenantSlug]);
+  }, [user, isUserLoading, router, pathname, firestore, tenantSlug, auth]);
 
   if (isVerifying) {
     return (
