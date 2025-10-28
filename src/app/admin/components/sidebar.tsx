@@ -23,15 +23,16 @@ import {
 import Logo from '@/components/Logo';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/firebase';
+import Link from 'next/link';
 
 const menuItems = [
-  { href: '/admin', label: 'Dashboard', icon: Home },
-  { href: '/admin/tenants', label: 'Tenants', icon: Building },
-  { href: '/admin/users', label: 'Users', icon: Users },
-  { href: '/admin/menus', label: 'Menus', icon: MenuSquare },
-  { href: '/admin/categories', label: 'Categories', icon: ClipboardList },
-  { href: '/admin/tables', label: 'Tables', icon: Table },
-  { href: '/admin/orders', label: 'Orders', icon: UtensilsCrossed },
+  { href: '/admin', label: 'Dasbor', icon: Home },
+  { href: '/admin/tenants', label: 'Tenant', icon: Building },
+  { href: '/admin/users', label: 'Pengguna', icon: Users },
+  { href: '/admin/menus', label: 'Menu', icon: MenuSquare },
+  { href: '/admin/categories', label: 'Kategori', icon: ClipboardList },
+  { href: '/admin/tables', label: 'Meja', icon: Table },
+  { href: '/admin/orders', label: 'Pesanan', icon: UtensilsCrossed },
 ];
 
 export function AdminSidebar({ children }: { children: React.ReactNode }) {
@@ -57,24 +58,25 @@ export function AdminSidebar({ children }: { children: React.ReactNode }) {
           <SidebarMenu>
             {menuItems.map((item) => (
               <SidebarMenuItem key={item.label}>
-                <SidebarMenuButton
-                  href={item.href}
-                  isActive={pathname === item.href}
-                  as="a"
-                  tooltip={{children: item.label}}
-                >
-                  <item.icon />
-                  <span>{item.label}</span>
-                </SidebarMenuButton>
+                <Link href={item.href} passHref legacyBehavior>
+                  <SidebarMenuButton
+                    as="a"
+                    isActive={pathname === item.href}
+                    tooltip={{children: item.label}}
+                  >
+                    <item.icon />
+                    <span>{item.label}</span>
+                  </SidebarMenuButton>
+                </Link>
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
         </SidebarContent>
         <SidebarMenu className="p-2 mt-auto">
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleLogout} tooltip={{children: "Logout"}}>
+            <SidebarMenuButton onClick={handleLogout} tooltip={{children: "Keluar"}}>
               <LogOut />
-              <span>Logout</span>
+              <span>Keluar</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

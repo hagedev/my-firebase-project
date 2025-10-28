@@ -51,52 +51,52 @@ export default function AdminDashboard() {
     return (
         <div className="container mx-auto p-4 md:p-8">
             <header className="mb-8">
-                <h1 className="text-3xl font-bold">Super Admin Dashboard</h1>
-                <p className="text-muted-foreground">Welcome back, {user?.email || 'Admin'}!</p>
+                <h1 className="text-3xl font-bold">Dasbor Super Admin</h1>
+                <p className="text-muted-foreground">Selamat datang kembali, {user?.email || 'Admin'}!</p>
             </header>
             <main>
                  {error && !loading && (
                     <Alert variant="destructive" className="mb-4">
                         <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Data Fetching Error</AlertTitle>
+                        <AlertTitle>Gagal Memuat Data</AlertTitle>
                         <AlertDescription>
-                           Could not load dashboard stats. This is likely a Firestore security rule issue.
+                           Tidak dapat memuat statistik dasbor. Ini kemungkinan besar masalah aturan keamanan Firestore.
                         </AlertDescription>
                     </Alert>
                 )}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                    <StatCard 
-                        title="Total Tenants"
+                        title="Total Tenant"
                         value={stats?.tenants}
                         icon={Building}
-                        description="Data fetching disabled"
+                        description="Pengambilan data dinonaktifkan"
                    />
                    <StatCard 
-                        title="Total Users"
+                        title="Total Pengguna"
                         value={stats?.users}
                         icon={Users}
-                        description="Data fetching disabled"
+                        description="Pengambilan data dinonaktifkan"
                    />
                     <StatCard 
-                        title="Total Menus"
+                        title="Total Menu"
                         value={stats?.menus}
                         icon={MenuSquare}
-                        description="Data fetching disabled"
+                        description="Pengambilan data dinonaktifkan"
                    />
                    <StatCard 
-                        title="Total Orders"
+                        title="Total Pesanan"
                         value={stats?.orders}
                         icon={UtensilsCrossed}
-                        description="Data fetching disabled"
+                        description="Pengambilan data dinonaktifkan"
                    />
                 </div>
                 <div className="mt-8">
                      <Card>
                         <CardHeader>
-                            <CardTitle>Recent Activity</CardTitle>
+                            <CardTitle>Aktivitas Terkini</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-muted-foreground">No recent activity to display.</p>
+                            <p className="text-muted-foreground">Tidak ada aktivitas terkini untuk ditampilkan.</p>
                         </CardContent>
                     </Card>
                 </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -44,7 +44,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -178,7 +177,7 @@ export default function TenantsPage() {
       setIsFormOpen(false);
       setSelectedTenant(null);
     } catch (e: any) {
-        console.error('Failed to save tenant:', e);
+        console.error('Gagal menyimpan tenant:', e);
         const path = selectedTenant ? `tenants/${selectedTenant.id}` : 'tenants';
         const operation = selectedTenant ? 'update' : 'create';
         
@@ -203,7 +202,7 @@ export default function TenantsPage() {
       setIsAlertOpen(false);
       setSelectedTenant(null);
     } catch (e: any) {
-        console.error('Failed to delete tenant:', e);
+        console.error('Gagal menghapus tenant:', e);
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: `tenants/${selectedTenant.id}`,
             operation: 'delete',
@@ -228,7 +227,7 @@ export default function TenantsPage() {
                 <FileWarning className="mx-auto h-12 w-12 text-destructive" />
                 <h3 className="mt-4 text-lg font-semibold text-destructive">Gagal Memuat Data</h3>
                 <p className="mt-2 text-sm text-destructive/80">
-                    Terjadi kesalahan saat mengambil data tenants. Ini kemungkinan besar disebabkan oleh masalah izin Firestore.
+                    Terjadi kesalahan saat mengambil data tenant. Ini kemungkinan besar disebabkan oleh masalah izin Firestore.
                 </p>
             </div>
         );
@@ -298,7 +297,7 @@ export default function TenantsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>Manage Tenants</CardTitle>
+              <CardTitle>Kelola Tenant</CardTitle>
               <CardDescription>
                 Buat, lihat, dan kelola tenant kafe Anda.
               </CardDescription>
