@@ -56,7 +56,8 @@ export function TenantAdminSidebar({ children }: { children: React.ReactNode }) 
           <SidebarMenu>
             {menuItems.map((item) => (
               <SidebarMenuItem key={item.label}>
-                <Link href={item.href} passHref legacyBehavior={false} asChild>
+                <Link href={item.href} passHref legacyBehavior>
+                  <a className="block">
                     <SidebarMenuButton
                         isActive={pathname === item.href}
                         tooltip={{children: item.label}}
@@ -64,6 +65,7 @@ export function TenantAdminSidebar({ children }: { children: React.ReactNode }) 
                         <item.icon />
                         <span>{item.label}</span>
                     </SidebarMenuButton>
+                  </a>
                 </Link>
               </SidebarMenuItem>
             ))}
