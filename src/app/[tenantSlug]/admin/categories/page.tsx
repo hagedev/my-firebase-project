@@ -120,6 +120,7 @@ function CategoryList({ firestore, tenantId }: { firestore: Firestore, tenantId:
   };
 
   const onSubmit = async (data: CategoryFormValues) => {
+    if (!categoriesRef) return;
     setIsSubmitting(true);
     const categoryData = { name: data.name };
 
