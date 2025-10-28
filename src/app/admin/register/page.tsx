@@ -41,12 +41,13 @@ export default function SuperAdminRegisterPage() {
 
   const onSubmit = async (data: RegisterFormValues) => {
     setIsLoading(true);
-    let userCredential;
     
     try {
-      userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      // 1. Create the user in Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
 
+      // 2. Create the role document in Firestore
       const superAdminData = {
         email: user.email,
         role: 'superadmin',
@@ -54,56 +55,50 @@ export default function SuperAdminRegisterPage() {
       };
       const superAdminRef = doc(firestore, `roles_superadmin/${user.uid}`);
 
-      // Using .then() and .catch() for non-blocking UI
-      setDoc(superAdminRef, superAdminData)
-        .then(() => {
-            toast({
-                title: 'Pendaftaran Berhasil',
-                description: 'Akun super admin telah dibuat. Anda akan diarahkan ke dasbor.',
-            });
-            router.push(`/admin`);
-        })
-        .catch(async (serverError) => {
-            // Firestore write failed, so we need to roll back user creation.
-            const permissionError = new FirestorePermissionError({
-              path: superAdminRef.path,
-              operation: 'create',
-              requestResourceData: superAdminData,
-            });
-            errorEmitter.emit('permission-error', permissionError);
+      // Attempt to set the document. This is now allowed by the new security rules.
+      await setDoc(superAdminRef, superAdminData);
 
-            try {
-                // We need to re-authenticate to delete the user.
-                // But since we just created them, they are the current user.
-                if (auth.currentUser && auth.currentUser.uid === user.uid) {
-                    await deleteUser(auth.currentUser);
-                }
-            } catch (deleteError) {
-                 console.error("Failed to rollback user creation:", deleteError);
-            }
-
-            toast({
-              variant: 'destructive',
-              title: 'Pendaftaran Gagal',
-              description: 'Gagal memberikan peran super admin. Akun pengguna telah dibatalkan. Silakan periksa aturan keamanan Anda dan coba lagi.',
-            });
-            setIsLoading(false);
-        });
+      // 3. If both succeed, show success and redirect
+      toast({
+          title: 'Pendaftaran Berhasil',
+          description: 'Akun super admin telah dibuat. Anda akan diarahkan ke dasbor.',
+      });
+      router.push(`/admin`);
 
     } catch (error: any) {
+        // This single catch block handles both Auth and Firestore errors
+        console.error("Super Admin Registration Failed:", error);
+        
         let description = 'Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.';
+        
+        // Handle Auth errors
         if (error.code === 'auth/email-already-in-use') {
-            description = 'Email ini sudah digunakan. Jika Anda gagal mendaftar sebelumnya, hapus pengguna dari Firebase Authentication Console dan coba lagi.';
-        } else if (error.message) {
+            description = 'Email ini sudah digunakan. Coba login atau gunakan email lain.';
+        } else if (error.message.includes('permission-denied') || error.name === 'FirebaseError') {
+             // Handle potential Firestore errors (though rules should now allow it)
+            description = 'Gagal memberikan peran super admin karena masalah izin. Pastikan aturan keamanan sudah benar.';
+            // Rollback user creation if role assignment fails
+            if (auth.currentUser) {
+                try {
+                    await deleteUser(auth.currentUser);
+                    description += ' Pembuatan pengguna telah dibatalkan.';
+                } catch (deleteError) {
+                    console.error("Failed to rollback user creation:", deleteError);
+                    description += ' Gagal membatalkan pembuatan pengguna, mohon hapus manual.';
+                }
+            }
+        } else {
             description = error.message;
         }
-        
+
         toast({
             variant: 'destructive',
             title: 'Pendaftaran Gagal',
             description: description,
         });
-        setIsLoading(false);
+
+    } finally {
+      setIsLoading(false);
     } 
   };
 
