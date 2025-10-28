@@ -122,10 +122,9 @@ function CategoryList({ firestore, tenantId }: { firestore: Firestore, tenantId:
   const onSubmit = async (data: CategoryFormValues) => {
     if (!categoriesRef) return;
     setIsSubmitting(true);
-    const categoryData = { name: data.name };
+    const categoryData = { name: data.name, tenantId };
 
     if (selectedCategory) {
-      // Perbarui kategori yang ada
       const docRef = doc(firestore, `tenants/${tenantId}/categories`, selectedCategory.id);
       updateDoc(docRef, categoryData)
         .then(() => {
@@ -141,8 +140,7 @@ function CategoryList({ firestore, tenantId }: { firestore: Firestore, tenantId:
         })
         .finally(() => setIsSubmitting(false));
     } else {
-      // Buat kategori baru
-      addDoc(categoriesRef, { ...categoryData, tenantId, order: (categories?.length ?? 0) + 1 })
+      addDoc(categoriesRef, { ...categoryData, order: (categories?.length ?? 0) + 1 })
         .then(() => {
           toast({ title: 'Berhasil', description: 'Kategori baru berhasil ditambahkan.' });
           setIsFormOpen(false);
@@ -151,14 +149,14 @@ function CategoryList({ firestore, tenantId }: { firestore: Firestore, tenantId:
           errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: categoriesRef.path,
             operation: 'create',
-            requestResourceData: categoryData,
+            requestResourceData: { ...categoryData, order: (categories?.length ?? 0) + 1 },
           }));
         })
         .finally(() => setIsSubmitting(false));
     }
   };
 
-  const handleDelete = useCallback(async () => {
+  const handleDelete = async () => {
     if (!selectedCategory) return;
     setIsSubmitting(true);
     const docRef = doc(firestore, `tenants/${tenantId}/categories`, selectedCategory.id);
@@ -175,7 +173,7 @@ function CategoryList({ firestore, tenantId }: { firestore: Firestore, tenantId:
             }));
         })
         .finally(() => setIsSubmitting(false));
-  }, [selectedCategory, firestore, toast, tenantId]);
+  };
 
   const renderContent = () => {
     if (isLoading) {
@@ -340,27 +338,29 @@ export default function TenantCategoriesPage() {
         const fetchTenant = async () => {
             if (!firestore || !tenantSlug) return;
             setIsLoading(true);
-            try {
-                const tenantsRef = collection(firestore, 'tenants');
-                const q = query(tenantsRef, where("slug", "==", tenantSlug));
-                const querySnapshot = await getDocs(q);
-
-                if (querySnapshot.empty) {
-                    setError(`Tenant dengan slug "${tenantSlug}" tidak ditemukan.`);
-                } else {
-                    const tenantDoc = querySnapshot.docs[0];
-                    setTenant({ id: tenantDoc.id, name: tenantDoc.data().nama });
-                }
-            } catch (e: any) {
-                setError("Gagal memuat data tenant. Kemungkinan karena masalah izin.");
-                const permissionError = new FirestorePermissionError({
-                    path: 'tenants',
-                    operation: 'list',
+            const tenantsRef = collection(firestore, 'tenants');
+            const q = query(tenantsRef, where("slug", "==", tenantSlug));
+            
+            getDocs(q)
+                .then(querySnapshot => {
+                    if (querySnapshot.empty) {
+                        setError(`Tenant dengan slug "${tenantSlug}" tidak ditemukan.`);
+                    } else {
+                        const tenantDoc = querySnapshot.docs[0];
+                        setTenant({ id: tenantDoc.id, name: tenantDoc.data().nama });
+                    }
+                })
+                .catch(() => {
+                    setError("Gagal memuat data tenant. Kemungkinan karena masalah izin.");
+                    const permissionError = new FirestorePermissionError({
+                        path: tenantsRef.path,
+                        operation: 'list',
+                    });
+                    errorEmitter.emit('permission-error', permissionError);
+                })
+                .finally(() => {
+                    setIsLoading(false);
                 });
-                errorEmitter.emit('permission-error', permissionError);
-            } finally {
-                setIsLoading(false);
-            }
         };
 
         fetchTenant();
