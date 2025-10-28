@@ -19,7 +19,7 @@ export default function Home() {
             className="text-white hover:bg-white/10 hover:text-white"
             asChild
           >
-            <Link href="/admin/login">Admin Login</Link>
+            <Link href="/air-cafe-demo/admin/login">Admin Login</Link>
           </Button>
         </div>
       </header>
@@ -55,12 +55,6 @@ export default function Home() {
               <Link href="/air-cafe-demo/meja/5">
                 <Coffee className="mr-2" />
                 View Demo Menu
-              </Link>
-            </Button>
-            <Button size="lg" variant="secondary" asChild>
-              <Link href="/admin/register">
-                <ShieldCheck className="mr-2" />
-                Create Super Admin
               </Link>
             </Button>
           </div>

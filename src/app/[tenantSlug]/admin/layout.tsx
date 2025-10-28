@@ -33,14 +33,6 @@ export default function TenantAdminLayout({ children }: { children: ReactNode })
         return;
       }
       
-      const superAdminRef = doc(firestore, `roles_superadmin/${user.uid}`);
-      const superAdminSnap = await getDoc(superAdminRef);
-
-      if (superAdminSnap.exists()) {
-        router.replace(`/admin`);
-        return;
-      }
-
       const userRef = doc(firestore, `users/${user.uid}`);
       const userSnap = await getDoc(userRef);
 

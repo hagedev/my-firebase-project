@@ -55,8 +55,8 @@
         },
         "role": {
           "type": "string",
-          "enum": ["superadmin", "admin_kafe"],
-          "description": "The role of the user (e.g., superadmin, admin_kafe)."
+          "enum": ["admin_kafe"],
+          "description": "The role of the user (e.g., admin_kafe)."
         },
         "email": {
           "type": "string",
@@ -296,13 +296,6 @@
         "definition": {
           "schema": { "$ref": "#/entities/User" },
           "description": "Stores user profiles, including role and tenant assignment."
-        }
-      },
-      {
-        "path": "/roles_superadmin/{userId}",
-        "definition": {
-          "schema": { "$ref": "#/entities/User" },
-          "description": "Collection to store superadmin user IDs for role-based access control (RBAC). Existence of a document denotes superadmin privileges."
         }
       },
       {

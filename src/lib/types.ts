@@ -10,7 +10,7 @@ export interface Tenant {
 export interface User {
   id: string;
   email: string;
-  role: 'superadmin' | 'admin_kafe';
+  role: 'admin_kafe';
   tenantId?: string;
   tenantName?: string; // For display purposes
 }
