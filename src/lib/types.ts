@@ -1,11 +1,20 @@
 export interface Tenant {
   id: string;
-  name: string;
+  nama: string;
   slug: string;
   logoUrl: string;
   qrisImageUrl: string;
-  dailyToken: string;
+  tokenHarian: string;
 }
+
+export interface User {
+  id: string;
+  email: string;
+  role: 'superadmin' | 'admin_kafe';
+  tenantId?: string;
+  tenantName?: string; // For display purposes
+}
+
 
 export interface Category {
   id: string;
