@@ -5,6 +5,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { useRouter, usePathname, useParams } from 'next/navigation';
 import { useEffect, useState, ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
+import { TenantAdminSidebar } from './components/sidebar';
 
 export default function TenantAdminLayout({ children }: { children: ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -32,7 +33,6 @@ export default function TenantAdminLayout({ children }: { children: ReactNode })
         return;
       }
       
-      // First, check if user is a super admin. If so, they should be at the /admin dashboard.
       const superAdminRef = doc(firestore, `roles_superadmin/${user.uid}`);
       const superAdminSnap = await getDoc(superAdminRef);
 
@@ -41,7 +41,6 @@ export default function TenantAdminLayout({ children }: { children: ReactNode })
         return;
       }
 
-      // Not a superadmin, check for tenant admin role for THIS tenant.
       const userRef = doc(firestore, `users/${user.uid}`);
       const userSnap = await getDoc(userRef);
 
@@ -52,7 +51,6 @@ export default function TenantAdminLayout({ children }: { children: ReactNode })
           const tenantSnap = await getDoc(tenantRef);
           
           if (tenantSnap.exists() && tenantSnap.data().slug === tenantSlug) {
-            // This is the correct tenant admin for this slug.
             if (pathname === `/${tenantSlug}/admin/login`) {
                 router.replace(`/${tenantSlug}/admin/dashboard`);
             } else {
@@ -63,8 +61,6 @@ export default function TenantAdminLayout({ children }: { children: ReactNode })
         }
       }
         
-      // If they are not a super admin, and not the correct tenant admin for this slug,
-      // they don't have access.
       await auth.signOut();
       router.replace(`/${tenantSlug}/admin/login`);
       setIsVerifying(false);
@@ -81,5 +77,9 @@ export default function TenantAdminLayout({ children }: { children: ReactNode })
     );
   }
 
-  return <>{children}</>;
+  if (pathname === `/${tenantSlug}/admin/login`) {
+    return <>{children}</>;
+  }
+
+  return <TenantAdminSidebar>{children}</TenantAdminSidebar>;
 }
