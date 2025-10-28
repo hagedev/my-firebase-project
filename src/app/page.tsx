@@ -14,7 +14,7 @@ export default function Home() {
         <div className="container mx-auto flex items-center justify-between">
           <Logo />
           <Button variant="ghost" className="text-white hover:bg-white/10 hover:text-white" asChild>
-            <Link href="/air-cafe-demo/admin/login">Admin Login</Link>
+            <Link href="/admin/login">Admin Login</Link>
           </Button>
         </div>
       </header>

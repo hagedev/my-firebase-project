@@ -59,7 +59,7 @@ export default function SuperAdminRegisterPage() {
                 title: 'Pendaftaran Berhasil',
                 description: 'Akun super admin telah dibuat. Anda akan diarahkan ke halaman login.',
             });
-            router.push(`/air-cafe-demo/admin/login`);
+            router.push(`/admin/login`);
         })
         .catch(async (serverError) => {
             // Firestore write failed, so we need to roll back user creation.
