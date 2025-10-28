@@ -41,9 +41,10 @@ export default function SuperAdminRegisterPage() {
 
   const onSubmit = async (data: RegisterFormValues) => {
     setIsLoading(true);
+    let userCredential;
     
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
 
       const superAdminData = {
@@ -53,6 +54,7 @@ export default function SuperAdminRegisterPage() {
       };
       const superAdminRef = doc(firestore, `roles_superadmin/${user.uid}`);
 
+      // Using .then() and .catch() for non-blocking UI
       setDoc(superAdminRef, superAdminData)
         .then(() => {
             toast({
@@ -71,6 +73,8 @@ export default function SuperAdminRegisterPage() {
             errorEmitter.emit('permission-error', permissionError);
 
             try {
+                // We need to re-authenticate to delete the user.
+                // But since we just created them, they are the current user.
                 if (auth.currentUser && auth.currentUser.uid === user.uid) {
                     await deleteUser(auth.currentUser);
                 }

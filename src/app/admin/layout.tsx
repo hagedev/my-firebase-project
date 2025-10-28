@@ -58,7 +58,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           }
         }
         
-        // If not super admin or tenant admin, deny access
+        // If not super admin or tenant admin, deny access by signing out
         await auth.signOut();
         router.replace('/admin/login');
         setIsVerifying(false);
@@ -77,9 +77,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     );
   }
   
+  // If we are on login or register, don't show the sidebar
   if (pathname === '/admin/login' || pathname === '/admin/register') {
     return <>{children}</>;
   }
 
+  // For all other admin pages, show the sidebar
   return <AdminSidebar>{children}</AdminSidebar>;
 }

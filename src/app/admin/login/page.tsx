@@ -45,7 +45,7 @@ export default function AdminLoginPage() {
         title: 'Login Successful',
         description: 'Redirecting to dashboard...',
       });
-      router.push('/admin');
+      router.push('/admin'); // Redirect to super admin dashboard
     } catch (error: any) {
       console.error('Login failed:', error);
       toast({
@@ -68,8 +68,8 @@ export default function AdminLoginPage() {
         </div>
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl">Admin Login</CardTitle>
-            <CardDescription>Enter your credentials to access the admin dashboard.</CardDescription>
+            <CardTitle className="text-2xl">Super Admin Login</CardTitle>
+            <CardDescription>Enter your credentials to access the super admin dashboard.</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
@@ -81,7 +81,7 @@ export default function AdminLoginPage() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input placeholder="admin@air.cafe" {...field} />
+                        <Input placeholder="superadmin@air.cafe" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
