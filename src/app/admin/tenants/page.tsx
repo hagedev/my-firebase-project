@@ -82,14 +82,14 @@ import {
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const tenantSchema = z.object({
-  name: z.string().min(3, { message: 'Nama tenant minimal 3 karakter.' }),
+  nama: z.string().min(3, { message: 'Nama tenant minimal 3 karakter.' }),
 });
 
 type TenantFormValues = z.infer<typeof tenantSchema>;
 
 type Tenant = {
   id: string;
-  name: string;
+  nama: string;
   slug: string;
   tokenHarian: string;
   logoUrl: string;
@@ -120,19 +120,19 @@ export default function TenantsPage() {
   const firestore = useFirestore();
 
   const tenantsRef = collection(firestore, 'tenants');
-  const tenantsQuery = useMemoFirebase(() => query(tenantsRef, orderBy('name', 'asc')), [tenantsRef]);
+  const tenantsQuery = useMemoFirebase(() => query(tenantsRef, orderBy('nama', 'asc')), [tenantsRef]);
   const { data: tenants, isLoading, error } = useCollection<Tenant>(tenantsQuery);
 
   const form = useForm<TenantFormValues>({
     resolver: zodResolver(tenantSchema),
     defaultValues: {
-      name: '',
+      nama: '',
     },
   });
 
   const handleDialogOpen = (tenant: Tenant | null) => {
     setSelectedTenant(tenant);
-    form.reset(tenant ? { name: tenant.name } : { name: '' });
+    form.reset(tenant ? { nama: tenant.nama } : { nama: '' });
     setIsFormOpen(true);
   };
 
@@ -143,14 +143,14 @@ export default function TenantsPage() {
 
   const onSubmit = async (data: TenantFormValues) => {
     setIsSubmitting(true);
-    const slug = createSlug(data.name);
+    const slug = createSlug(data.nama);
     const logoPlaceholder = PlaceHolderImages.find(p => p.id === 'cafe-logo');
     const qrisPlaceholder = PlaceHolderImages.find(p => p.id === 'qris-code');
 
     const tenantData = {
-        name: data.name,
+        nama: data.nama,
         slug: slug,
-        logoUrl: logoPlaceholder?.imageUrl || `https://placehold.co/100x100?text=${data.name}`,
+        logoUrl: logoPlaceholder?.imageUrl || `https://placehold.co/100x100?text=${data.nama}`,
         qrisImageUrl: qrisPlaceholder?.imageUrl || 'https://placehold.co/400x400?text=QRIS',
         tokenHarian: generateDailyToken(),
         updatedAt: serverTimestamp(),
@@ -161,7 +161,7 @@ export default function TenantsPage() {
         // Update existing tenant
         const docRef = doc(firestore, 'tenants', selectedTenant.id);
         await updateDoc(docRef, {
-            name: tenantData.name,
+            nama: tenantData.nama,
             slug: tenantData.slug,
             updatedAt: tenantData.updatedAt
         });
@@ -257,7 +257,7 @@ export default function TenantsPage() {
         <TableBody>
           {tenants.map((tenant) => (
             <TableRow key={tenant.id}>
-              <TableCell className="font-medium">{tenant.name}</TableCell>
+              <TableCell className="font-medium">{tenant.nama}</TableCell>
               <TableCell className="text-muted-foreground">/{tenant.slug}</TableCell>
               <TableCell className="font-mono text-primary">{tenant.tokenHarian}</TableCell>
               <TableCell className="text-right">
@@ -324,7 +324,7 @@ export default function TenantsPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
               <FormField
                 control={form.control}
-                name="name"
+                name="nama"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Nama Tenant (Kafe)</FormLabel>
@@ -357,7 +357,7 @@ export default function TenantsPage() {
             <AlertDialogHeader>
                 <AlertDialogTitle>Apakah Anda yakin?</AlertDialogTitle>
                 <AlertDialogDescription>
-                    Tindakan ini akan menghapus tenant &quot;{selectedTenant?.name}&quot; secara permanen. Tindakan ini tidak dapat dibatalkan.
+                    Tindakan ini akan menghapus tenant &quot;{selectedTenant?.nama}&quot; secara permanen. Tindakan ini tidak dapat dibatalkan.
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
