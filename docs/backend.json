@@ -10,9 +10,9 @@
           "type": "string",
           "description": "Unique identifier for the tenant entity."
         },
-        "name": {
+        "nama": {
           "type": "string",
-          "description": "The name of the cafe."
+          "description": "The name of the cafe. 'nama' instead of 'name'."
         },
         "slug": {
           "type": "string",
@@ -34,7 +34,7 @@
         }
       },
       "required": [
-        "name",
+        "nama",
         "slug",
         "tokenHarian"
       ]
@@ -55,6 +55,7 @@
         },
         "role": {
           "type": "string",
+          "enum": ["superadmin", "admin_kafe"],
           "description": "The role of the user (e.g., superadmin, admin_kafe)."
         },
         "email": {
@@ -104,13 +105,21 @@
           "type": "number",
           "description": "The price of the menu item."
         },
-        "stockStatus": {
-          "type": "string",
-          "enum": [
-            "Available",
-            "Out of Stock"
-          ],
-          "description": "The stock status of the menu item (e.g., Available, Out of Stock)."
+        "isAvailable": {
+            "type": "boolean",
+            "description": "The availability status of the menu item"
+        },
+        "variants": {
+            "type": "array",
+            "description": "List of variants for the menu item.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "additionalPrice": {"type": "number"}
+                },
+                "required": ["name", "additionalPrice"]
+            }
         }
       },
       "required": [
@@ -118,7 +127,7 @@
         "categoryId",
         "name",
         "price",
-        "stockStatus"
+        "isAvailable"
       ]
     },
     "Category": {
@@ -138,6 +147,10 @@
         "name": {
           "type": "string",
           "description": "The name of the category."
+        },
+        "order": {
+            "type": "number",
+            "description": "The display order of the category."
         }
       },
       "required": [
@@ -169,27 +182,15 @@
           "items": {
             "type": "object",
             "properties": {
-              "menuId": {
-                "type": "string"
-              },
-              "name": {
-                "type": "string"
-              },
-              "quantity": {
-                "type": "number"
-              },
-              "price": {
-                "type": "number"
-              },
+              "menuId": { "type": "string" },
+              "name": { "type": "string" },
+              "quantity": { "type": "number" },
+              "price": { "type": "number" },
               "variant": {
                 "type": "object",
                 "properties": {
-                  "name": {
-                    "type": "string"
-                  },
-                  "additionalPrice": {
-                    "type": "number"
-                  }
+                  "name": { "type": "string" },
+                  "additionalPrice": { "type": "number" }
                 }
               }
             },
@@ -207,29 +208,17 @@
         },
         "paymentMethod": {
           "type": "string",
-          "enum": [
-            "Cash",
-            "QRIS"
-          ],
+          "enum": [ "Cash", "QRIS" ],
           "description": "The payment method used for the order (e.g., Cash, QRIS)."
         },
         "paymentStatus": {
           "type": "string",
-          "enum": [
-            "Unpaid",
-            "Paid"
-          ],
+          "enum": [ "Unpaid", "Paid" ],
           "description": "The payment status of the order (e.g., Unpaid, Paid)."
         },
-        "orderStatus": {
+        "status": {
           "type": "string",
-          "enum": [
-            "Received",
-            "Preparing",
-            "Ready",
-            "Completed",
-            "Cancelled"
-          ],
+          "enum": [ "Received", "Preparing", "Ready", "Completed", "Cancelled" ],
           "description": "The status of the order (e.g., Received, Preparing, Ready)."
         },
         "verificationToken": {
@@ -252,7 +241,7 @@
         "totalAmount",
         "paymentMethod",
         "paymentStatus",
-        "orderStatus",
+        "status",
         "verificationToken",
         "createdAt"
       ]
@@ -277,10 +266,7 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "Empty",
-            "Occupied"
-          ],
+          "enum": [ "Empty", "Occupied" ],
           "description": "The status of the table (e.g., Empty, Occupied)."
         }
       },
@@ -297,72 +283,56 @@
     ]
   },
   "firestore": {
-    "structure": [
+     "structure": [
       {
         "path": "/tenants/{tenantId}",
         "definition": {
-          "schema": {
-            "$ref": "#/entities/Tenant"
-          },
+          "schema": { "$ref": "#/entities/Tenant" },
           "description": "Stores cafe tenant profiles and configuration data."
         }
       },
       {
         "path": "/users/{userId}",
         "definition": {
-          "schema": {
-            "$ref": "#/entities/User"
-          },
+          "schema": { "$ref": "#/entities/User" },
           "description": "Stores user profiles, including role and tenant assignment."
         }
       },
       {
         "path": "/roles_superadmin/{userId}",
         "definition": {
-          "schema": {
-            "$ref": "#/entities/User"
-          },
+          "schema": { "$ref": "#/entities/User" },
           "description": "Collection to store superadmin user IDs for role-based access control (RBAC). Existence of a document denotes superadmin privileges."
         }
       },
       {
         "path": "/tenants/{tenantId}/menus/{menuId}",
         "definition": {
-          "schema": {
-            "$ref": "#/entities/Menu"
-          },
+          "schema": { "$ref": "#/entities/Menu" },
           "description": "Stores menu items for a specific tenant."
         }
       },
       {
         "path": "/tenants/{tenantId}/categories/{categoryId}",
         "definition": {
-          "schema": {
-            "$ref": "#/entities/Category"
-          },
+          "schema": { "$ref": "#/entities/Category" },
           "description": "Stores menu categories for a specific tenant."
         }
       },
       {
         "path": "/tenants/{tenantId}/orders/{orderId}",
         "definition": {
-          "schema": {
-            "$ref": "#/entities/Order"
-          },
+          "schema": { "$ref": "#/entities/Order" },
           "description": "Stores orders placed at a specific tenant."
         }
       },
       {
         "path": "/tenants/{tenantId}/tables/{tableId}",
         "definition": {
-          "schema": {
-            "$ref": "#/entities/Table"
-          },
+          "schema": { "$ref": "#/entities/Table" },
           "description": "Stores tables for a specific tenant."
         }
       }
     ]
   }
 }
-
-    
