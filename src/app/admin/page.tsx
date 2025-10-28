@@ -16,18 +16,16 @@ interface DashboardStats {
 
 // This is a more reliable way to get the path from a query, especially for collection groups.
 function getQueryPath(q: Query): string {
-    const internalQuery = (q as any)._query;
-    if (internalQuery) {
-        if (internalQuery.path) { // For regular collection queries
-            return internalQuery.path.canonicalString ? internalQuery.path.canonicalString() : internal-Query.path.toString();
-        }
-        if (internalQuery.collectionGroup) { // For collectionGroup queries
-            return `*/${internalQuery.collectionGroup}`;
-        }
+    if ((q as any)._query.collectionGroup) {
+        return `*/${(q as any)._query.collectionGroup}`;
     }
-    // Fallback if the internal structure changes, but this is much safer.
+    if ((q as any)._query.path) {
+        const path = (q as any)._query.path;
+        return path.canonicalString ? path.canonicalString() : path.toString();
+    }
     return 'unknown_firestore_path';
 }
+
 
 export default function AdminDashboard() {
     const { user } = useUser();
