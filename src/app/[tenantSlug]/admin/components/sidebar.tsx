@@ -30,11 +30,11 @@ export function TenantAdminSidebar({ children }: { children: React.ReactNode }) 
   const tenantSlug = params.tenantSlug as string;
 
   const menuItems = [
-    { href: `/${tenantSlug}/admin/dashboard`, label: 'Dashboard', icon: Home },
-    { href: `/${tenantSlug}/admin/menus`, label: 'Menus', icon: MenuSquare },
-    { href: `/${tenantSlug}/admin/categories`, label: 'Categories', icon: ClipboardList },
-    { href: `/${tenantSlug}/admin/tables`, label: 'Tables', icon: Table },
-    { href: `/${tenantSlug}/admin/orders`, label: 'Orders', icon: UtensilsCrossed },
+    { href: `/${tenantSlug}/admin/dashboard`, label: 'Dasbor', icon: Home },
+    { href: `/${tenantSlug}/admin/menus`, label: 'Menu', icon: MenuSquare },
+    { href: `/${tenantSlug}/admin/categories`, label: 'Kategori', icon: ClipboardList },
+    { href: `/${tenantSlug}/admin/tables`, label: 'Meja', icon: Table },
+    { href: `/${tenantSlug}/admin/orders`, label: 'Pesanan', icon: UtensilsCrossed },
   ];
 
   const handleLogout = async () => {
@@ -70,9 +70,9 @@ export function TenantAdminSidebar({ children }: { children: React.ReactNode }) 
         </SidebarContent>
         <SidebarMenu className="p-2 mt-auto">
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleLogout} tooltip={{children: "Logout"}}>
+            <SidebarMenuButton onClick={handleLogout} tooltip={{children: "Keluar"}}>
               <LogOut />
-              <span>Logout</span>
+              <span>Keluar</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

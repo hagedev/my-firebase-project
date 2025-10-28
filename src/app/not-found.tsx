@@ -9,14 +9,14 @@ export default function NotFound() {
         <Coffee className="h-16 w-16 text-primary" />
         <div>
           <h1 className="font-headline text-5xl font-bold text-primary">404</h1>
-          <p className="text-lg text-muted-foreground">Page Not Found</p>
+          <p className="text-lg text-muted-foreground">Halaman Tidak Ditemukan</p>
         </div>
       </div>
       <p className="max-w-md text-muted-foreground">
-        It seems you've wandered off the menu. The page you're looking for doesn't exist.
+        Sepertinya Anda keluar dari menu. Halaman yang Anda cari tidak ada.
       </p>
       <Button asChild>
-        <Link href="/">Return to Homepage</Link>
+        <Link href="/">Kembali ke Beranda</Link>
       </Button>
     </main>
   )

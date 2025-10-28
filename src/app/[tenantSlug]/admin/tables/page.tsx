@@ -11,11 +11,11 @@ export default function TenantTablesPage() {
         <div className="container mx-auto p-4 md:p-8">
             <Card>
                 <CardHeader>
-                    <CardTitle>Manage Tables</CardTitle>
-                    <CardDescription>View, create, and manage your tables for {tenantSlug}.</CardDescription>
+                    <CardTitle>Kelola Meja</CardTitle>
+                    <CardDescription>Lihat, buat, dan kelola meja Anda untuk {tenantSlug}.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <p>Table management for {tenantSlug} will be implemented here.</p>
+                    <p>Manajemen meja untuk {tenantSlug} akan diimplementasikan di sini.</p>
                 </CardContent>
             </Card>
         </div>

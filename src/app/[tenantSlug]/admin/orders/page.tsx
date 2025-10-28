@@ -11,11 +11,11 @@ export default function TenantOrdersPage() {
         <div className="container mx-auto p-4 md:p-8">
             <Card>
                 <CardHeader>
-                    <CardTitle>Manage Orders</CardTitle>
-                    <CardDescription>View and manage incoming orders for {tenantSlug}.</CardDescription>
+                    <CardTitle>Kelola Pesanan</CardTitle>
+                    <CardDescription>Lihat dan kelola pesanan masuk untuk {tenantSlug}.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <p>Order management for {tenantSlug} will be implemented here.</p>
+                    <p>Manajemen pesanan untuk {tenantSlug} akan diimplementasikan di sini.</p>
                 </CardContent>
             </Card>
         </div>

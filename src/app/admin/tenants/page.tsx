@@ -7,11 +7,11 @@ export default function SuperAdminTenantsPage() {
         <div className="container mx-auto p-4 md:p-8">
             <Card>
                 <CardHeader>
-                    <CardTitle>Manage Tenants</CardTitle>
-                    <CardDescription>View, create, and manage cafe tenants.</CardDescription>
+                    <CardTitle>Kelola Tenant</CardTitle>
+                    <CardDescription>Lihat, buat, dan kelola tenant kafe.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <p>Tenant management will be implemented here.</p>
+                    <p>Manajemen tenant akan diimplementasikan di sini.</p>
                 </CardContent>
             </Card>
         </div>

@@ -19,11 +19,11 @@ export default function TenantAdminDashboard() {
     return (
         <div className="container mx-auto p-4">
             <header className="flex justify-between items-center mb-8">
-                <h1 className="text-3xl font-bold">Tenant Admin Dashboard</h1>
-                <Button onClick={handleLogout} variant="outline">Logout</Button>
+                <h1 className="text-3xl font-bold">Dasbor Admin Tenant</h1>
+                <Button onClick={handleLogout} variant="outline">Keluar</Button>
             </header>
             <main>
-                <p>Welcome to the Tenant Admin Dashboard for {tenantSlug}!</p>
+                <p>Selamat datang di Dasbor Admin Tenant untuk {tenantSlug}!</p>
             </main>
         </div>
     );

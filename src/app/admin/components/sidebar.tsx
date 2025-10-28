@@ -26,9 +26,9 @@ export function SuperAdminSidebar({ children }: { children: React.ReactNode }) {
   const auth = useAuth();
 
   const menuItems = [
-    { href: `/admin/dashboard`, label: 'Dashboard', icon: Home },
-    { href: `/admin/tenants`, label: 'Tenants', icon: Building },
-    { href: `/admin/users`, label: 'Users', icon: Users },
+    { href: `/admin/dashboard`, label: 'Dasbor', icon: Home },
+    { href: `/admin/tenants`, label: 'Tenant', icon: Building },
+    { href: `/admin/users`, label: 'Pengguna', icon: Users },
   ];
 
   const handleLogout = async () => {
@@ -64,9 +64,9 @@ export function SuperAdminSidebar({ children }: { children: React.ReactNode }) {
         </SidebarContent>
         <SidebarMenu className="p-2 mt-auto">
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleLogout} tooltip={{children: "Logout"}}>
+            <SidebarMenuButton onClick={handleLogout} tooltip={{children: "Keluar"}}>
               <LogOut />
-              <span>Logout</span>
+              <span>Keluar</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

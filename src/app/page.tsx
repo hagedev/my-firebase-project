@@ -19,7 +19,7 @@ export default function Home() {
             className="text-white hover:bg-white/10 hover:text-white"
             asChild
           >
-            <Link href="/air-cafe-demo/admin/login">Admin Login</Link>
+            <Link href="/air-cafe-demo/admin/login">Login Admin</Link>
           </Button>
         </div>
       </header>
@@ -40,11 +40,11 @@ export default function Home() {
 
         <div className="container mx-auto px-4 flex flex-col items-center gap-6">
           <h1 className="font-headline text-5xl md:text-7xl font-bold drop-shadow-lg">
-            Welcome to AirCafe
+            Selamat Datang di AirCafe
           </h1>
           <p className="max-w-2xl text-lg md:text-xl text-white/90 drop-shadow-md">
-            The seamless digital ordering experience your customers deserve.
-            Modern, efficient, and secure.
+            Pengalaman memesan digital yang mulus untuk pelanggan Anda.
+            Modern, efisien, dan aman.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
             <Button
@@ -54,7 +54,7 @@ export default function Home() {
             >
               <Link href="/air-cafe-demo/meja/5">
                 <Coffee className="mr-2" />
-                View Demo Menu
+                Lihat Menu Demo
               </Link>
             </Button>
           </div>
@@ -62,7 +62,7 @@ export default function Home() {
       </div>
       <footer className="bg-background border-t">
         <div className="container mx-auto py-6 text-center text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} AirCafe. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} AirCafe. Semua hak dilindungi.</p>
         </div>
       </footer>
     </main>

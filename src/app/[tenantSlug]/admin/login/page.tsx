@@ -17,8 +17,8 @@ import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 const loginSchema = z.object({
-  email: z.string().email({ message: 'Invalid email address.' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
+  email: z.string().email({ message: 'Alamat email tidak valid.' }),
+  password: z.string().min(6, { message: 'Kata sandi minimal harus 6 karakter.' }),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -44,16 +44,16 @@ export default function AdminLoginPage() {
     try {
       await signInWithEmailAndPassword(auth, data.email, data.password);
       toast({
-        title: 'Login Successful',
-        description: 'Redirecting to dashboard...',
+        title: 'Login Berhasil',
+        description: 'Mengarahkan ke dasbor...',
       });
       router.push(`/${tenantSlug}/admin/dashboard`);
     } catch (error: any) {
-      console.error('Login failed:', error);
+      console.error('Login gagal:', error);
       toast({
         variant: 'destructive',
-        title: 'Login Failed',
-        description: error.message || 'An unknown error occurred. Please try again.',
+        title: 'Login Gagal',
+        description: error.message || 'Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.',
       });
     } finally {
       setIsLoading(false);
@@ -70,8 +70,8 @@ export default function AdminLoginPage() {
         </div>
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl">Admin Login</CardTitle>
-            <CardDescription>Enter your credentials to access the admin dashboard.</CardDescription>
+            <CardTitle className="text-2xl">Login Admin</CardTitle>
+            <CardDescription>Masukkan kredensial Anda untuk mengakses dasbor admin.</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
@@ -94,7 +94,7 @@ export default function AdminLoginPage() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Password</FormLabel>
+                      <FormLabel>Kata Sandi</FormLabel>
                       <FormControl>
                         <Input type="password" placeholder="••••••••" {...field} />
                       </FormControl>

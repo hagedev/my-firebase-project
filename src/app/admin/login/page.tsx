@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -32,17 +32,16 @@ import Link from 'next/link';
 import { Separator } from '@/components/ui/separator';
 
 const loginSchema = z.object({
-  email: z.string().email({ message: 'Invalid email address.' }),
+  email: z.string().email({ message: 'Alamat email tidak valid.' }),
   password: z
     .string()
-    .min(6, { message: 'Password must be at least 6 characters.' }),
+    .min(6, { message: 'Kata sandi minimal harus 6 karakter.' }),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function AdminLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
   const { toast } = useToast();
   const auth = useAuth();
 
@@ -59,20 +58,20 @@ export default function AdminLoginPage() {
     try {
       await signInWithEmailAndPassword(auth, data.email, data.password);
       toast({
-        title: 'Login Successful',
-        description: 'Redirecting to dashboard...',
+        title: 'Login Berhasil',
+        description: 'Mengarahkan ke dasbor...',
       });
-      // The layout will handle redirection
+      // Layout akan menangani pengalihan
     } catch (error: any) {
-      console.error('Login failed:', error);
+      console.error('Login gagal:', error);
       toast({
         variant: 'destructive',
-        title: 'Login Failed',
+        title: 'Login Gagal',
         description:
           error.code === 'auth/invalid-credential'
-            ? 'Incorrect email or password.'
+            ? 'Email atau kata sandi salah.'
             : error.message ||
-              'An unknown error occurred. Please try again.',
+              'Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.',
       });
     } finally {
       setIsLoading(false);
@@ -89,9 +88,9 @@ export default function AdminLoginPage() {
         </div>
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl">Super Admin Login</CardTitle>
+            <CardTitle className="text-2xl">Login Super Admin</CardTitle>
             <CardDescription>
-              Enter your credentials to access the dashboard.
+              Masukkan kredensial Anda untuk mengakses dasbor.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -119,7 +118,7 @@ export default function AdminLoginPage() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Password</FormLabel>
+                      <FormLabel>Kata Sandi</FormLabel>
                       <FormControl>
                         <Input
                           type="password"
@@ -145,10 +144,10 @@ export default function AdminLoginPage() {
           <CardFooter className="flex flex-col items-center gap-4">
             <Separator />
             <p className="text-sm text-muted-foreground">
-              First time setup?
+              Pengaturan pertama kali?
             </p>
             <Button variant="outline" className="w-full" asChild>
-              <Link href="/admin/register">Register Initial Super Admin</Link>
+              <Link href="/admin/register">Daftarkan Super Admin Awal</Link>
             </Button>
           </CardFooter>
         </Card>

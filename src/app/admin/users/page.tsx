@@ -7,11 +7,11 @@ export default function SuperAdminUsersPage() {
         <div className="container mx-auto p-4 md:p-8">
             <Card>
                 <CardHeader>
-                    <CardTitle>Manage Users</CardTitle>
-                    <CardDescription>View, create, and manage all users.</CardDescription>
+                    <CardTitle>Kelola Pengguna</CardTitle>
+                    <CardDescription>Lihat, buat, dan kelola semua pengguna.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <p>User management will be implemented here.</p>
+                    <p>Manajemen pengguna akan diimplementasikan di sini.</p>
                 </CardContent>
             </Card>
         </div>

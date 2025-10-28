@@ -11,11 +11,11 @@ export default function TenantMenusPage() {
         <div className="container mx-auto p-4 md:p-8">
             <Card>
                 <CardHeader>
-                    <CardTitle>Manage Menus</CardTitle>
-                    <CardDescription>View, create, and manage your menu items for {tenantSlug}.</CardDescription>
+                    <CardTitle>Kelola Menu</CardTitle>
+                    <CardDescription>Lihat, buat, dan kelola item menu Anda untuk {tenantSlug}.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <p>Menu management for {tenantSlug} will be implemented here.</p>
+                    <p>Manajemen menu untuk {tenantSlug} akan diimplementasikan di sini.</p>
                 </CardContent>
             </Card>
         </div>

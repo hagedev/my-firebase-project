@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -10,7 +10,6 @@ import {
   updateDoc,
   deleteDoc,
   doc,
-  serverTimestamp,
   query,
   orderBy,
   where,
@@ -23,7 +22,6 @@ import {
   FirestorePermissionError,
   errorEmitter,
   useMemoFirebase,
-  useUser,
 } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import {
@@ -84,7 +82,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useParams } from 'next/navigation';
-import type { Category, Tenant } from '@/lib/types';
+import type { Category } from '@/lib/types';
 
 const categorySchema = z.object({
   name: z.string().min(3, { message: 'Nama kategori minimal 3 karakter.' }),
@@ -126,14 +124,14 @@ function CategoryList({ firestore, tenantId }: { firestore: Firestore, tenantId:
     const categoryData = { name: data.name };
 
     if (selectedCategory) {
-      // Update existing category
+      // Perbarui kategori yang ada
       const docRef = doc(firestore, `tenants/${tenantId}/categories`, selectedCategory.id);
       updateDoc(docRef, categoryData)
         .then(() => {
           toast({ title: 'Berhasil', description: 'Kategori berhasil diperbarui.' });
           setIsFormOpen(false);
         })
-        .catch(e => {
+        .catch(() => {
           errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'update',
@@ -142,13 +140,13 @@ function CategoryList({ firestore, tenantId }: { firestore: Firestore, tenantId:
         })
         .finally(() => setIsSubmitting(false));
     } else {
-      // Create new category
+      // Buat kategori baru
       addDoc(categoriesRef, { ...categoryData, tenantId, order: (categories?.length ?? 0) + 1 })
         .then(() => {
           toast({ title: 'Berhasil', description: 'Kategori baru berhasil ditambahkan.' });
           setIsFormOpen(false);
         })
-        .catch(e => {
+        .catch(() => {
           errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: categoriesRef.path,
             operation: 'create',
@@ -169,7 +167,7 @@ function CategoryList({ firestore, tenantId }: { firestore: Firestore, tenantId:
             toast({ title: 'Berhasil', description: 'Kategori berhasil dihapus.' });
             setIsAlertOpen(false);
         })
-        .catch(e => {
+        .catch(() => {
             errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: docRef.path,
                 operation: 'delete',
@@ -331,7 +329,6 @@ function CategoryList({ firestore, tenantId }: { firestore: Firestore, tenantId:
 export default function TenantCategoriesPage() {
     const firestore = useFirestore();
     const params = useParams();
-    const { user } = useUser();
     const [tenant, setTenant] = useState<{ id: string, name: string } | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -354,7 +351,7 @@ export default function TenantCategoriesPage() {
                     setTenant({ id: tenantDoc.id, name: tenantDoc.data().nama });
                 }
             } catch (e: any) {
-                console.error("Error fetching tenant:", e);
+                console.error("Gagal mengambil tenant:", e);
                 setError("Gagal memuat data tenant. Kemungkinan karena masalah izin.");
                 const permissionError = new FirestorePermissionError({
                     path: `tenants`,
@@ -393,7 +390,7 @@ export default function TenantCategoriesPage() {
     }
     
     if (!tenant) {
-        return null; // Should be handled by error state
+        return null; // Harus ditangani oleh state error
     }
 
     return (

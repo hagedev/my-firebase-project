@@ -36,14 +36,14 @@ import Link from 'next/link';
 
 const registerSchema = z
   .object({
-    email: z.string().email({ message: 'Invalid email address.' }),
+    email: z.string().email({ message: 'Alamat email tidak valid.' }),
     password: z
       .string()
-      .min(8, { message: 'Password must be at least 8 characters.' }),
+      .min(8, { message: 'Kata sandi minimal harus 8 karakter.' }),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match.",
+    message: "Kata sandi tidak cocok.",
     path: ['confirmPassword'],
   });
 
@@ -69,7 +69,7 @@ export default function RegisterSuperAdminPage() {
     setIsLoading(true);
 
     try {
-      // 1. Create user in Firebase Auth
+      // 1. Buat pengguna di Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         data.email,
@@ -78,12 +78,12 @@ export default function RegisterSuperAdminPage() {
       const user = userCredential.user;
 
       try {
-        // 2. Create documents in Firestore to assign role
+        // 2. Buat dokumen di Firestore untuk menetapkan peran
         const userDocRef = doc(firestore, 'users', user.uid);
         const roleDocRef = doc(firestore, 'roles_superadmin', user.uid);
 
-        // This should be a transaction, but for simplicity we do it sequentially.
-        // The security rules should prevent inconsistent states.
+        // Seharusnya ini transaksi, tapi untuk sederhana kita lakukan berurutan.
+        // Aturan keamanan harus mencegah keadaan yang tidak konsisten.
         await setDoc(userDocRef, {
           email: user.email,
           role: 'superadmin',
@@ -98,30 +98,31 @@ export default function RegisterSuperAdminPage() {
         await sendEmailVerification(user);
 
         toast({
-          title: 'Registration Successful',
+          title: 'Pendaftaran Berhasil',
           description:
-            'Super admin created. Please verify your email and then log in.',
+            'Super admin dibuat. Silakan verifikasi email Anda lalu login.',
         });
         router.push('/admin/login');
       } catch (firestoreError: any) {
-        // If Firestore fails, rollback Auth user creation
+        // Jika Firestore gagal, batalkan pembuatan pengguna Auth
         await deleteUser(user);
-        throw firestoreError; // Re-throw to be caught by the outer catch block
+        throw firestoreError; // Lemparkan lagi untuk ditangkap oleh blok catch luar
       }
-    } catch (error: any) {
-      console.error('Registration failed:', error);
+    } catch (error: any)
+{
+      console.error('Pendaftaran gagal:', error);
       let description =
-        error.message || 'An unknown error occurred. Please try again.';
+        error.message || 'Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.';
       if (error.code === 'auth/email-already-in-use') {
         description =
-          'This email is already in use. Please use a different email.';
+          'Email ini sudah digunakan. Silakan gunakan email lain.';
       } else if (error.code === 'permission-denied') {
         description =
-          'Cannot create super admin. An initial super admin may already exist.';
+          'Tidak dapat membuat super admin. Super admin awal mungkin sudah ada.';
       }
       toast({
         variant: 'destructive',
-        title: 'Registration Failed',
+        title: 'Pendaftaran Gagal',
         description,
       });
     } finally {
@@ -139,10 +140,9 @@ export default function RegisterSuperAdminPage() {
         </div>
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl">Initial Super Admin</CardTitle>
+            <CardTitle className="text-2xl">Super Admin Awal</CardTitle>
             <CardDescription>
-              Create the first super admin account for the application. This can
-              only be done once.
+              Buat akun super admin pertama untuk aplikasi. Ini hanya dapat dilakukan sekali.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -170,7 +170,7 @@ export default function RegisterSuperAdminPage() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Password</FormLabel>
+                      <FormLabel>Kata Sandi</FormLabel>
                       <FormControl>
                         <Input
                           type="password"
@@ -188,7 +188,7 @@ export default function RegisterSuperAdminPage() {
                   name="confirmPassword"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Confirm Password</FormLabel>
+                      <FormLabel>Konfirmasi Kata Sandi</FormLabel>
                       <FormControl>
                         <Input
                           type="password"
@@ -205,7 +205,7 @@ export default function RegisterSuperAdminPage() {
                   {isLoading ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
-                    'Create Super Admin'
+                    'Buat Super Admin'
                   )}
                 </Button>
               </form>
