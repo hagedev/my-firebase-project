@@ -21,6 +21,7 @@ import {
 import Logo from '@/components/Logo';
 import { usePathname, useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/firebase';
+import Link from 'next/link';
 
 export function TenantAdminSidebar({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -55,15 +56,15 @@ export function TenantAdminSidebar({ children }: { children: React.ReactNode }) 
           <SidebarMenu>
             {menuItems.map((item) => (
               <SidebarMenuItem key={item.label}>
-                <SidebarMenuButton
-                  href={item.href}
-                  isActive={pathname === item.href}
-                  as="a"
-                  tooltip={{children: item.label}}
-                >
-                  <item.icon />
-                  <span>{item.label}</span>
-                </SidebarMenuButton>
+                <Link href={item.href} passHref legacyBehavior={false} asChild>
+                    <SidebarMenuButton
+                        isActive={pathname === item.href}
+                        tooltip={{children: item.label}}
+                    >
+                        <item.icon />
+                        <span>{item.label}</span>
+                    </SidebarMenuButton>
+                </Link>
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
