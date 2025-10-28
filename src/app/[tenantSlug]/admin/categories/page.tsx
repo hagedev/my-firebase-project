@@ -351,10 +351,9 @@ export default function TenantCategoriesPage() {
                     setTenant({ id: tenantDoc.id, name: tenantDoc.data().nama });
                 }
             } catch (e: any) {
-                console.error("Gagal mengambil tenant:", e);
                 setError("Gagal memuat data tenant. Kemungkinan karena masalah izin.");
                 const permissionError = new FirestorePermissionError({
-                    path: `tenants`,
+                    path: 'tenants',
                     operation: 'list',
                 });
                 errorEmitter.emit('permission-error', permissionError);
