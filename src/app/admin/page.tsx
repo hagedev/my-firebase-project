@@ -37,7 +37,8 @@ export default function AdminDashboard() {
                     try {
                         return await getDocs(q);
                     } catch (err) {
-                        const path = (q as any)._query.path ? (q as any)._query.path.canonicalString() : (q as any).path || 'unknown path';
+                        // This is where we create and emit the detailed error
+                        const path = (q as any)._query?.path?.canonicalString() ?? 'unknown path';
                         const permissionError = new FirestorePermissionError({
                             path: path,
                             operation: operation,
