@@ -20,15 +20,13 @@ function getQueryPath(q: Query): string {
     if ((q as any)._query) {
         const queryInternal = (q as any)._query;
         if (queryInternal.path) {
+            // For normal collections, canonicalString is reliable
             return queryInternal.path.canonicalString ? queryInternal.path.canonicalString() : queryInternal.path.toString();
         }
         if (queryInternal.collectionGroup) {
-            return `*/${queryInternal.collectionGroup}`;
+            // For collectionGroup queries
+            return `collectionGroup(${queryInternal.collectionGroup})`;
         }
-    }
-    // Fallback for collection group queries specifically
-    if ((q as any)._query?.collectionGroup) {
-        return `collectionGroup(${ (q as any)._query.collectionGroup })`
     }
     return 'unknown_path';
 }
@@ -55,7 +53,7 @@ export default function AdminDashboard() {
                 const tenantsPromise = getDocs(tenantsQuery).catch(err => {
                     const permissionError = new FirestorePermissionError({ path: getQueryPath(tenantsQuery), operation: 'list' });
                     errorEmitter.emit('permission-error', permissionError);
-                    throw permissionError; // Re-throw the contextual error
+                    throw permissionError; 
                 });
 
                 const usersPromise = getDocs(usersQuery).catch(err => {
@@ -92,9 +90,8 @@ export default function AdminDashboard() {
                 
                 setStats(newStats);
 
-            } catch (error: any) {
-                // This block will now catch the re-thrown FirestorePermissionError
-                setError(error.message || "An error occurred while fetching data.");
+            } catch (err: any) {
+                setError(err.message || "An error occurred while fetching data.");
             } finally {
                 setLoading(false);
             }
@@ -134,7 +131,7 @@ export default function AdminDashboard() {
                 <p className="text-muted-foreground">Welcome back, {user?.email || 'Admin'}!</p>
             </header>
             <main>
-                 {error && (
+                 {error && !loading && (
                     <Alert variant="destructive" className="mb-4">
                         <AlertCircle className="h-4 w-4" />
                         <AlertTitle>Data Fetching Error</AlertTitle>
