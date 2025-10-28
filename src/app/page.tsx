@@ -19,7 +19,7 @@ export default function Home() {
             className="text-white hover:bg-white/10 hover:text-white"
             asChild
           >
-            <Link href="/air-cafe-demo/admin/login">Login Admin</Link>
+            <Link href="/admin/login">Login Admin</Link>
           </Button>
         </div>
       </header>
