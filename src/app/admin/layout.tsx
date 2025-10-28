@@ -1,6 +1,6 @@
 'use client';
 
-import { useUser, useFirestore } from '@/firebase';
+import { useUser, useFirestore, useAuth } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState, ReactNode } from 'react';
@@ -10,6 +10,7 @@ import { AdminSidebar } from './components/sidebar';
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const auth = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [isVerifying, setIsVerifying] = useState(true);
@@ -58,7 +59,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         }
         
         // If not super admin or tenant admin, deny access
-        await auth.signOut(); // using auth from useAuth()
+        await auth.signOut();
         router.replace('/admin/login');
         setIsVerifying(false);
 
@@ -66,7 +67,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     };
 
     checkAdminStatus();
-  }, [user, isUserLoading, router, pathname, firestore]);
+  }, [user, isUserLoading, router, pathname, firestore, auth]);
 
   if (isVerifying) {
     return (

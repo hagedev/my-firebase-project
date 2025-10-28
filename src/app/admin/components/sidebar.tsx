@@ -9,7 +9,6 @@ import {
   SidebarMenuButton,
   SidebarProvider,
   SidebarTrigger,
-  useSidebar,
 } from '@/components/ui/sidebar';
 import {
   Building,
@@ -17,7 +16,6 @@ import {
   Home,
   LogOut,
   MenuSquare,
-  Settings,
   Table,
   Users,
   UtensilsCrossed,
@@ -25,7 +23,6 @@ import {
 import Logo from '@/components/Logo';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/firebase';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 const menuItems = [
   { href: '/admin', label: 'Dashboard', icon: Home },
@@ -52,7 +49,7 @@ export function AdminSidebar({ children }: { children: React.ReactNode }) {
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2">
-            <Logo className="text-primary-foreground" />
+            <Logo />
             <SidebarTrigger />
           </div>
         </SidebarHeader>
@@ -64,6 +61,7 @@ export function AdminSidebar({ children }: { children: React.ReactNode }) {
                   href={item.href}
                   isActive={pathname === item.href}
                   as="a"
+                  tooltip={{children: item.label}}
                 >
                   <item.icon />
                   <span>{item.label}</span>
@@ -72,9 +70,9 @@ export function AdminSidebar({ children }: { children: React.ReactNode }) {
             ))}
           </SidebarMenu>
         </SidebarContent>
-        <SidebarMenu className="p-2">
+        <SidebarMenu className="p-2 mt-auto">
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleLogout}>
+            <SidebarMenuButton onClick={handleLogout} tooltip={{children: "Logout"}}>
               <LogOut />
               <span>Logout</span>
             </SidebarMenuButton>

@@ -21,9 +21,9 @@ export default function AdminDashboard() {
                             <Building className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">1</div>
+                            <div className="text-2xl font-bold">0</div>
                             <p className="text-xs text-muted-foreground">
-                                Currently managed
+                                No tenants yet
                             </p>
                         </CardContent>
                     </Card>
@@ -33,9 +33,9 @@ export default function AdminDashboard() {
                             <Users className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">2</div>
+                            <div className="text-2xl font-bold">1</div>
                             <p className="text-xs text-muted-foreground">
-                                Including admins
+                                Super admin
                             </p>
                         </CardContent>
                     </Card>
@@ -45,7 +45,7 @@ export default function AdminDashboard() {
                             <MenuSquare className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">6</div>
+                            <div className="text-2xl font-bold">0</div>
                             <p className="text-xs text-muted-foreground">
                                 Across all tenants
                             </p>
