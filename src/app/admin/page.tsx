@@ -1,51 +1,64 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useUser } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, query } from 'firebase/firestore';
 import { Building, MenuSquare, UtensilsCrossed, Users, Loader2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import type { Tenant, User, MenuItem, Order } from '@/lib/types';
 
-interface DashboardStats {
-    tenants: number;
-    users: number;
-    menus: number;
-    orders: number;
-}
+
+const StatCard = ({ title, value, icon: Icon, description, isLoading }: { title: string, value: number, icon: React.ElementType, description: string, isLoading: boolean }) => (
+    <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">{title}</CardTitle>
+            <Icon className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+            {isLoading ? (
+                <Loader2 className="h-6 w-6 animate-spin" />
+            ) : (
+                <>
+                    <div className="text-2xl font-bold">{value}</div>
+                    <p className="text-xs text-muted-foreground">
+                        {description}
+                    </p>
+                </>
+            )}
+        </CardContent>
+    </Card>
+);
 
 export default function AdminDashboard() {
     const { user } = useUser();
-    
-    // Data fetching has been disabled to prevent permission errors.
-    // Stats are now hardcoded to 0.
-    const stats: DashboardStats = {
-        tenants: 0,
-        users: 0,
-        menus: 0,
-        orders: 0,
-    };
-    const loading = false;
-    const error = null;
+    const firestore = useFirestore();
 
-    const StatCard = ({ title, value, icon: Icon, description }: { title: string, value: number | undefined, icon: React.ElementType, description: string }) => (
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{title}</CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-                {loading ? (
-                    <Loader2 className="h-6 w-6 animate-spin" />
-                ) : (
-                    <>
-                        <div className="text-2xl font-bold">{value ?? 0}</div>
-                        <p className="text-xs text-muted-foreground">
-                            {description}
-                        </p>
-                    </>
-                )}
-            </CardContent>
-        </Card>
-    );
+    const tenantsQuery = useMemoFirebase(() => query(collection(firestore, 'tenants')), [firestore]);
+    const { data: tenants, isLoading: loadingTenants, error: tenantsError } = useCollection<Tenant>(tenantsQuery);
+
+    const usersQuery = useMemoFirebase(() => query(collection(firestore, 'users')), [firestore]);
+    const { data: users, isLoading: loadingUsers, error: usersError } = useCollection<User>(usersQuery);
+
+    const menusQuery = useMemoFirebase(() => tenants && query(collection(firestore, `tenants/${tenants[0]?.id}/menus`)), [tenants, firestore]);
+    const { data: menus, isLoading: loadingMenus, error: menusError } = useCollection<MenuItem>(menusQuery);
+
+    const ordersQuery = useMemoFirebase(() => tenants && query(collection(firestore, `tenants/${tenants[0]?.id}/orders`)), [tenants, firestore]);
+    const { data: orders, isLoading: loadingOrders, error: ordersError } = useCollection<Order>(ordersQuery);
+
+    const isLoading = loadingTenants || loadingUsers || loadingMenus || loadingOrders;
+    const error = tenantsError || usersError || menusError || ordersError;
+
+    const stats = useMemo(() => {
+        // Note: This is a simplified aggregation. For large scale apps, this should be done with cloud functions.
+        // We are only fetching from the first tenant for menus/orders as a sample.
+        return {
+            tenants: tenants?.length ?? 0,
+            users: users?.length ?? 0,
+            menus: menus?.length ?? 0,
+            orders: orders?.length ?? 0,
+        };
+    }, [tenants, users, menus, orders]);
 
 
     return (
@@ -55,39 +68,43 @@ export default function AdminDashboard() {
                 <p className="text-muted-foreground">Selamat datang kembali, {user?.email || 'Admin'}!</p>
             </header>
             <main>
-                 {error && !loading && (
+                 {error && (
                     <Alert variant="destructive" className="mb-4">
                         <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Gagal Memuat Data</AlertTitle>
+                        <AlertTitle>Gagal Memuat Data Dasbor</AlertTitle>
                         <AlertDescription>
-                           Tidak dapat memuat statistik dasbor. Ini kemungkinan besar masalah aturan keamanan Firestore.
+                           Terjadi kesalahan saat memuat statistik. Ini mungkin karena masalah aturan keamanan Firestore. Pastikan super admin memiliki izin 'list' pada koleksi tenants, users, menus, dan orders.
                         </AlertDescription>
                     </Alert>
                 )}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                    <StatCard 
                         title="Total Tenant"
-                        value={stats?.tenants}
+                        value={stats.tenants}
                         icon={Building}
-                        description="Pengambilan data dinonaktifkan"
+                        description="Jumlah kafe terdaftar"
+                        isLoading={loadingTenants}
                    />
                    <StatCard 
                         title="Total Pengguna"
-                        value={stats?.users}
+                        value={stats.users}
                         icon={Users}
-                        description="Pengambilan data dinonaktifkan"
+                        description="Admin kafe & super admin"
+                        isLoading={loadingUsers}
                    />
                     <StatCard 
                         title="Total Menu"
-                        value={stats?.menus}
+                        value={stats.menus}
                         icon={MenuSquare}
-                        description="Pengambilan data dinonaktifkan"
+                        description="Menu di tenant pertama"
+                        isLoading={loadingMenus}
                    />
                    <StatCard 
                         title="Total Pesanan"
-                        value={stats?.orders}
+                        value={stats.orders}
                         icon={UtensilsCrossed}
-                        description="Pengambilan data dinonaktifkan"
+                        description="Pesanan di tenant pertama"
+                        isLoading={loadingOrders}
                    />
                 </div>
                 <div className="mt-8">
