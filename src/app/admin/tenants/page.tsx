@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -13,6 +13,7 @@ import {
   serverTimestamp,
   query,
   orderBy,
+  Firestore,
 } from 'firebase/firestore';
 import {
   useFirestore,
@@ -111,17 +112,16 @@ const generateDailyToken = () => {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-export default function TenantsPage() {
+function TenantList({ firestore }: { firestore: Firestore }) {
+  const tenantsRef = useMemoFirebase(() => collection(firestore, 'tenants'), [firestore]);
+  const tenantsQuery = useMemoFirebase(() => query(tenantsRef, orderBy('nama', 'asc')), [tenantsRef]);
+  const { data: tenants, isLoading, error } = useCollection<Tenant>(tenantsQuery);
+
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const { toast } = useToast();
-  const firestore = useFirestore();
-
-  const tenantsRef = collection(firestore, 'tenants');
-  const tenantsQuery = useMemoFirebase(() => query(tenantsRef, orderBy('nama', 'asc')), [tenantsRef]);
-  const { data: tenants, isLoading, error } = useCollection<Tenant>(tenantsQuery);
 
   const form = useForm<TenantFormValues>({
     resolver: zodResolver(tenantSchema),
@@ -140,7 +140,7 @@ export default function TenantsPage() {
     setSelectedTenant(tenant);
     setIsAlertOpen(true);
   };
-
+  
   const onSubmit = async (data: TenantFormValues) => {
     setIsSubmitting(true);
     const slug = createSlug(data.nama);
@@ -191,7 +191,7 @@ export default function TenantsPage() {
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = useCallback(async () => {
     if (!selectedTenant) return;
     setIsSubmitting(true);
 
@@ -210,7 +210,7 @@ export default function TenantsPage() {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [selectedTenant, firestore, toast]);
 
   const renderContent = () => {
     if (isLoading) {
@@ -293,8 +293,7 @@ export default function TenantsPage() {
 
   return (
     <>
-      <div className="container mx-auto p-4 md:p-8">
-        <Card>
+      <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle>Kelola Tenant</CardTitle>
@@ -308,7 +307,6 @@ export default function TenantsPage() {
           </CardHeader>
           <CardContent>{renderContent()}</CardContent>
         </Card>
-      </div>
 
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="sm:max-w-[425px]">
@@ -370,4 +368,14 @@ export default function TenantsPage() {
       </AlertDialog>
     </>
   );
+}
+
+export default function TenantsPage() {
+  const firestore = useFirestore();
+  
+  return (
+    <div className="container mx-auto p-4 md:p-8">
+      <TenantList firestore={firestore} />
+    </div>
+  )
 }
