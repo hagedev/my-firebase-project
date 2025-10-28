@@ -14,21 +14,21 @@ interface DashboardStats {
     orders: number;
 }
 
-// Helper to get the path from a query for error reporting
+// A more robust helper to get the path from a query for error reporting.
+// This handles both regular collections and collection group queries.
 function getQueryPath(q: Query): string {
-    // This is a simplified but more robust way to get a representation of the query path
-    if ((q as any)._query) {
-        const queryInternal = (q as any)._query;
-        if (queryInternal.path) {
-            // For normal collections, canonicalString is reliable
-            return queryInternal.path.canonicalString ? queryInternal.path.canonicalString() : queryInternal.path.toString();
+    // The internal _query property is not part of the public API, but it's the most reliable way to get this info.
+    const internalQuery = (q as any)._query;
+    if (internalQuery) {
+        if (internalQuery.path) { // This is a regular collection query
+            return internalQuery.path.canonicalString ? internalQuery.path.canonicalString() : internalQuery.path.toString();
         }
-        if (queryInternal.collectionGroup) {
-            // For collectionGroup queries
-            return `collectionGroup(${queryInternal.collectionGroup})`;
+        if (internalQuery.collectionGroup) { // This is a collectionGroup query
+            return `*/${internalQuery.collectionGroup}`;
         }
     }
-    return 'unknown_path';
+    // Fallback if the internal structure changes, though it's unlikely.
+    return 'unknown_firestore_path';
 }
 
 export default function AdminDashboard() {
@@ -50,35 +50,25 @@ export default function AdminDashboard() {
                 const menusQuery = collectionGroup(firestore, 'menus');
                 const ordersQuery = collectionGroup(firestore, 'orders');
 
-                const tenantsPromise = getDocs(tenantsQuery).catch(err => {
-                    const permissionError = new FirestorePermissionError({ path: getQueryPath(tenantsQuery), operation: 'list' });
-                    errorEmitter.emit('permission-error', permissionError);
-                    throw permissionError; 
-                });
+                const createFetchPromise = (query: Query) => {
+                    return getDocs(query).catch(err => {
+                        // This catch block creates and throws a rich, contextual error.
+                        const permissionError = new FirestorePermissionError({ 
+                            path: getQueryPath(query), 
+                            operation: 'list' 
+                        });
+                        // Emit for the global listener
+                        errorEmitter.emit('permission-error', permissionError);
+                        // Throw it to be caught by the outer try-catch block
+                        throw permissionError; 
+                    });
+                };
 
-                const usersPromise = getDocs(usersQuery).catch(err => {
-                    const permissionError = new FirestorePermissionError({ path: getQueryPath(usersQuery), operation: 'list' });
-                    errorEmitter.emit('permission-error', permissionError);
-                    throw permissionError;
-                });
-
-                const menusPromise = getDocs(menusQuery).catch(err => {
-                    const permissionError = new FirestorePermissionError({ path: getQueryPath(menusQuery), operation: 'list' });
-                    errorEmitter.emit('permission-error', permissionError);
-                    throw permissionError;
-                });
-
-                const ordersPromise = getDocs(ordersQuery).catch(err => {
-                    const permissionError = new FirestorePermissionError({ path: getQueryPath(ordersQuery), operation: 'list' });
-                    errorEmitter.emit('permission-error', permissionError);
-                    throw permissionError;
-                });
-                
                 const [tenantsSnap, usersSnap, menusSnap, ordersSnap] = await Promise.all([
-                    tenantsPromise,
-                    usersPromise,
-                    menusPromise,
-                    ordersPromise,
+                    createFetchPromise(tenantsQuery),
+                    createFetchPromise(usersQuery),
+                    createFetchPromise(menusQuery),
+                    createFetchPromise(ordersQuery),
                 ]);
 
                 const newStats: DashboardStats = {
@@ -91,6 +81,7 @@ export default function AdminDashboard() {
                 setStats(newStats);
 
             } catch (err: any) {
+                // This will now catch the detailed FirestorePermissionError
                 setError(err.message || "An error occurred while fetching data.");
             } finally {
                 setLoading(false);
