@@ -1,10 +1,11 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useUser, useFirestore } from "@/firebase";
-import { collection, collectionGroup, getDocs } from "firebase/firestore";
-import { Building, MenuSquare, UtensilsCrossed, Users, Loader2 } from "lucide-react";
+import { useUser, useFirestore, FirestorePermissionError, errorEmitter } from "@/firebase";
+import { collection, collectionGroup, getDocs, Query } from "firebase/firestore";
+import { Building, MenuSquare, UtensilsCrossed, Users, Loader2, AlertCircle } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface DashboardStats {
     tenants: number;
@@ -18,32 +19,50 @@ export default function AdminDashboard() {
     const firestore = useFirestore();
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchStats = async () => {
             if (!firestore) return;
+            setLoading(true);
+            setError(null);
+
+            const queries: { key: keyof DashboardStats; query: Query }[] = [
+                { key: 'tenants', query: collection(firestore, 'tenants') },
+                { key: 'users', query: collection(firestore, 'users') },
+                { key: 'menus', query: collectionGroup(firestore, 'menus') },
+                { key: 'orders', query: collectionGroup(firestore, 'orders') },
+            ];
 
             try {
-                const tenantsCollection = collection(firestore, 'tenants');
-                const usersCollection = collection(firestore, 'users');
-                const menusCollectionGroup = collectionGroup(firestore, 'menus');
-                const ordersCollectionGroup = collectionGroup(firestore, 'orders');
+                const results = await Promise.all(
+                    queries.map(({ key, query }) =>
+                        getDocs(query).catch(err => {
+                            // This is where we create and emit the detailed error
+                            const path = query.type === 'collection-group' ? `*/${query.id}` : (query as any).path;
+                            const permissionError = new FirestorePermissionError({
+                                path: path,
+                                operation: 'list',
+                            });
+                            errorEmitter.emit('permission-error', permissionError);
+                            // We throw the original error to stop the Promise.all
+                            throw err;
+                        })
+                    )
+                );
 
-                const [tenantsSnap, usersSnap, menusSnap, ordersSnap] = await Promise.all([
-                    getDocs(tenantsCollection),
-                    getDocs(usersCollection),
-                    getDocs(menusCollectionGroup),
-                    getDocs(ordersCollectionGroup)
-                ]);
+                const newStats: DashboardStats = {
+                    tenants: results[0].size,
+                    users: results[1].size,
+                    menus: results[2].size,
+                    orders: results[3].size,
+                };
+                
+                setStats(newStats);
 
-                setStats({
-                    tenants: tenantsSnap.size,
-                    users: usersSnap.size,
-                    menus: menusSnap.size,
-                    orders: ordersSnap.size,
-                });
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Error fetching dashboard stats:", error);
+                setError(error.message || "An error occurred while fetching data.");
             } finally {
                 setLoading(false);
             }
@@ -81,6 +100,15 @@ export default function AdminDashboard() {
                 <p className="text-muted-foreground">Welcome back, {user?.email || 'Admin'}!</p>
             </header>
             <main>
+                 {error && (
+                    <Alert variant="destructive" className="mb-4">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Data Fetching Error</AlertTitle>
+                        <AlertDescription>
+                            Could not load dashboard stats due to a permission error. The detailed error has been reported.
+                        </AlertDescription>
+                    </Alert>
+                )}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                    <StatCard 
                         title="Total Tenants"
