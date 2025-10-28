@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -10,7 +9,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -29,7 +27,6 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import Logo from '@/components/Logo';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { Separator } from '@/components/ui/separator';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Alamat email tidak valid.' }),
@@ -141,15 +138,6 @@ export default function AdminLoginPage() {
               </form>
             </Form>
           </CardContent>
-          <CardFooter className="flex flex-col items-center gap-4">
-            <Separator />
-            <p className="text-sm text-muted-foreground">
-              Pengaturan pertama kali?
-            </p>
-            <Button variant="outline" className="w-full" asChild>
-              <Link href="/admin/register">Daftarkan Super Admin Awal</Link>
-            </Button>
-          </CardFooter>
         </Card>
       </div>
     </div>
