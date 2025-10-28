@@ -81,30 +81,6 @@ export default function AdminDashboard() {
                         description="Admin kafe & super admin"
                         isLoading={loadingUsers}
                    />
-                   <Card className="col-span-2 bg-secondary/50">
-                        <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-                           <div>
-                            <CardTitle className="text-sm font-medium">Statistik Lanjutan</CardTitle>
-                            <CardDescription className="text-xs">Menu & Pesanan</CardDescription>
-                           </div>
-                           <Archive className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-sm text-muted-foreground pt-2">
-                                <p>Menghitung total menu dan pesanan di semua tenant memerlukan agregasi data yang kompleks. Untuk performa terbaik pada skala besar, fitur ini idealnya diimplementasikan menggunakan Cloud Functions.</p>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-                <div className="mt-8">
-                     <Card>
-                        <CardHeader>
-                            <CardTitle>Aktivitas Terkini</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-muted-foreground">Tidak ada aktivitas terkini untuk ditampilkan.</p>
-                        </CardContent>
-                    </Card>
                 </div>
             </main>
         </div>
