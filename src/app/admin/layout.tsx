@@ -35,7 +35,16 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
       // Pengguna sudah login, periksa dokumennya di Firestore
       const userRef = doc(firestore, `users/${user.uid}`);
-      let userSnap = await getDoc(userRef);
+      let userSnap;
+      try {
+        userSnap = await getDoc(userRef);
+      } catch (e) {
+        console.error("Gagal memeriksa dokumen pengguna:", e);
+        await auth.signOut();
+        router.replace('/admin/login');
+        return;
+      }
+      
 
       // JIKA DOKUMEN PENGGUNA TIDAK ADA: Ini mungkin login pertama super admin
       if (!userSnap.exists()) {
