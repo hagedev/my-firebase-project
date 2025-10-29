@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirestore, useUser } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { Coffee, ShieldAlert } from 'lucide-react';
@@ -52,10 +52,9 @@ export default function AdminLoginPage() {
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
-    let unauthorizedError = false;
 
     try {
-      // 1. AUTENTIKASI: Verifikasi email dan password dengan Firebase Auth
+      // 1. AUTENTIKASI: Coba login dengan kredensial yang diberikan.
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
 
@@ -63,46 +62,44 @@ export default function AdminLoginPage() {
         throw new Error('Gagal mendapatkan informasi pengguna setelah login.');
       }
 
-      // 2. AUTORISASI: Periksa apakah pengguna adalah super admin
+      // 2. AUTORISASI: Periksa apakah pengguna ini adalah super admin.
       const roleRef = doc(firestore, `roles_superadmin/${user.uid}`);
       const roleDoc = await getDoc(roleRef);
 
       if (roleDoc.exists()) {
-        // 3. SUKSES: Pengguna adalah super admin
+        // 3. SUKSES: Pengguna adalah super admin. Alihkan ke dashboard.
         toast({
           title: 'Login Berhasil',
           description: 'Anda akan diarahkan ke dashboard super admin.',
         });
-        // Arahkan ke dashboard. Halaman dashboard akan menangani sisanya.
         router.replace('/admin');
+        // Jangan set isLoading ke false di sini agar form tetap disabled selama redirect.
+        return; 
       } else {
-        // 4. GAGAL AUTORISASI: Pengguna valid, tapi bukan super admin
-        // Tandai sebagai error unauthorized dan logout pengguna
-        unauthorizedError = true;
+        // 4. GAGAL AUTORISASI: Pengguna bukan super admin.
+        // Batalkan sesi login dan tampilkan pesan error.
         await signOut(auth);
-      }
-    } catch (error: any) {
-      // 5. TANGANI SEMUA ERROR
-      let title = 'Login Gagal';
-      let description = 'Terjadi kesalahan saat mencoba masuk.';
-
-      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-        description = 'Email atau password yang Anda masukkan salah.';
-      } else if (error.code === 'auth/too-many-requests') {
-        description = 'Terlalu banyak percobaan login. Coba lagi nanti.';
-      }
-      
-      console.error('Login Process Error:', error);
-      toast({ variant: 'destructive', title, description });
-
-    } finally {
-      if (unauthorizedError) {
         toast({
           variant: 'destructive',
           title: 'Akses Ditolak',
           description: 'Akun Anda tidak memiliki hak akses super admin.',
         });
       }
+    } catch (error: any) {
+      // 5. GAGAL AUTENTIKASI: Tangani error dari signInWithEmailAndPassword.
+      let description = 'Email atau password yang Anda masukkan salah.';
+      if (error.code === 'auth/too-many-requests') {
+        description = 'Terlalu banyak percobaan login. Coba lagi nanti.';
+      }
+      
+      console.error('Login Process Error:', error);
+      toast({ 
+        variant: 'destructive', 
+        title: 'Login Gagal', 
+        description: description 
+      });
+    } finally {
+      // isLoading akan menjadi false untuk semua skenario kegagalan.
       setIsLoading(false);
     }
   };
@@ -115,14 +112,14 @@ export default function AdminLoginPage() {
             <Coffee className="h-8 w-8 text-primary-foreground" />
           </div>
           <CardTitle className="font-headline text-3xl">AirCafe Super Admin</CardTitle>
-          <CardDescription>Silakan masuk untuk mengelola sistem.</CardDescription>
+          <CardDescription>Hanya untuk Super Admin. Silakan masuk.</CardDescription>
         </CardHeader>
         <CardContent>
           {errorParam === 'unauthorized' && (
             <Alert variant="destructive" className="mb-6">
               <ShieldAlert className="h-4 w-4" />
               <AlertTitle>Akses Ditolak</AlertTitle>
-              <AlertDescription>Anda harus login untuk mengakses halaman ini.</AlertDescription>
+              <AlertDescription>Anda harus login sebagai Super Admin untuk mengakses halaman ini.</AlertDescription>
             </Alert>
           )}
           <Form {...form}>
@@ -154,7 +151,7 @@ export default function AdminLoginPage() {
                 )}
               />
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Memproses...' : 'Masuk'}
+                {isLoading ? 'Memverifikasi...' : 'Masuk'}
               </Button>
             </form>
           </Form>
