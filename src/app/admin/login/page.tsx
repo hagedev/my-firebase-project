@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Card,
   CardContent,
@@ -25,7 +25,9 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { Coffee } from 'lucide-react';
+import { Coffee, ShieldAlert } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
 
 const loginSchema = z.object({
   email: z
@@ -44,6 +46,9 @@ export default function AdminLoginPage() {
   const { toast } = useToast();
   const router = useRouter();
   const auth = useAuth();
+  const searchParams = useSearchParams();
+  const error = searchParams.get('error');
+
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -91,6 +96,15 @@ export default function AdminLoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {error === 'unauthorized' && (
+            <Alert variant="destructive" className="mb-6">
+              <ShieldAlert className="h-4 w-4" />
+              <AlertTitle>Akses Ditolak</AlertTitle>
+              <AlertDescription>
+                Anda tidak memiliki hak akses untuk halaman ini. Silakan masuk dengan akun super admin.
+              </AlertDescription>
+            </Alert>
+          )}
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <FormField
