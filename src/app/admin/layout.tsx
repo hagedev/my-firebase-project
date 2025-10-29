@@ -44,6 +44,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       }
     } else {
       // Jika bukan super admin dan tidak di halaman login, redirect ke login
+      // Ini juga menangani kasus di mana user login dengan akun non-admin
       if (!isLoginPage) {
         router.replace('/admin/login?error=unauthorized');
       }
@@ -68,7 +69,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   // Jika sudah selesai loading dan user adalah super admin, atau jika kita di halaman login
   // tampilkan kontennya. Logika useEffect akan menangani redirect jika perlu.
   const isSuperAdmin = user && superAdminRole;
-  if (isSuperAdmin || pathname === '/admin/login') {
+  if ((isSuperAdmin && !isUserLoading && !isRoleLoading) || pathname === '/admin/login') {
      return <>{children}</>;
   }
 
