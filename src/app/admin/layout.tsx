@@ -50,27 +50,29 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         try {
           const batch = writeBatch(firestore);
 
-          // Buat dokumen pengguna
+          // 1. Buat dokumen di koleksi 'users'
           batch.set(userRef, {
             id: user.uid,
             email: user.email,
             role: 'superadmin',
           });
 
-          // Buat dokumen peran untuk validasi aturan keamanan
+          // 2. Buat dokumen di koleksi 'roles_superadmin' untuk validasi aturan keamanan
           const roleDocRef = doc(firestore, 'roles_superadmin', user.uid);
           batch.set(roleDocRef, {
             userId: user.uid,
             assignedAt: serverTimestamp(),
           });
 
+          // Jalankan kedua operasi tulis secara atomik
           await batch.commit();
 
-          // Ambil kembali snapshot pengguna setelah dibuat
+          // Ambil kembali snapshot pengguna setelah dibuat untuk melanjutkan verifikasi
           userSnap = await getDoc(userRef);
+
         } catch (e) {
           console.error("Gagal membuat dokumen super admin:", e);
-          // Jika gagal (misalnya karena aturan menolak), logout pengguna
+          // Jika gagal (misalnya karena aturan menolak atau super admin sudah ada), logout pengguna
           await auth.signOut();
           router.replace('/admin/login');
           return;
@@ -105,7 +107,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           return;
       }
         
-      // Jika dokumen pengguna tidak ada, atau peran tidak dikenali, mereka tidak diizinkan.
+      // Jika peran tidak dikenali, mereka tidak diizinkan.
       await auth.signOut();
       router.replace('/admin/login');
     };
