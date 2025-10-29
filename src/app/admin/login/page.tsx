@@ -15,8 +15,6 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import Logo from '@/components/Logo';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Terminal } from 'lucide-react';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Alamat email tidak valid.' }),
@@ -43,12 +41,12 @@ export default function SuperAdminLoginPage() {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, data.email, data.password);
-      // AdminLayout akan menangani verifikasi peran dan pengalihan
+      // AdminLayout will handle role verification and redirection
       toast({
         title: 'Login Berhasil',
         description: 'Mengarahkan ke dasbor...',
       });
-      router.push('/admin/dashboard'); // Redirect setelah login berhasil
+      router.push('/admin/dashboard'); // Redirect after successful login
     } catch (error: any) {
       console.error('Login Gagal:', error);
       let description = 'Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.';
@@ -68,25 +66,12 @@ export default function SuperAdminLoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md space-y-6">
-        <div className="flex justify-center">
+      <div className="w-full max-w-md">
+        <div className="mb-8 flex justify-center">
             <Link href="/">
                 <Logo className="text-foreground" />
             </Link>
         </div>
-
-        <Alert>
-            <Terminal className="h-4 w-4" />
-            <AlertTitle>Setup Awal</AlertTitle>
-            <AlertDescription>
-                Belum punya Super Admin? Kunjungi halaman {' '}
-                <Link href="/admin/seed-super-admin" className="font-semibold underline">
-                    Generator Super Admin
-                </Link>
-                {' '} untuk membuat akun pertama.
-            </AlertDescription>
-        </Alert>
-
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl">Login Super Admin</CardTitle>
