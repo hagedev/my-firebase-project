@@ -5,7 +5,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import {
   Card,
   CardContent,
@@ -62,8 +61,6 @@ export default function AdminLoginPage() {
         title: 'Login Berhasil',
         description: 'Anda akan diarahkan ke dashboard.',
       });
-      // router.replace digunakan untuk menggantikan halaman saat ini di history
-      // sehingga pengguna tidak bisa kembali ke halaman login setelah berhasil masuk.
       router.replace('/admin');
     } catch (error: any) {
       console.error('Login Error:', error);

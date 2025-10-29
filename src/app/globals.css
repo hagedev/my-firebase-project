@@ -8,19 +8,19 @@ body {
 
 @layer base {
   :root {
-    --background: 39 100% 94%;
+    --background: 39 100% 94%; /* --aircafe-bg-orange: #FFF3E0; */
     --foreground: 24 10% 10%;
     --card: 39 100% 97%;
     --card-foreground: 24 10% 10%;
     --popover: 39 100% 97%;
     --popover-foreground: 24 10% 10%;
-    --primary: 36 100% 50%;
+    --primary: 36 100% 50%; /* --aircafe-primary-orange: #FF9800; */
     --primary-foreground: 0 0% 100%;
     --secondary: 36 100% 90%;
     --secondary-foreground: 36 100% 20%;
     --muted: 36 100% 90%;
     --muted-foreground: 30 10% 45%;
-    --accent: 45 100% 51.6%;
+    --accent: 45 100% 51.6%; /* --aircafe-accent-gold: #FFC107; */
     --accent-foreground: 45 100% 10%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
