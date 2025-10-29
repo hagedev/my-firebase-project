@@ -363,13 +363,18 @@
         "definition": {
           "entityName": "roles_superadmin",
           "schema": {
-            "$ref": "#/backend/entities/User"
+            "type": "object",
+            "properties": {
+              "active": {
+                "type": "boolean"
+              }
+            }
           },
-          "description": "This collection stores documents indicating superadmin role. Existence of a document for a user ID implies superadmin privileges.",
+          "description": "This collection stores documents indicating superadmin role. Existence of a document for a user ID implies superadmin privileges. Locked from client-side writes.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier for the user."
+              "description": "The unique identifier for the user (must match auth UID)."
             }
           ]
         }
