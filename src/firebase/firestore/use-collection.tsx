@@ -89,7 +89,7 @@ export function useCollection<T = any>(
         const path: string =
           memoizedTargetRefOrQuery.type === 'collection'
             ? (memoizedTargetRefOrQuery as CollectionReference).path
-            : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.toString(); // Use toString() for query path
+            : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
 
         const contextualError = new FirestorePermissionError({
           operation: 'list',
@@ -108,7 +108,7 @@ export function useCollection<T = any>(
     return () => unsubscribe();
   }, [memoizedTargetRefOrQuery]); // Re-run if the target query/reference changes.
   if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
-    throw new Error('useCollection target query was not properly memoized using useMemoFirebase. This will cause infinite re-renders.');
+    throw new Error(memoizedTargetRefOrQuery + ' was not properly memoized using useMemoFirebase');
   }
   return { data, isLoading, error };
 }
