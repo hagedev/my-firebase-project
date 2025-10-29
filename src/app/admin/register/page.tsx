@@ -66,15 +66,16 @@ export default function RegisterSuperAdminPage() {
     setIsLoading(true);
     
     try {
-      // Langkah 1: Buat pengguna di Firebase Auth
-      await createUserWithEmailAndPassword(
+      // Langkah 1: Buat pengguna di Firebase Auth.
+      // Ini mungkin gagal jika email sudah digunakan atau jika aturan menolak.
+      const userCredential = await createUserWithEmailAndPassword(
         auth,
         data.email,
         data.password
       );
 
-      // Langkah 2: Langsung login dengan pengguna baru
-      // Ini akan memicu onAuthStateChanged dan logika di AdminLayout
+      // Langkah 2: Langsung login dengan pengguna baru.
+      // Ini penting agar klien memiliki token auth untuk langkah selanjutnya di AdminLayout.
       await signInWithEmailAndPassword(
         auth,
         data.email,
@@ -83,10 +84,11 @@ export default function RegisterSuperAdminPage() {
       
       toast({
         title: 'Pendaftaran Berhasil',
-        description: 'Login berhasil. Mengarahkan ke dasbor...',
+        description: 'Login berhasil, memverifikasi peran & mengarahkan ke dasbor...',
       });
-      // AdminLayout akan menangani pengalihan ke /admin/dashboard
-      // dan membuat dokumen Firestore yang diperlukan.
+
+      // AdminLayout akan menangani pembuatan dokumen Firestore dan pengalihan akhir.
+      // Kita cukup arahkan ke root admin, dan layout akan mengambil alih.
       router.push('/admin/dashboard');
 
     } catch (error: any) {
@@ -94,9 +96,12 @@ export default function RegisterSuperAdminPage() {
       let description = 'Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.';
       
       if (error.code === 'auth/email-already-in-use') {
-        description = 'Email ini sudah digunakan. Silakan gunakan email lain atau login.';
+        description = 'Email ini sudah digunakan. Silakan gunakan email lain atau coba login jika Anda sudah mendaftar.';
       } else if (error.code === 'permission-denied') {
-        description = 'Gagal membuat pengguna. Kemungkinan super admin awal sudah ada atau aturan keamanan salah.';
+        // Ini bisa terjadi jika aturan keamanan menolak pembuatan pengguna,
+        // meskipun untuk Auth, ini lebih jarang. Kemungkinan besar ini terjadi
+        // karena super admin sudah ada.
+        description = 'Gagal membuat pengguna. Kemungkinan super admin awal sudah ada.';
       }
       
       toast({
@@ -119,7 +124,7 @@ export default function RegisterSuperAdminPage() {
         </div>
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl">Super Admin Awal</CardTitle>
+            <CardTitle className="text-2xl">Pendaftaran Super Admin</CardTitle>
             <CardDescription>
               Buat akun super admin pertama untuk aplikasi. Ini hanya dapat dilakukan sekali.
             </CardDescription>

@@ -15,6 +15,13 @@ export interface User {
   tenantName?: string; // For display purposes
 }
 
+export interface SuperAdminRole {
+    userId: string;
+    email: string;
+    role: 'superadmin';
+    assignedAt: any; // Firestore ServerTimestamp
+}
+
 
 export interface Category {
   id: string;
