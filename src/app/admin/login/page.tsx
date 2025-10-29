@@ -10,8 +10,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { useAuth, useFirestore, errorEmitter } from '@/firebase';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { collection, getDocs, limit, query } from 'firebase/firestore';
+import { FirestorePermissionError } from '@/firebase/errors';
 import Logo from '@/components/Logo';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
@@ -28,6 +30,7 @@ export default function SuperAdminLoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   const auth = useAuth();
+  const firestore = useFirestore();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -39,23 +42,52 @@ export default function SuperAdminLoginPage() {
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
+
     try {
-      await signInWithEmailAndPassword(auth, data.email, data.password);
-      // AdminLayout akan menangani verifikasi peran dan pengalihan
-      toast({
-        title: 'Login Berhasil',
-        description: 'Mengarahkan ke dasbor...',
-      });
-      router.push('/admin/dashboard');
+      // Periksa apakah sudah ada super admin.
+      const superAdminCollectionRef = collection(firestore, 'roles_superadmin');
+      const q = query(superAdminCollectionRef, limit(1));
+      const snapshot = await getDocs(q);
+      const isSystemEmpty = snapshot.empty;
+
+      if (isSystemEmpty) {
+        // SCENARIO 1: Belum ada super admin, buat pengguna baru.
+        toast({
+          title: 'Membuat Super Admin Pertama',
+          description: 'Sistem kosong, akun Anda akan dibuat sebagai super admin pertama.',
+        });
+        await createUserWithEmailAndPassword(auth, data.email, data.password);
+        // Setelah berhasil, AdminLayout akan mengambil alih untuk membuat dokumen peran.
+        router.push('/admin/dashboard');
+      } else {
+        // SCENARIO 2: Sudah ada super admin, lakukan login biasa.
+        await signInWithEmailAndPassword(auth, data.email, data.password);
+        // AdminLayout akan menangani verifikasi peran dan pengalihan.
+        toast({
+          title: 'Login Berhasil',
+          description: 'Mengarahkan ke dasbor...',
+        });
+        router.push('/admin/dashboard');
+      }
     } catch (error: any) {
-      console.error('Login gagal:', error);
+      console.error('Proses login/registrasi gagal:', error);
+
       let description = 'Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.';
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
         description = 'Email atau kata sandi yang Anda masukkan salah.';
+      } else if (error.code === 'auth/email-already-in-use') {
+        description = 'Email ini sudah terdaftar. Silakan coba login.';
+      } else if (error.code === 'permission-denied') {
+        description = 'Gagal memeriksa status sistem karena masalah izin. Hubungi administrator.';
+         errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: 'roles_superadmin',
+            operation: 'list',
+          }));
       }
+
       toast({
         variant: 'destructive',
-        title: 'Login Gagal',
+        title: 'Operasi Gagal',
         description,
       });
     } finally {
@@ -74,7 +106,7 @@ export default function SuperAdminLoginPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl">Login Super Admin</CardTitle>
-            <CardDescription>Masukkan kredensial Anda untuk mengakses dasbor utama.</CardDescription>
+            <CardDescription>Masukkan kredensial Anda. Jika ini login pertama, akun super admin akan dibuat.</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
@@ -106,7 +138,7 @@ export default function SuperAdminLoginPage() {
                   )}
                 />
                 <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Login'}
+                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Lanjutkan'}
                 </Button>
               </form>
             </Form>
