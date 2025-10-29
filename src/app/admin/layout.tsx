@@ -10,27 +10,37 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    // Jangan lakukan apapun jika status user masih loading
+    // Jangan lakukan apa-apa jika status user masih dimuat.
+    // Ini mencegah keputusan prematur.
     if (isUserLoading) {
       return;
     }
 
-    // Jika loading selesai dan user TIDAK ADA,
-    // dan dia mencoba akses halaman selain login, tendang ke login.
-    if (!user && pathname !== '/admin/login') {
+    const isLoginPage = pathname === '/admin/login';
+
+    // Kondisi 1: User TIDAK ADA, tapi mencoba akses halaman admin (bukan login)
+    // Paksa kembali ke halaman login.
+    if (!user && !isLoginPage) {
       router.replace('/admin/login');
     }
-    
-    // Jika loading selesai dan user ADA, tapi dia masih di halaman login,
-    // (ini terjadi setelah redirect dari login sukses), arahkan ke dashboard.
-    if (user && pathname === '/admin/login') {
-        router.replace('/admin');
+
+    // Kondisi 2: User SUDAH ADA, tapi masih berada di halaman login
+    // (misalnya setelah berhasil login atau menekan tombol back)
+    // Arahkan ke dashboard.
+    if (user && isLoginPage) {
+      router.replace('/admin');
     }
 
+    // Untuk semua kasus lain (user ada dan di halaman admin, atau user tidak ada dan di halaman login),
+    // tidak perlu dilakukan redirect. Biarkan komponen merender children.
+    
   }, [user, isUserLoading, pathname, router]);
-  
-  // Selama auth state masih loading, tampilkan UI loading untuk mencegah flash
-  // konten yang tidak seharusnya dilihat.
+
+  // Logika Render:
+  // 1. Jika masih loading, tampilkan UI loading untuk mencegah "flash" konten yang salah.
+  // 2. Jika user tidak ada DAN kita tidak di halaman login, jangan render apa-apa (return null),
+  //    karena useEffect di atas akan segera mengurus redirect. Ini mencegah dashboard muncul sesaat.
+  // 3. Selain itu, tampilkan children (baik halaman login atau halaman dashboard yang sah).
   if (isUserLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -39,7 +49,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  // Tampilkan children (halaman login atau dashboard) setelah loading selesai.
-  // Logika useEffect di atas sudah menangani pengalihan jika diperlukan.
+  if (!user && pathname !== '/admin/login') {
+    return null;
+  }
+  
   return <>{children}</>;
 }
