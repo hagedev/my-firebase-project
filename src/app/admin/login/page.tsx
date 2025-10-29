@@ -23,9 +23,8 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth } from '@/firebase';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
 import { Coffee, ShieldAlert } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -36,12 +35,14 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
+// UID Super Admin yang telah ditentukan.
+const SUPER_ADMIN_UID = 'ttFbsVWt14cdTwVlKs1AbgBLUtx1';
+
 export default function AdminLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
   const auth = useAuth();
-  const firestore = useFirestore();
   const searchParams = useSearchParams();
   const errorParam = searchParams.get('error');
 
@@ -58,27 +59,18 @@ export default function AdminLoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
 
-      if (!user) {
-        throw new Error('Gagal mendapatkan informasi pengguna setelah login.');
-      }
-
-      // 2. AUTORISASI: Periksa apakah pengguna ini adalah super admin.
-      const roleRef = doc(firestore, `roles_superadmin/${user.uid}`);
-      const roleDoc = await getDoc(roleRef);
-
-      if (roleDoc.exists()) {
-        // 3. SUKSES: Pengguna adalah super admin. Alihkan ke dashboard.
+      // 2. AUTORISASI: Bandingkan UID pengguna yang login dengan UID Super Admin.
+      if (user.uid === SUPER_ADMIN_UID) {
+        // 3. SUKSES: Pengguna adalah Super Admin. Alihkan ke dashboard.
         toast({
           title: 'Login Berhasil',
           description: 'Anda akan diarahkan ke dashboard super admin.',
         });
         router.replace('/admin');
-        // Jangan set isLoading ke false di sini agar form tetap disabled selama redirect.
-        return; 
+        return; // Hentikan eksekusi lebih lanjut
       } else {
-        // 4. GAGAL AUTORISASI: Pengguna bukan super admin.
-        // Batalkan sesi login dan tampilkan pesan error.
-        await signOut(auth);
+        // 4. GAGAL AUTORISASI: Kredensial benar, tapi bukan Super Admin.
+        await signOut(auth); // Langsung logout pengguna ini.
         toast({
           variant: 'destructive',
           title: 'Akses Ditolak',
@@ -86,9 +78,11 @@ export default function AdminLoginPage() {
         });
       }
     } catch (error: any) {
-      // 5. GAGAL AUTENTIKASI: Tangani error dari signInWithEmailAndPassword.
+      // 5. GAGAL AUTENTIKASI: Tangani error dari Firebase Auth (misal: email/pass salah).
       let description = 'Email atau password yang Anda masukkan salah.';
-      if (error.code === 'auth/too-many-requests') {
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        description = 'Email atau password yang Anda masukkan salah.';
+      } else if (error.code === 'auth/too-many-requests') {
         description = 'Terlalu banyak percobaan login. Coba lagi nanti.';
       }
       
@@ -99,7 +93,7 @@ export default function AdminLoginPage() {
         description: description 
       });
     } finally {
-      // isLoading akan menjadi false untuk semua skenario kegagalan.
+      // Apapun hasilnya (kecuali redirect sukses), loading dihentikan.
       setIsLoading(false);
     }
   };
