@@ -32,11 +32,10 @@ export default function AdminDashboardPage() {
       <main className="flex-1 p-4 md:p-6">
         <Card>
           <CardHeader>
-            <CardTitle>Redirect Berhasil!</CardTitle>
+            <CardTitle>Dashboard</CardTitle>
           </CardHeader>
           <CardContent>
-            <p>Selamat datang di Dashboard, {user?.email}.</p>
-            <p>Halaman ini masih kosong. Kita akan mengisinya nanti.</p>
+            <p>Anda telah berhasil login sebagai super admin!</p>
           </CardContent>
         </Card>
       </main>
