@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { useAuth, useFirestore, FirestorePermissionError, errorEmitter } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -20,7 +20,7 @@ export default function SeedSuperAdminPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const handleGenerate = useCallback(async () => {
+  const handleGenerate = async () => {
     setError(null);
     setSuccess(false);
     setIsLoading(true);
@@ -62,7 +62,8 @@ export default function SeedSuperAdminPage() {
 
       if (error.code === 'auth/email-already-in-use') {
         errorMessage = `Pengguna dengan email ${email} sudah ada. Proses dianggap berhasil. Silakan login.`;
-        setSuccess(true); // Anggap sukses jika user sudah ada.
+        // Anggap sukses jika user sudah ada, karena tujuannya adalah memastikan super admin ada.
+        setSuccess(true); 
       } else if (error.code === 'permission-denied') {
         errorMessage = 'Gagal membuat dokumen peran karena masalah izin. Kemungkinan besar sudah ada super admin lain.';
         // Emit contextual error
@@ -75,17 +76,21 @@ export default function SeedSuperAdminPage() {
         errorMessage = error.message;
       }
       
-      setError(errorMessage);
+      // Hanya set error jika bukan kasus 'email-already-in-use' yang kita anggap sukses
+      if (error.code !== 'auth/email-already-in-use') {
+          setError(errorMessage);
+      }
+      
       toast({
-        variant: 'destructive',
-        title: 'Operasi Gagal',
+        variant: success ? 'default' : 'destructive',
+        title: success ? 'Pengguna Sudah Ada' : 'Operasi Gagal',
         description: errorMessage,
       });
 
     } finally {
       setIsLoading(false);
     }
-  }, [auth, firestore, toast]);
+  };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -124,7 +129,7 @@ export default function SeedSuperAdminPage() {
               </div>
             )}
             
-            {error && !success && !isLoading && (
+            {error && !isLoading && (
                  <div className="rounded-md border border-destructive bg-destructive/10 p-4 text-destructive">
                      <div className="flex items-start gap-3">
                         <AlertTriangle className="h-5 w-5 mt-0.5"/>
