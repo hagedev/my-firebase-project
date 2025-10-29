@@ -23,24 +23,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     
     // Jika loading selesai dan user ADA, tapi dia masih di halaman login,
     // (ini terjadi setelah redirect dari login sukses), arahkan ke dashboard.
-    // Pengecekan peran sudah terjadi di halaman login, jadi kita bisa asumsikan
-    // user yang ada di sini adalah user yang sah.
     if (user && pathname === '/admin/login') {
         router.replace('/admin');
     }
 
   }, [user, isUserLoading, pathname, router]);
-
-  // Selama loading, tampilkan layar loading agar tidak ada kedipan UI
-  if (isUserLoading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  // Jika tidak loading, tampilkan konten.
-  // Logika di useEffect akan menangani redirect jika tidak sah.
+  
+  // Tampilkan children secara langsung. 
+  // Halaman dashboard (children) akan menangani UI loading-nya sendiri.
+  // Logika useEffect di atas akan menangani redirect jika diperlukan.
   return <>{children}</>;
 }
