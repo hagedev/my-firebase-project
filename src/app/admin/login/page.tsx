@@ -62,7 +62,7 @@ export default function AdminLoginPage() {
         title: 'Login Berhasil',
         description: 'Anda akan diarahkan ke dashboard.',
       });
-      router.push('/admin');
+      router.replace('/admin');
     } catch (error: any) {
       console.error('Login Error:', error);
       let description = 'Terjadi kesalahan saat login.';
