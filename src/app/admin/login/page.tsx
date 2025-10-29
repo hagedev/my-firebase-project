@@ -9,6 +9,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -27,6 +28,7 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import Logo from '@/components/Logo';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { Separator } from '@/components/ui/separator';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Alamat email tidak valid.' }),
@@ -138,6 +140,16 @@ export default function AdminLoginPage() {
               </form>
             </Form>
           </CardContent>
+          <CardFooter className="flex-col items-start gap-4">
+            <div className="flex items-center w-full">
+                <Separator className="flex-1" />
+                <span className="px-4 text-xs text-muted-foreground">Atau</span>
+                <Separator className="flex-1" />
+            </div>
+            <Button variant="outline" className="w-full" asChild>
+                <Link href="/admin/register">Daftarkan Super Admin Awal</Link>
+            </Button>
+          </CardFooter>
         </Card>
       </div>
     </div>

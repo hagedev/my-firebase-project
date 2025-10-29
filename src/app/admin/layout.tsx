@@ -45,7 +45,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         return;
       }
       
-
       // JIKA DOKUMEN PENGGUNA TIDAK ADA: Ini mungkin login pertama super admin
       if (!userSnap.exists()) {
         try {
