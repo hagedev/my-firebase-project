@@ -43,7 +43,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
-      "description": "Represents a user of the AirCafe application, including admins.",
+      "description": "Represents a cafe admin user of the AirCafe application.",
       "properties": {
         "id": {
           "type": "string",
@@ -55,8 +55,8 @@
         },
         "role": {
           "type": "string",
-          "enum": ["admin_kafe", "superadmin"],
-          "description": "The role of the user (e.g., admin_kafe, superadmin)."
+          "enum": ["admin_kafe"],
+          "description": "The role of the user, which is admin_kafe."
         },
         "email": {
           "type": "string",
@@ -280,11 +280,21 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "SuperAdminRole",
       "type": "object",
-      "description": "Defines the structure for a document in the roles_superadmin collection.",
+      "description": "Defines the structure for a document in the roles_superadmin collection. This collection holds all data for super admin users.",
       "properties": {
         "userId": {
           "type": "string",
           "description": "The UID of the user who is a super admin."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the super admin.",
+          "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["superadmin"],
+          "description": "The role of the user, which is always 'superadmin'."
         },
         "assignedAt": {
           "type": "string",
@@ -292,7 +302,7 @@
           "description": "Timestamp when the role was assigned."
         }
       },
-      "required": ["userId", "assignedAt"]
+      "required": ["userId", "email", "role", "assignedAt"]
     }
   },
   "auth": {
@@ -313,14 +323,14 @@
         "path": "/users/{userId}",
         "definition": {
           "schema": { "$ref": "#/entities/User" },
-          "description": "Stores user profiles, including role and tenant assignment."
+          "description": "Stores cafe admin user profiles."
         }
       },
       {
         "path": "/roles_superadmin/{userId}",
         "definition": {
           "schema": { "$ref": "#/entities/SuperAdminRole" },
-          "description": "A collection where the document ID is the user's UID, used for checking super admin role in security rules."
+          "description": "A collection where the document ID is the user's UID. This stores all data for super admin users and is used for role validation in security rules."
         }
       },
       {

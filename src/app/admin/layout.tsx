@@ -1,7 +1,7 @@
 'use client';
 
 import { useUser, useFirestore, useAuth } from '@/firebase';
-import { doc, getDoc, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState, ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
@@ -14,105 +14,85 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [isVerifying, setIsVerifying] = useState(true);
+  const [role, setRole] = useState<'superadmin' | 'admin_kafe' | 'unknown' | null>(null);
 
   useEffect(() => {
     if (isUserLoading) {
-      return; // Tunggu hingga status auth selesai dimuat
+      return; 
     }
 
-    const checkAdminStatus = async () => {
-      const isPublicPage =
-        pathname === '/admin/login' || pathname === '/admin/register';
+    const checkUserRole = async () => {
+      const isPublicPage = pathname === '/admin/login' || pathname === '/admin/register';
 
       if (!user) {
-        if (isPublicPage) {
+        if (!isPublicPage) {
+          router.replace('/admin/login');
+        } else {
           setIsVerifying(false);
-        } else {
-          router.replace('/admin/login');
         }
         return;
       }
 
-      // Pengguna sudah login, periksa dokumennya di Firestore
-      const userRef = doc(firestore, `users/${user.uid}`);
-      let userSnap;
-      try {
-        userSnap = await getDoc(userRef);
-      } catch (e) {
-        console.error("Gagal memeriksa dokumen pengguna:", e);
-        await auth.signOut();
-        router.replace('/admin/login');
-        return;
-      }
-      
-      // JIKA DOKUMEN PENGGUNA TIDAK ADA: Ini mungkin login pertama super admin
-      if (!userSnap.exists()) {
-        try {
-          const batch = writeBatch(firestore);
+      // 1. Check for Super Admin role first
+      const superAdminRef = doc(firestore, 'roles_superadmin', user.uid);
+      const superAdminSnap = await getDoc(superAdminRef);
 
-          // 1. Buat dokumen di koleksi 'users'
-          batch.set(userRef, {
-            id: user.uid,
-            email: user.email,
-            role: 'superadmin',
-          });
-
-          // 2. Buat dokumen di koleksi 'roles_superadmin' untuk validasi aturan keamanan
-          const roleDocRef = doc(firestore, 'roles_superadmin', user.uid);
-          batch.set(roleDocRef, {
-            userId: user.uid,
-            assignedAt: serverTimestamp(),
-          });
-
-          // Jalankan kedua operasi tulis secara atomik
-          await batch.commit();
-
-          // Ambil kembali snapshot pengguna setelah dibuat untuk melanjutkan verifikasi
-          userSnap = await getDoc(userRef);
-
-        } catch (e) {
-          console.error("Gagal membuat dokumen super admin:", e);
-          // Jika gagal (misalnya karena aturan menolak atau super admin sudah ada), logout pengguna
-          await auth.signOut();
-          router.replace('/admin/login');
-          return;
-        }
-      }
-      
-      const userData = userSnap.data();
-
-      // CHECK 1: Apakah pengguna superadmin?
-      if (userData?.role === 'superadmin') {
+      if (superAdminSnap.exists()) {
+        setRole('superadmin');
         if (isPublicPage) {
-          router.replace('/admin/dashboard'); // Arahkan dari login/register ke dasbor
+          router.replace('/admin/dashboard');
         } else {
-          setIsVerifying(false); // Izinkan akses ke halaman terproteksi
+          setIsVerifying(false);
         }
         return;
       }
       
-      // CHECK 2: Apakah pengguna admin kafe? (Dan mencoba akses halaman super admin)
-      if (userData?.role === 'admin_kafe') {
-          const tenantRef = doc(firestore, `tenants/${userData.tenantId}`);
-          const tenantSnap = await getDoc(tenantRef);
-          if (tenantSnap.exists()) {
-              // Pengguna ini adalah admin kafe yang valid, tapi di area yang salah.
-              // Arahkan mereka ke dasbor tenant mereka.
-              router.replace(`/${tenantSnap.data().slug}/admin`);
-          } else {
-              // Admin kafe dengan tenantId tidak valid, logout.
-              await auth.signOut();
-              router.replace('/admin/login');
-          }
-          return;
+      // Handle first-time super admin creation
+      try {
+        const superAdminCollection = await getDoc(doc(firestore, 'roles_superadmin', '_collection_marker_'));
+        const isFirstSuperAdmin = !superAdminCollection.exists();
+
+        if (isFirstSuperAdmin) {
+           await setDoc(superAdminRef, {
+             userId: user.uid,
+             email: user.email,
+             role: 'superadmin',
+             assignedAt: serverTimestamp(),
+           });
+           setRole('superadmin');
+           router.replace('/admin/dashboard');
+           return;
+        }
+      } catch (error) {
+        // This might fail if rules are not set up yet, which is fine during initial registration
       }
-        
-      // Jika peran tidak dikenali, mereka tidak diizinkan.
+
+
+      // 2. If not Super Admin, check for Cafe Admin role
+      const userRef = doc(firestore, `users/${user.uid}`);
+      const userSnap = await getDoc(userRef);
+
+      if (userSnap.exists() && userSnap.data().role === 'admin_kafe') {
+        setRole('admin_kafe');
+        const tenantRef = doc(firestore, `tenants/${userSnap.data().tenantId}`);
+        const tenantSnap = await getDoc(tenantRef);
+        if (tenantSnap.exists()) {
+            router.replace(`/${tenantSnap.data().slug}/admin`);
+        } else {
+            // Invalid tenant, logout
+            await auth.signOut();
+            router.replace('/admin/login');
+        }
+        return;
+      }
+
+      // 3. If no role found, deny access
+      setRole('unknown');
       await auth.signOut();
       router.replace('/admin/login');
     };
 
-    checkAdminStatus();
+    checkUserRole();
   }, [user, isUserLoading, router, pathname, firestore, auth]);
 
   if (isVerifying) {
@@ -122,9 +102,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       </div>
     );
   }
-
-  if (pathname === '/admin/login' || pathname === '/admin/register') {
-    return <>{children}</>;
+  
+  const isPublicPage = pathname === '/admin/login' || pathname === '/admin/register';
+  
+  if(isPublicPage || role !== 'superadmin'){
+     return <>{children}</>;
   }
 
   return <SuperAdminSidebar>{children}</SuperAdminSidebar>;
