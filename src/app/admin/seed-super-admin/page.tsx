@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth, useFirestore, FirestorePermissionError, errorEmitter } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
@@ -13,19 +13,18 @@ import Link from 'next/link';
 import Logo from '@/components/Logo';
 
 export default function SeedSuperAdminPage() {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   const auth = useAuth();
   const firestore = useFirestore();
   const { toast } = useToast();
-  const router = useRouter();
 
-  const handleGenerate = async () => {
-    setIsLoading(true);
+  const handleGenerate = useCallback(async () => {
     setError(null);
     setSuccess(false);
+    setIsLoading(true);
 
     const email = 'bayu@superad.min';
     const password = '123456';
@@ -63,7 +62,7 @@ export default function SeedSuperAdminPage() {
       let errorMessage = 'Terjadi kesalahan yang tidak diketahui.';
 
       if (error.code === 'auth/email-already-in-use') {
-        errorMessage = `Pengguna dengan email ${email} sudah ada. Silakan login atau hapus pengguna ini terlebih dahulu.`;
+        errorMessage = `Pengguna dengan email ${email} sudah ada. Silakan login.`;
         setSuccess(true); // Anggap sukses jika user sudah ada, agar bisa lanjut login
       } else if (error.code === 'permission-denied') {
         errorMessage = 'Gagal membuat dokumen peran karena masalah izin. Pastikan aturan keamanan Firestore Anda benar.';
@@ -78,15 +77,21 @@ export default function SeedSuperAdminPage() {
       }
       
       setError(errorMessage);
-      toast({
-        variant: 'destructive',
-        title: 'Operasi Gagal',
-        description: errorMessage,
-      });
+      if (error.code !== 'auth/email-already-in-use') {
+        toast({
+            variant: 'destructive',
+            title: 'Operasi Gagal',
+            description: errorMessage,
+        });
+      }
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [auth, firestore, toast]);
+
+  useEffect(() => {
+    handleGenerate();
+  }, [handleGenerate]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -98,17 +103,24 @@ export default function SeedSuperAdminPage() {
         </div>
         <Card>
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Generate Super Admin Awal</CardTitle>
-            <CardDescription>Gunakan halaman ini sekali untuk membuat akun super admin pertama.</CardDescription>
+            <CardTitle className="text-2xl">Generator Super Admin</CardTitle>
+            <CardDescription>Mencoba membuat akun super admin pertama secara otomatis.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="rounded-lg border bg-card-foreground/5 p-4 text-sm">
-                <p className="font-semibold">Akun yang akan dibuat:</p>
+                <p className="font-semibold">Akun yang dibuat:</p>
                 <p><span className="text-muted-foreground">Email:</span> bayu@superad.min</p>
                 <p><span className="text-muted-foreground">Password:</span> 123456</p>
             </div>
 
-            {success && (
+            {isLoading && (
+                 <div className="flex items-center justify-center gap-3 text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>Memproses...</span>
+                </div>
+            )}
+
+            {success && !isLoading && (
               <div className="rounded-md border border-green-500 bg-green-50 p-4 text-green-800">
                 <div className="flex items-center gap-3">
                   <ShieldCheck className="h-6 w-6" />
@@ -123,7 +135,7 @@ export default function SeedSuperAdminPage() {
               </div>
             )}
             
-            {error && !success && (
+            {error && !success && !isLoading && (
                  <div className="rounded-md border border-destructive bg-destructive/10 p-4 text-destructive">
                      <div className="flex items-start gap-3">
                         <AlertTriangle className="h-5 w-5 mt-0.5"/>
@@ -134,9 +146,9 @@ export default function SeedSuperAdminPage() {
                      </div>
                 </div>
             )}
-
+            
             <Button onClick={handleGenerate} className="w-full" disabled={isLoading || success}>
-              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Generate Super Admin'}
+              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Coba Lagi'}
             </Button>
             
           </CardContent>
