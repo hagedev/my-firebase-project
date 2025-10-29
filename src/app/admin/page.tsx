@@ -14,25 +14,25 @@ export default function AdminDashboardPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Tunggu sampai status loading user selesai
+    // Jangan lakukan apa-apa selagi status autentikasi masih loading.
     if (isUserLoading) {
-      return; // Jangan lakukan apa-apa selagi loading
+      return; 
     }
 
-    // Setelah loading selesai, jika tidak ada user, redirect paksa
+    // Setelah loading selesai, jika TIDAK ADA user, redirect paksa ke login.
     if (!user) {
-      router.replace('/admin/login');
+      router.replace('/admin/login?error=unauthorized');
     }
   }, [user, isUserLoading, router]);
 
   const handleLogout = async () => {
     await signOut(auth);
-    // Setelah logout, Firebase listener akan mendeteksi tidak ada user,
-    // dan useEffect di atas akan menangani redirect ke halaman login.
+    // Setelah logout, listener onAuthStateChanged akan aktif, 
+    // dan useEffect di atas akan secara otomatis mengalihkan ke halaman login.
   };
 
-  // Tampilkan loading screen selama proses verifikasi user.
-  // Ini adalah langkah krusial untuk mencegah "flash" konten yang salah.
+  // Tampilkan layar loading untuk mencegah "kedipan" konten yang tidak diinginkan
+  // dan untuk menunggu hasil pengecekan `useEffect`.
   if (isUserLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -41,8 +41,9 @@ export default function AdminDashboardPage() {
     );
   }
 
-  // Jika user tidak ada setelah loading (misal, karena sudah di-redirect oleh useEffect),
-  // return null untuk memastikan tidak ada yang dirender sebelum redirect selesai.
+  // Jika setelah loading selesai ternyata tidak ada user, useEffect sudah
+  // memulai proses redirect. Return null untuk memastikan tidak ada
+  // konten dashboard yang ter-render sebelum redirect selesai.
   if (!user) {
     return null;
   }

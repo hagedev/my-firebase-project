@@ -23,9 +23,8 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
 import { Coffee, ShieldAlert } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -47,7 +46,6 @@ export default function AdminLoginPage() {
   const { toast } = useToast();
   const router = useRouter();
   const auth = useAuth();
-  const firestore = useFirestore();
   const searchParams = useSearchParams();
   const errorParam = searchParams.get('error');
 
@@ -63,38 +61,29 @@ export default function AdminLoginPage() {
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
     try {
-      // 1. Coba login dengan email dan password
-      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
-      const user = userCredential.user;
+      // Cukup coba login. Jangan periksa peran di sini.
+      // Logika penjagaan akan ada di halaman dashboard.
+      await signInWithEmailAndPassword(auth, data.email, data.password);
+      
+      toast({
+        title: 'Login Berhasil',
+        description: 'Anda akan diarahkan ke dashboard.',
+      });
 
-      // 2. Jika login berhasil, cek peran di Firestore
-      const roleRef = doc(firestore, `roles_superadmin/${user.uid}`);
-      const roleDoc = await getDoc(roleRef);
-
-      // 3. Jika dokumen peran ada, dia adalah super admin
-      if (roleDoc.exists()) {
-        toast({
-          title: 'Login Berhasil',
-          description: 'Anda akan diarahkan ke dashboard.',
-        });
-        // 4. Alihkan ke dashboard
-        router.replace('/admin');
-      } else {
-        // Jika dokumen peran tidak ada, tolak akses dan logout
-        await auth.signOut();
-        toast({
-          variant: 'destructive',
-          title: 'Akses Ditolak',
-          description: 'Akun Anda tidak memiliki hak akses super admin.',
-        });
-      }
+      // Langsung redirect ke dashboard. Halaman dashboard yang akan
+      // memverifikasi sesi dan menendang jika perlu.
+      router.replace('/admin');
 
     } catch (error: any) {
       console.error('Login Error:', error);
       let description = 'Terjadi kesalahan saat login.';
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+      // Kode error yang lebih spesifik untuk kredensial salah
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
         description = 'Email atau password yang Anda masukkan salah.';
+      } else if (error.code === 'auth/too-many-requests') {
+        description = 'Terlalu banyak percobaan login. Coba lagi nanti.';
       }
+      
       toast({
         variant: 'destructive',
         title: 'Login Gagal',
@@ -123,7 +112,7 @@ export default function AdminLoginPage() {
               <ShieldAlert className="h-4 w-4" />
               <AlertTitle>Akses Ditolak</AlertTitle>
               <AlertDescription>
-                Anda tidak memiliki hak akses untuk halaman ini. Silakan masuk dengan akun super admin.
+                Anda harus login untuk mengakses halaman ini.
               </AlertDescription>
             </Alert>
           )}
