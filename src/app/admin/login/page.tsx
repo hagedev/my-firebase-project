@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -9,12 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import Logo from '@/components/Logo';
 import { Loader2 } from 'lucide-react';
-import Link from 'next/link';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Alamat email tidak valid.' }),
@@ -23,12 +17,9 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-export default function SuperAdminLoginPage() {
+export default function AdminLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
-  const { toast } = useToast();
-  const auth = useAuth();
-
+ 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -39,43 +30,18 @@ export default function SuperAdminLoginPage() {
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
-    try {
-      await signInWithEmailAndPassword(auth, data.email, data.password);
-      // AdminLayout will handle role verification and redirection
-      toast({
-        title: 'Login Berhasil',
-        description: 'Mengarahkan ke dasbor...',
-      });
-      router.push('/admin/dashboard'); // Redirect after successful login
-    } catch (error: any) {
-      console.error('Login Gagal:', error);
-      let description = 'Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.';
-      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-        description = 'Email atau kata sandi yang Anda masukkan salah.';
-      }
-      
-      toast({
-        variant: 'destructive',
-        title: 'Login Gagal',
-        description,
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    console.log('Login attempt with:', data);
+    // Logika login akan ditambahkan di sini
+    setTimeout(() => setIsLoading(false), 1000);
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-md">
-        <div className="mb-8 flex justify-center">
-            <Link href="/">
-                <Logo className="text-foreground" />
-            </Link>
-        </div>
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl">Login Super Admin</CardTitle>
-            <CardDescription>Masukkan kredensial Anda untuk melanjutkan.</CardDescription>
+            <CardTitle className="text-2xl">Login</CardTitle>
+            <CardDescription>Masukkan kredensial Anda.</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
@@ -87,7 +53,7 @@ export default function SuperAdminLoginPage() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input placeholder="superadmin@air.cafe" {...field} />
+                        <Input placeholder="admin@example.com" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
