@@ -1,7 +1,7 @@
 'use client';
 
 import { useUser, useFirestore, useAuth, FirestorePermissionError, errorEmitter } from '@/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { collection, doc, getDocs, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState, ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
@@ -15,55 +15,98 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [isVerifying, setIsVerifying] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     // PENTING: Jangan lakukan apa pun sampai Firebase Auth selesai memuat status pengguna.
     if (isUserLoading) {
-      return; 
+      return;
     }
 
     const checkUserRole = async () => {
-      // Jika tidak ada pengguna yang login, arahkan ke halaman login
-      // Kecuali jika mereka sudah berada di halaman register atau login.
+      // Jika tidak ada pengguna yang login, arahkan ke halaman login, kecuali mereka sudah di sana.
       if (!user) {
-        if (pathname !== '/admin/register' && pathname !== '/admin/login') {
+        if (pathname !== '/admin/login') {
           router.replace('/admin/login');
         }
         setIsVerifying(false);
         return;
       }
       
-      // Jika pengguna sudah login, kita coba verifikasi perannya
-      const superAdminRef = doc(firestore, 'roles_superadmin', user.uid);
-      const superAdminDoc = await getDoc(superAdminRef).catch(err => {
-         errorEmitter.emit('permission-error', new FirestorePermissionError({ path: superAdminRef.path, operation: 'get' }));
-         return null;
-      });
+      // Pengguna sudah login. Sekarang kita verifikasi perannya.
+      const superAdminCollectionRef = collection(firestore, 'roles_superadmin');
+      
+      try {
+        const superAdminRef = doc(superAdminCollectionRef, user.uid);
+        const superAdminDoc = await getDoc(superAdminRef);
 
-      // Jika dokumen super admin ada, pengguna terverifikasi.
-      if (superAdminDoc?.exists()) {
-           if (pathname === '/admin/login' || pathname === '/admin/register') {
-              router.replace('/admin/dashboard');
-           } else {
-             setIsVerifying(false);
-           }
-           return;
+        if (superAdminDoc.exists()) {
+          // KASUS: Pengguna adalah Super Admin.
+          if (pathname === '/admin/login') {
+            router.replace('/admin/dashboard');
+          } else {
+            setIsVerifying(false);
+          }
+          return;
+        }
+
+        // KASUS: Dokumen Super Admin tidak ditemukan. Cek apakah ini harusnya jadi super admin pertama.
+        const superAdminSnapshot = await getDocs(superAdminCollectionRef);
+        if (superAdminSnapshot.empty) {
+          // KASUS: Generate Super Admin Pertama Kali
+          const superAdminData = {
+            userId: user.uid,
+            email: user.email,
+            role: 'superadmin',
+            assignedAt: serverTimestamp(),
+          };
+          await setDoc(superAdminRef, superAdminData);
+          toast({
+            title: "Selamat Datang, Super Admin!",
+            description: "Akun Anda telah berhasil dibuat sebagai super admin pertama.",
+          });
+          router.replace('/admin/dashboard'); // Langsung arahkan ke dasbor
+          return;
+        }
+
+        // KASUS: Pengguna BUKAN Super Admin, dan super admin sudah ada.
+        // Cek apakah dia Admin Kafe? Admin Kafe tidak seharusnya login lewat sini.
+        const userRef = doc(firestore, `users/${user.uid}`);
+        const userSnap = await getDoc(userRef);
+
+        let errorMessage = "Akun Anda tidak memiliki hak akses super admin.";
+        if (userSnap.exists() && userSnap.data().role === 'admin_kafe') {
+            errorMessage = "Ini adalah halaman login Super Admin. Silakan login melalui halaman admin kafe Anda.";
+        }
+
+        toast({
+          variant: "destructive",
+          title: "Akses Ditolak",
+          description: errorMessage,
+        });
+        await auth.signOut();
+        router.replace('/admin/login'); // Tetap di halaman login super admin
+
+      } catch (error) {
+        // Menangkap error dari getDoc atau getDocs
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: 'roles_superadmin',
+            operation: 'list' // atau 'get', tergantung operasi yang gagal
+        }));
+        toast({
+          variant: "destructive",
+          title: "Error Verifikasi",
+          description: "Gagal memverifikasi peran pengguna karena masalah izin."
+        });
+        await auth.signOut();
+        router.replace('/admin/login');
+      } finally {
+        setIsVerifying(false);
       }
-
-      // Jika dokumen tidak ada, berarti pengguna ini bukan super admin.
-      // Kita logout paksa dan arahkan ke halaman login admin.
-      toast({
-        variant: "destructive",
-        title: "Akses Ditolak",
-        description: "Akun Anda tidak memiliki hak akses super admin."
-      })
-      await auth.signOut();
-      router.replace('/admin/login');
-      setIsVerifying(false);
     };
 
     checkUserRole();
-  }, [user, isUserLoading, router, pathname, firestore, auth, useToast]);
+  }, [user, isUserLoading, router, pathname, firestore, auth, toast]);
 
   if (isVerifying || isUserLoading) {
     return (
@@ -73,16 +116,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     );
   }
   
-  // Izinkan rendering halaman register atau login jika verifikasi selesai
-  if (pathname === '/admin/register' || pathname === '/admin/login') {
+  if (pathname === '/admin/login') {
      return <>{children}</>;
   }
 
-  // Jika semua verifikasi lolos dan pengguna ada, tampilkan layout admin
   if (user && !isVerifying) {
     return <SuperAdminSidebar>{children}</SuperAdminSidebar>;
   }
 
-  // Fallback, seharusnya tidak pernah tercapai
   return null;
 }
