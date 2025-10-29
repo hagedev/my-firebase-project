@@ -42,12 +42,21 @@ export default function SuperAdminLoginPage() {
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
+    const superAdminCollectionRef = collection(firestore, 'roles_superadmin');
+    const q = query(superAdminCollectionRef, limit(1));
 
     try {
-      // Periksa apakah sudah ada super admin.
-      const superAdminCollectionRef = collection(firestore, 'roles_superadmin');
-      const q = query(superAdminCollectionRef, limit(1));
-      const snapshot = await getDocs(q);
+      const snapshot = await getDocs(q).catch(serverError => {
+        // Implementasi contextual error handling
+        const permissionError = new FirestorePermissionError({
+            path: superAdminCollectionRef.path,
+            operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        // Lemparkan kembali error untuk ditangkap oleh blok catch utama
+        throw permissionError;
+      });
+      
       const isSystemEmpty = snapshot.empty;
 
       if (isSystemEmpty) {
@@ -70,6 +79,12 @@ export default function SuperAdminLoginPage() {
         router.push('/admin/dashboard');
       }
     } catch (error: any) {
+      // Jangan tampilkan toast untuk FirestorePermissionError karena sudah ditangani secara global
+      if (error instanceof FirestorePermissionError) {
+        // Biarkan FirebaseErrorListener yang menanganinya
+        return;
+      }
+
       console.error('Proses login/registrasi gagal:', error);
 
       let description = 'Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.';
@@ -77,14 +92,8 @@ export default function SuperAdminLoginPage() {
         description = 'Email atau kata sandi yang Anda masukkan salah.';
       } else if (error.code === 'auth/email-already-in-use') {
         description = 'Email ini sudah terdaftar. Silakan coba login.';
-      } else if (error.code === 'permission-denied') {
-        description = 'Gagal memeriksa status sistem karena masalah izin. Hubungi administrator.';
-         errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: 'roles_superadmin',
-            operation: 'list',
-          }));
       }
-
+      
       toast({
         variant: 'destructive',
         title: 'Operasi Gagal',
@@ -138,7 +147,7 @@ export default function SuperAdminLoginPage() {
                   )}
                 />
                 <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Lanjutkan'}
+                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Login atau Buat Akun'}
                 </Button>
               </form>
             </Form>
