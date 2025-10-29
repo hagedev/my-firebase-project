@@ -46,7 +46,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   }, [user, isUserLoading, superAdminRole, isRoleLoading, router, pathname]);
 
   // Show a loading screen for protected pages while we verify auth and role
-  if ((isUserLoading || (user && isRoleLoading)) && pathname !== '/admin/login') {
+  const isLoadingProtectedPage = (isUserLoading || (user && isRoleLoading)) && pathname !== '/admin/login';
+  if (isLoadingProtectedPage) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
@@ -57,14 +58,18 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  // Render children under these conditions:
-  // 1. We are on the login page, and we haven't finished loading or the user is not logged in yet.
-  // 2. We have confirmed the user is a super admin.
-  if ((pathname === '/admin/login' && !user) || (user && superAdminRole)) {
+  // If on login page, always render children (the login form)
+  // The useEffect will handle redirecting away if the user is already a logged-in admin.
+  if (pathname === '/admin/login') {
     return <>{children}</>;
   }
 
-  // In all other cases (like a non-admin user on the login page after a redirect),
-  // return null to avoid showing the wrong page flicker. The useEffect will handle redirection.
+  // If on a protected page and user is a confirmed super admin, render the page
+  if (user && superAdminRole) {
+    return <>{children}</>;
+  }
+  
+  // In all other cases (e.g., waiting for redirect, or a non-admin on a protected page),
+  // return null to prevent content flashing.
   return null;
 }
