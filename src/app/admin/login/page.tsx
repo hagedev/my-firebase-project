@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -23,8 +23,9 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 import { Coffee, ShieldAlert } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -46,8 +47,9 @@ export default function AdminLoginPage() {
   const { toast } = useToast();
   const router = useRouter();
   const auth = useAuth();
+  const firestore = useFirestore();
   const searchParams = useSearchParams();
-  const error = searchParams.get('error');
+  const errorParam = searchParams.get('error');
 
 
   const form = useForm<LoginFormValues>({
@@ -61,12 +63,32 @@ export default function AdminLoginPage() {
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, data.email, data.password);
-      toast({
-        title: 'Login Berhasil',
-        description: 'Anda akan diarahkan ke dashboard.',
-      });
-      router.replace('/admin');
+      // 1. Coba login dengan email dan password
+      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+      const user = userCredential.user;
+
+      // 2. Jika login berhasil, cek peran di Firestore
+      const roleRef = doc(firestore, `roles_superadmin/${user.uid}`);
+      const roleDoc = await getDoc(roleRef);
+
+      // 3. Jika dokumen peran ada, dia adalah super admin
+      if (roleDoc.exists()) {
+        toast({
+          title: 'Login Berhasil',
+          description: 'Anda akan diarahkan ke dashboard.',
+        });
+        // 4. Alihkan ke dashboard
+        router.replace('/admin');
+      } else {
+        // Jika dokumen peran tidak ada, tolak akses
+        await auth.signOut(); // Logout pengguna yang tidak berhak
+        toast({
+          variant: 'destructive',
+          title: 'Akses Ditolak',
+          description: 'Akun Anda tidak memiliki hak akses super admin.',
+        });
+      }
+
     } catch (error: any) {
       console.error('Login Error:', error);
       let description = 'Terjadi kesalahan saat login.';
@@ -96,7 +118,7 @@ export default function AdminLoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {error === 'unauthorized' && (
+          {errorParam === 'unauthorized' && (
             <Alert variant="destructive" className="mb-6">
               <ShieldAlert className="h-4 w-4" />
               <AlertTitle>Akses Ditolak</AlertTitle>
