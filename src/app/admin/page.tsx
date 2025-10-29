@@ -16,13 +16,10 @@ export default function AdminDashboardPage() {
 
   const handleLogout = async () => {
     await signOut(auth);
-    // Setelah logout, arahkan kembali ke halaman login.
-    // Menggunakan replace agar riwayat navigasi dashboard dihapus.
     router.replace('/admin/login');
   };
 
   // Selama proses verifikasi user, tampilkan layar loading.
-  // Ini memberi waktu bagi aplikasi untuk memuat semua data yang dibutuhkan.
   if (isUserLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">

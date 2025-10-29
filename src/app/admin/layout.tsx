@@ -29,8 +29,17 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   }, [user, isUserLoading, pathname, router]);
   
-  // Tampilkan children secara langsung. 
-  // Halaman dashboard (children) akan menangani UI loading-nya sendiri.
-  // Logika useEffect di atas akan menangani redirect jika diperlukan.
+  // Selama auth state masih loading, tampilkan UI loading untuk mencegah flash
+  // konten yang tidak seharusnya dilihat.
+  if (isUserLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary"></div>
+      </div>
+    );
+  }
+
+  // Tampilkan children (halaman login atau dashboard) setelah loading selesai.
+  // Logika useEffect di atas sudah menangani pengalihan jika diperlukan.
   return <>{children}</>;
 }
