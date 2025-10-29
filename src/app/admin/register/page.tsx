@@ -85,16 +85,8 @@ export default function RegisterSuperAdminPage() {
           assignedAt: serverTimestamp(),
       };
       
-      // Operasi ini harus diizinkan oleh aturan keamanan yang telah kita perbaiki
       await setDoc(superAdminRef, superAdminData);
 
-      // Langkah 3: Login dengan pengguna baru untuk membuat sesi.
-      await signInWithEmailAndPassword(
-        auth,
-        data.email,
-        data.password
-      );
-      
       toast({
         title: 'Pendaftaran Super Admin Berhasil',
         description: 'Akun dan peran telah dibuat. Mengarahkan ke dasbor...',
@@ -106,14 +98,33 @@ export default function RegisterSuperAdminPage() {
     } catch (error: any) {
       console.error('Pendaftaran atau pembuatan peran gagal:', error);
       
+      // Jika email sudah ada, coba login sebagai gantinya.
+      if (error.code === 'auth/email-already-in-use') {
+        toast({
+          title: 'Email Sudah Terdaftar',
+          description: 'Mencoba untuk login dan memperbaiki status peran...',
+        });
+        try {
+          // Coba login, AdminLayout akan menangani pembuatan dokumen jika belum ada
+          await signInWithEmailAndPassword(auth, data.email, data.password);
+          router.push('/admin/dashboard');
+        } catch (loginError: any) {
+          toast({
+            variant: 'destructive',
+            title: 'Login Gagal',
+            description: 'Meskipun email terdaftar, login gagal. Periksa kembali kata sandi Anda.',
+          });
+        }
+        setIsLoading(false);
+        return;
+      }
+      
       let title = 'Pendaftaran Gagal';
       let description = 'Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.';
 
-      if (error.code === 'auth/email-already-in-use') {
-        description = 'Email ini sudah digunakan. Silakan gunakan email lain.';
-      } else if (error.code === 'permission-denied' || error.name === 'FirebaseError') {
+      if (error.name === 'FirebaseError' && error.code.includes('permission-denied')) {
         title = 'Pembuatan Peran Gagal';
-        description = 'Gagal membuat dokumen peran di Firestore. Ini kemungkinan karena super admin pertama sudah ada di sistem.';
+        description = 'Gagal membuat dokumen peran di Firestore karena masalah izin. Periksa aturan keamanan Anda.';
         // Emit error untuk debugging jika ini terjadi
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: `roles_superadmin/${auth.currentUser?.uid || 'unknown'}`,
