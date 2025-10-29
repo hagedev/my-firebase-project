@@ -52,6 +52,7 @@ export default function AdminLoginPage() {
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
+    let unauthorizedError = false;
 
     try {
       // 1. AUTENTIKASI: Verifikasi email dan password dengan Firebase Auth
@@ -76,7 +77,9 @@ export default function AdminLoginPage() {
         router.replace('/admin');
       } else {
         // 4. GAGAL AUTORISASI: Pengguna valid, tapi bukan super admin
-        throw new Error('unauthorized');
+        // Tandai sebagai error unauthorized dan logout pengguna
+        unauthorizedError = true;
+        await signOut(auth);
       }
     } catch (error: any) {
       // 5. TANGANI SEMUA ERROR
@@ -87,17 +90,19 @@ export default function AdminLoginPage() {
         description = 'Email atau password yang Anda masukkan salah.';
       } else if (error.code === 'auth/too-many-requests') {
         description = 'Terlalu banyak percobaan login. Coba lagi nanti.';
-      } else if (error.message === 'unauthorized') {
-        title = 'Akses Ditolak';
-        description = 'Akun Anda tidak memiliki hak akses super admin.';
-        // Penting: Logout pengguna yang berhasil login tapi tidak punya peran
-        await signOut(auth);
       }
       
       console.error('Login Process Error:', error);
       toast({ variant: 'destructive', title, description });
 
     } finally {
+      if (unauthorizedError) {
+        toast({
+          variant: 'destructive',
+          title: 'Akses Ditolak',
+          description: 'Akun Anda tidak memiliki hak akses super admin.',
+        });
+      }
       setIsLoading(false);
     }
   };
