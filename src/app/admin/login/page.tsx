@@ -80,8 +80,8 @@ export default function AdminLoginPage() {
         // 4. Alihkan ke dashboard
         router.replace('/admin');
       } else {
-        // Jika dokumen peran tidak ada, tolak akses
-        await auth.signOut(); // Logout pengguna yang tidak berhak
+        // Jika dokumen peran tidak ada, tolak akses dan logout
+        await auth.signOut();
         toast({
           variant: 'destructive',
           title: 'Akses Ditolak',

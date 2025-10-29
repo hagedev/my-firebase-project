@@ -15,13 +15,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Jika loading selesai dan user tidak ada,
+    // Jika loading selesai dan user TIDAK ADA,
     // dan dia mencoba akses halaman selain login, tendang ke login.
     if (!user && pathname !== '/admin/login') {
       router.replace('/admin/login');
     }
     
-    // Jika loading selesai dan user ada, tapi dia masih di halaman login,
+    // Jika loading selesai dan user ADA, tapi dia masih di halaman login,
     // (ini terjadi setelah redirect dari login sukses), arahkan ke dashboard.
     // Pengecekan peran sudah terjadi di halaman login, jadi kita bisa asumsikan
     // user yang ada di sini adalah user yang sah.
