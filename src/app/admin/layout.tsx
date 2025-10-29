@@ -17,45 +17,45 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   const { data: superAdminRole, isLoading: isRoleLoading } = useDoc(superAdminRoleRef);
 
+  const isLoginPage = pathname === '/admin/login';
+
   useEffect(() => {
-    // Jangan lakukan apa-apa jika data user atau role masih loading
+    // 1. Jangan lakukan apa pun jika data user atau data role masih loading.
+    // Ini adalah kunci utama untuk mencegah race condition.
     if (isUserLoading || (user && isRoleLoading)) {
       return;
     }
 
-    const isLoginPage = pathname === '/admin/login';
-
-    // Jika user tidak login
+    // 2. Jika loading selesai dan user tidak ada
     if (!user) {
+      // Jika mencoba akses halaman admin selain login, redirect ke login.
       if (!isLoginPage) {
         router.replace('/admin/login');
       }
+      // Jika sudah di halaman login, biarkan saja.
       return;
     }
 
-    // Jika user sudah login
-    // Cek apakah user adalah super admin
+    // 3. Jika loading selesai dan user ada
     const isSuperAdmin = !!superAdminRole;
 
     if (isSuperAdmin) {
-      // Jika super admin ada di halaman login, redirect ke dashboard
+      // Jika super admin ada di halaman login, redirect ke dashboard.
       if (isLoginPage) {
         router.replace('/admin');
       }
     } else {
-      // Jika bukan super admin dan tidak di halaman login, redirect ke login
-      // Ini juga menangani kasus di mana user login dengan akun non-admin
+      // Jika user login tapi bukan super admin, tendang ke login dengan pesan error.
       if (!isLoginPage) {
         router.replace('/admin/login?error=unauthorized');
       }
     }
 
-  }, [user, isUserLoading, superAdminRole, isRoleLoading, router, pathname]);
-
-  const isLoadingProtectedPage = (isUserLoading || (user && isRoleLoading)) && pathname !== '/admin/login';
+  }, [user, isUserLoading, superAdminRole, isRoleLoading, router, pathname, isLoginPage]);
 
   // Tampilkan loading screen jika sedang memeriksa di halaman terproteksi
-  if (isLoadingProtectedPage) {
+  const isCheckingAccess = (isUserLoading || (user && isRoleLoading)) && !isLoginPage;
+  if (isCheckingAccess) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
@@ -66,14 +66,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  // Jika sudah selesai loading dan user adalah super admin, atau jika kita di halaman login
-  // tampilkan kontennya. Logika useEffect akan menangani redirect jika perlu.
+  // Tampilkan konten jika:
+  // 1. Berada di halaman login (dan tidak sedang diredirect)
+  // 2. Pengguna adalah super admin yang sudah diverifikasi
   const isSuperAdmin = user && superAdminRole;
-  if ((isSuperAdmin && !isUserLoading && !isRoleLoading) || pathname === '/admin/login') {
+  if (isLoginPage || isSuperAdmin) {
      return <>{children}</>;
   }
 
-  // Untuk kasus lain (misalnya user bukan super admin di halaman terproteksi sebelum redirect),
-  // jangan render apa-apa untuk mencegah 'flash of content'.
+  // Untuk semua kasus lain (mis. sebelum redirect terjadi), jangan render apa-apa.
   return null;
 }
