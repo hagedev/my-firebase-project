@@ -23,11 +23,12 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirestore, FirestorePermissionError, errorEmitter } from '@/firebase';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import Logo from '@/components/Logo';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
@@ -52,6 +53,7 @@ export default function RegisterSuperAdminPage() {
   const router = useRouter();
   const { toast } = useToast();
   const auth = useAuth();
+  const firestore = useFirestore();
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -67,15 +69,26 @@ export default function RegisterSuperAdminPage() {
     
     try {
       // Langkah 1: Buat pengguna di Firebase Auth.
-      // Ini mungkin gagal jika email sudah digunakan atau jika aturan menolak.
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         data.email,
         data.password
       );
+      const user = userCredential.user;
 
-      // Langkah 2: Langsung login dengan pengguna baru.
-      // Ini penting agar klien memiliki token auth untuk langkah selanjutnya di AdminLayout.
+      // Langkah 2: Buat dokumen peran di Firestore.
+      const superAdminRef = doc(firestore, 'roles_superadmin', user.uid);
+      const superAdminData = {
+          userId: user.uid,
+          email: user.email,
+          role: 'superadmin',
+          assignedAt: serverTimestamp(),
+      };
+      
+      // Operasi ini harus diizinkan oleh aturan keamanan yang telah kita perbaiki
+      await setDoc(superAdminRef, superAdminData);
+
+      // Langkah 3: Login dengan pengguna baru untuk membuat sesi.
       await signInWithEmailAndPassword(
         auth,
         data.email,
@@ -83,30 +96,35 @@ export default function RegisterSuperAdminPage() {
       );
       
       toast({
-        title: 'Pendaftaran Berhasil',
-        description: 'Login berhasil, memverifikasi peran & mengarahkan ke dasbor...',
+        title: 'Pendaftaran Super Admin Berhasil',
+        description: 'Akun dan peran telah dibuat. Mengarahkan ke dasbor...',
       });
 
-      // AdminLayout akan menangani pembuatan dokumen Firestore dan pengalihan akhir.
-      // Kita cukup arahkan ke root admin, dan layout akan mengambil alih.
+      // Arahkan ke dasbor, AdminLayout akan memverifikasi dan memberikan akses.
       router.push('/admin/dashboard');
 
     } catch (error: any) {
-      console.error('Pendaftaran atau login gagal:', error);
-      let description = 'Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.';
+      console.error('Pendaftaran atau pembuatan peran gagal:', error);
       
+      let title = 'Pendaftaran Gagal';
+      let description = 'Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.';
+
       if (error.code === 'auth/email-already-in-use') {
-        description = 'Email ini sudah digunakan. Silakan gunakan email lain atau coba login jika Anda sudah mendaftar.';
-      } else if (error.code === 'permission-denied') {
-        // Ini bisa terjadi jika aturan keamanan menolak pembuatan pengguna,
-        // meskipun untuk Auth, ini lebih jarang. Kemungkinan besar ini terjadi
-        // karena super admin sudah ada.
-        description = 'Gagal membuat pengguna. Kemungkinan super admin awal sudah ada.';
+        description = 'Email ini sudah digunakan. Silakan gunakan email lain.';
+      } else if (error.code === 'permission-denied' || error.name === 'FirebaseError') {
+        title = 'Pembuatan Peran Gagal';
+        description = 'Gagal membuat dokumen peran di Firestore. Ini kemungkinan karena super admin pertama sudah ada di sistem.';
+        // Emit error untuk debugging jika ini terjadi
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: `roles_superadmin/${auth.currentUser?.uid || 'unknown'}`,
+            operation: 'create',
+            requestResourceData: { email: data.email, role: 'superadmin' }
+        }));
       }
       
       toast({
         variant: 'destructive',
-        title: 'Pendaftaran Gagal',
+        title: title,
         description,
       });
     } finally {
@@ -126,7 +144,7 @@ export default function RegisterSuperAdminPage() {
           <CardHeader>
             <CardTitle className="text-2xl">Pendaftaran Super Admin</CardTitle>
             <CardDescription>
-              Buat akun super admin pertama untuk aplikasi. Ini hanya dapat dilakukan sekali.
+              Buat akun super admin pertama untuk aplikasi. Akun ini memiliki hak akses tertinggi.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -192,6 +210,16 @@ export default function RegisterSuperAdminPage() {
                     'Buat Super Admin'
                   )}
                 </Button>
+                 <p className="px-8 text-center text-sm text-muted-foreground">
+                    Sudah punya akun?{" "}
+                    <Link
+                    href="/admin/login"
+                    className="underline underline-offset-4 hover:text-primary"
+                    >
+                    Login di sini
+                    </Link>
+                    .
+                </p>
               </form>
             </Form>
           </CardContent>

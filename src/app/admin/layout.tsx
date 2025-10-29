@@ -1,7 +1,7 @@
 'use client';
 
 import { useUser, useFirestore, useAuth, FirestorePermissionError, errorEmitter } from '@/firebase';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState, ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
@@ -15,7 +15,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [isVerifying, setIsVerifying] = useState(true);
-  const { toast } = useToast();
 
   useEffect(() => {
     // PENTING: Jangan lakukan apa pun sampai Firebase Auth selesai memuat status pengguna.
@@ -24,10 +23,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     }
 
     const checkUserRole = async () => {
-      // Jika tidak ada pengguna yang login, arahkan ke halaman registrasi
+      // Jika tidak ada pengguna yang login, arahkan ke halaman login
+      // Kecuali jika mereka sudah berada di halaman register atau login.
       if (!user) {
-        if (pathname !== '/admin/register') {
-          router.replace('/admin/register');
+        if (pathname !== '/admin/register' && pathname !== '/admin/login') {
+          router.replace('/admin/login');
         }
         setIsVerifying(false);
         return;
@@ -40,48 +40,30 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
          return null;
       });
 
-      // Jika dokumen super admin sudah ada, pengguna terverifikasi.
+      // Jika dokumen super admin ada, pengguna terverifikasi.
       if (superAdminDoc?.exists()) {
            if (pathname === '/admin/login' || pathname === '/admin/register') {
               router.replace('/admin/dashboard');
+           } else {
+             setIsVerifying(false);
            }
-           setIsVerifying(false);
            return;
       }
 
-      // Jika dokumen belum ada, ini adalah login pertama setelah registrasi.
-      // Kita coba buat dokumen super admin untuk pengguna ini.
-      // Aturan keamanan yang baru akan mengizinkan operasi ini.
-      const superAdminData = {
-          userId: user.uid,
-          email: user.email,
-          role: 'superadmin',
-          assignedAt: serverTimestamp(),
-      };
-      
-      setDoc(superAdminRef, superAdminData)
-        .then(() => {
-            toast({ title: "Akun Super Admin Dibuat", description: "Anda sekarang adalah super admin pertama." });
-            router.replace('/admin/dashboard');
-        })
-        .catch(() => {
-            // Jika ini gagal, berarti ada masalah dengan aturan keamanan.
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-                path: superAdminRef.path,
-                operation: 'create',
-                requestResourceData: superAdminData
-            }));
-            // Keluar dan kembali ke halaman registrasi jika pembuatan gagal.
-            auth.signOut();
-            router.replace('/admin/register');
-        })
-        .finally(() => {
-            setIsVerifying(false);
-        });
+      // Jika dokumen tidak ada, berarti pengguna ini bukan super admin.
+      // Kita logout paksa dan arahkan ke halaman login admin.
+      toast({
+        variant: "destructive",
+        title: "Akses Ditolak",
+        description: "Akun Anda tidak memiliki hak akses super admin."
+      })
+      await auth.signOut();
+      router.replace('/admin/login');
+      setIsVerifying(false);
     };
 
     checkUserRole();
-  }, [user, isUserLoading, router, pathname, firestore, auth, toast]);
+  }, [user, isUserLoading, router, pathname, firestore, auth, useToast]);
 
   if (isVerifying || isUserLoading) {
     return (
@@ -91,13 +73,16 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     );
   }
   
+  // Izinkan rendering halaman register atau login jika verifikasi selesai
   if (pathname === '/admin/register' || pathname === '/admin/login') {
      return <>{children}</>;
   }
 
+  // Jika semua verifikasi lolos dan pengguna ada, tampilkan layout admin
   if (user && !isVerifying) {
     return <SuperAdminSidebar>{children}</SuperAdminSidebar>;
   }
 
+  // Fallback, seharusnya tidak pernah tercapai
   return null;
 }
