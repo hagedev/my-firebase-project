@@ -32,7 +32,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       }
       
       const superAdminRef = doc(firestore, 'roles_superadmin', user.uid);
-      const userRef = doc(firestore, 'users', user.uid);
 
       try {
         const superAdminDoc = await getDoc(superAdminRef);
