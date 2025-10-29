@@ -7,32 +7,51 @@ import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LogOut } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AdminDashboardPage() {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Jangan lakukan apa-apa selagi status autentikasi masih loading.
+    // 1. Jangan lakukan apa-apa selagi status autentikasi masih loading.
     if (isUserLoading) {
       return; 
     }
 
-    // Setelah loading selesai, jika TIDAK ADA user, redirect paksa ke login.
+    // 2. Setelah loading selesai, jika TIDAK ADA user, redirect paksa ke login.
+    // Ini akan menangani kasus akses langsung ke URL atau sesi yang sudah berakhir.
     if (!user) {
       router.replace('/admin/login?error=unauthorized');
     }
+
+    // Jika user ada, biarkan halaman dirender. Pengecekan peran super admin
+    // sudah dilakukan secara tuntas di halaman login.
   }, [user, isUserLoading, router]);
 
   const handleLogout = async () => {
-    await signOut(auth);
-    // Setelah logout, listener onAuthStateChanged akan aktif, 
-    // dan useEffect di atas akan secara otomatis mengalihkan ke halaman login.
+    try {
+        await signOut(auth);
+        toast({
+            title: 'Logout Berhasil',
+            description: 'Anda telah keluar dari sesi super admin.',
+        });
+        // `useEffect` di atas akan otomatis mendeteksi perubahan `user` menjadi `null`
+        // dan mengalihkan ke halaman login.
+    } catch (error) {
+        console.error("Logout error:", error)
+        toast({
+            variant: 'destructive',
+            title: 'Logout Gagal',
+            description: 'Terjadi kesalahan saat mencoba keluar.',
+        });
+    }
   };
 
-  // Tampilkan layar loading untuk mencegah "kedipan" konten yang tidak diinginkan
-  // dan untuk menunggu hasil pengecekan `useEffect`.
+  // Tampilkan layar loading untuk menunggu hasil pengecekan `useEffect`.
+  // Ini adalah bagian krusial untuk mencegah "kedipan" konten atau redirect prematur.
   if (isUserLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -66,6 +85,7 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent>
             <p>Anda telah berhasil login sebagai super admin!</p>
+            <p className="text-sm text-muted-foreground mt-2">Email: {user.email}</p>
           </CardContent>
         </Card>
       </main>
