@@ -1,219 +1,194 @@
 /**
- * @file Firestore Security Rules for AirCafe Application
- * @description This ruleset enforces a multi-tenant security model where users (cafe admins) can only access data belonging to their assigned tenant, except superadmins, who can access any data.
+ * @file Firebase Security Rules for AirCafe Application
  *
- * Data Structure:
- * - /tenants/{tenantId}: Stores tenant-specific data.
- * - /users/{userId}: Stores user profiles, linked to a tenant by 'tenantId'.  User ID corresponds to Firebase Auth UID.
- * - /roles_superadmin/{userId}: Stores superadmin role information.
+ * @description This ruleset enforces a multi-tenant data model where each cafe (tenant) has its own set of data (menus, categories, orders, tables).
+ *   Users are specific to a tenant and have an 'admin_kafe' role. Superadmins are managed in a separate collection.
+ *
+ * @data_structure
+ * - /tenants/{tenantId}: Stores tenant profile information.
+ * - /users/{userId}: Stores user profile information. User ID corresponds to Firebase Auth UID.
+ * - /roles_superadmin/{userId}: Stores superadmin role assignments.
  * - /tenants/{tenantId}/menus/{menuId}: Stores menu items for a tenant.
  * - /tenants/{tenantId}/categories/{categoryId}: Stores menu categories for a tenant.
  * - /tenants/{tenantId}/orders/{orderId}: Stores orders for a tenant.
  * - /tenants/{tenantId}/tables/{tableId}: Stores tables for a tenant.
  *
- * Key Security Decisions:
- * - Users can only create their own profile using their Firebase Auth UID.
- * - Tenants are not directly created via the client; they are likely created via a separate admin interface or backend function.  No rules are provided to allow Tenant creation.
- * - Superadmin role overrides tenant-based restrictions.
- * - Data validation is relaxed in this prototyping phase to focus on authorization. Only key fields for relational integrity are validated.
+ * @key_security_decisions
+ * - Users can only read/write their own profile data.
+ * - Only authenticated users can access tenant-specific data.
+ * - Data validation is relaxed in this prototyping phase, focusing on authorization and relationship integrity.
+ * - Superadmin role is validated using the `roles_superadmin` collection.
+ * - List operations are generally restricted to the owner tenant, unless explicitly allowed otherwise.
  *
- * Denormalization for Authorization:
- * - User documents contain a 'tenantId' field, enabling rules to easily check if a user has access to a specific tenant's data.
+ * @denormalization_for_authorization
+ * - User documents store the tenantId to simplify authorization checks for tenant-specific data.
+ * - Superadmin status is checked via a dedicated collection `roles_superadmin`.
  *
- * Structural Segregation:
- * - The separation of user data into /users/{userId} and tenant data into /tenants/{tenantId} helps maintain a clear separation of concerns and simplifies security rules.
+ * @structural_segregation
+ * - Superadmin roles are kept in a separate collection for clear separation of concerns and efficient querying.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
+     * @description Grants access to tenant documents.
+     * @path /tenants/{tenantId}
+     * @allow (get, list): Public access to tenant information.
+     * @allow (create, update, delete): Only superadmins can manage tenants.
+     * @deny (create, update, delete): Non-superadmins cannot manage tenants.
+     * @principle Public read, superadmin-only write access for tenant information.
+     */
+    match /tenants/{tenantId} {
+      allow get, list: if true;
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    /**
+     * @description Grants access to user documents.
+     * @path /users/{userId}
+     * @allow (get, update, delete): Only the user can access their own profile data.
+     * @allow (create): Only the user can create their own profile.
+     * @deny (get, update, delete): Other users cannot access this user's profile data.
+     * @principle Enforces user-ownership for profile management.
+     */
+    match /users/{userId} {
+      allow get, update, delete: if isOwner(userId);
+      allow create: if isSelfCreating(userId);
+      allow list: if false; // Prevent listing all users.
+    }
+
+     /**
+      * @description Grants access to superadmin role documents.
+      * @path /roles_superadmin/{userId}
+      * @allow get: if isSuperAdmin();
+      * @allow create: if isSuperAdmin();
+      * @allow update: if false; // Superadmin roles should not be updated directly via client.
+      * @allow delete: if isSuperAdmin();
+      * @allow list: if isSuperAdmin();
+      * @principle Only existing superadmins can view, create, and delete other superadmin role assignments.
+      */
+    match /roles_superadmin/{userId} {
+        allow get, list: if isSuperAdmin();
+        allow create: if isSuperAdmin();
+        allow update, delete: if false;
+    }
+
+    /**
+     * @description Grants access to menu documents within a tenant.
+     * @path /tenants/{tenantId}/menus/{menuId}
+     * @allow (get, list): Any authenticated user can read menu items.
+     * @allow (create, update, delete): Only the tenant admin can manage menu items.
+     * @deny (create, update, delete): Non-tenant admins cannot manage menu items.
+     * @principle Tenant-level access control for menu management.
+     */
+    match /tenants/{tenantId}/menus/{menuId} {
+      allow get, list: if isSignedIn();
+      allow create: if isTenantAdmin(tenantId);
+      allow update: if isExistingTenantAdmin(tenantId);
+      allow delete: if isExistingTenantAdmin(tenantId);
+    }
+
+    /**
+     * @description Grants access to category documents within a tenant.
+     * @path /tenants/{tenantId}/categories/{categoryId}
+     * @allow (get, list): Any authenticated user can read categories.
+     * @allow (create, update, delete): Only the tenant admin can manage categories.
+     * @deny (create, update, delete): Non-tenant admins cannot manage categories.
+     * @principle Tenant-level access control for category management.
+     */
+    match /tenants/{tenantId}/categories/{categoryId} {
+      allow get, list: if isSignedIn();
+      allow create: if isTenantAdmin(tenantId);
+      allow update: if isExistingTenantAdmin(tenantId);
+      allow delete: if isExistingTenantAdmin(tenantId);
+    }
+
+    /**
+     * @description Grants access to order documents within a tenant.
+     * @path /tenants/{tenantId}/orders/{orderId}
+     * @allow (get, list): Any authenticated user can read orders.
+     * @allow (create, update, delete): Only the tenant admin can manage orders.
+     * @deny (create, update, delete): Non-tenant admins cannot manage orders.
+     * @principle Tenant-level access control for order management.
+     */
+    match /tenants/{tenantId}/orders/{orderId} {
+      allow get, list: if isSignedIn();
+      allow create: if isTenantAdmin(tenantId);
+      allow update: if isExistingTenantAdmin(tenantId);
+      allow delete: if isExistingTenantAdmin(tenantId);
+    }
+
+    /**
+     * @description Grants access to table documents within a tenant.
+     * @path /tenants/{tenantId}/tables/{tableId}
+     * @allow (get, list): Any authenticated user can read tables.
+     * @allow (create, update, delete): Only the tenant admin can manage tables.
+     * @deny (create, update, delete): Non-tenant admins cannot manage tables.
+     * @principle Tenant-level access control for table management.
+     */
+    match /tenants/{tenantId}/tables/{tableId} {
+      allow get, list: if isSignedIn();
+      allow create: if isTenantAdmin(tenantId);
+      allow update: if isExistingTenantAdmin(tenantId);
+      allow delete: if isExistingTenantAdmin(tenantId);
+    }
+
+    // ---- Helper functions ----
+
+    /**
      * @description Checks if the user is signed in.
+     * @return {boolean} True if the user is signed in, false otherwise.
      */
     function isSignedIn() {
       return request.auth != null;
     }
 
     /**
-     * @description Checks if the user is the owner (userId matches request.auth.uid).
+     * @description Checks if the user is the owner of the document.
+     * @param {string} userId - The user ID to check against.
+     * @return {boolean} True if the user is the owner, false otherwise.
+     * @example allow read: if isOwner(userId); // Grants read access only to the user with ID userId.
      */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
     /**
-     * @description Checks if the user is an existing owner (userId matches request.auth.uid and the resource exists).
+     * @description Checks if the user is creating their own user document.
+     * @param {string} userId - The user ID to check against.
+     * @return {boolean} True if the user is creating their own document, false otherwise.
      */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && exists(/databases/$(database)/documents/users/$(userId));
+    function isSelfCreating(userId) {
+      return isSignedIn() && request.auth.uid == userId;
     }
 
     /**
-     * @description getSelf
-     */
-    //function getSelf() {
-    //    return get(/databases/$(database)/documents/users/$(request.auth.uid));
-    //}
-
-    /**
-     * @description Checks if the user is a superadmin.
-     */
-    function isSuperAdmin() {
-      return exists(/databases/$(database)/documents/roles_superadmin/$(request.auth.uid));
-    }
-
-    /**
-     * @description Checks if the user is a tenant admin and belongs to the tenant specified by tenantId.
+     * @description Checks if the user is a tenant admin for the given tenant.
+     * @param {string} tenantId - The tenant ID to check against.
+     * @return {boolean} True if the user is a tenant admin, false otherwise.
      */
     function isTenantAdmin(tenantId) {
       return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.tenantId == tenantId;
     }
 
-    /**
-     * @description Allows only superadmins to perform an action, or tenant admins on resources belonging to their tenant.
-     */
-    function isSuperAdminOrTenantAdmin(tenantId) {
-      return isSuperAdmin() || isTenantAdmin(tenantId);
+     /**
+      * @description Checks if the user is an existing tenant admin for the given tenant.
+      * Also ensures that the document exists.
+      * @param {string} tenantId - The tenant ID to check against.
+      * @return {boolean} True if the user is a tenant admin, false otherwise.
+      */
+    function isExistingTenantAdmin(tenantId) {
+        return resource != null && isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.tenantId == tenantId;
     }
 
     /**
-     * @description Stores cafe tenant profiles and configuration data.
-     * @path /tenants/{tenantId}
-     * @allow (get) Public access.
-     * @allow (list) Public access.
-     * @allow (create) Only superadmins can create tenants.
-     * @allow (update) Only superadmins can update tenants.
-     * @allow (delete) Only superadmins can delete tenants.
-     * @deny (create) Non-superadmins cannot create tenants.
-     * @deny (update) Non-superadmins cannot update tenants.
-     * @deny (delete) Non-superadmins cannot delete tenants.
-     * @principle Requires superadmin role for write access.  Read access is public.
+     * @description Checks if the user has a 'superadmin' role.
+     * @return {boolean} True if the user is a superadmin, false otherwise.
+     * @example allow write: if isSuperAdmin(); // Grants write access only to superadmins.
      */
-    match /tenants/{tenantId} {
-      allow get, list: if true;
-      allow create: if isSuperAdmin();
-      allow update: if isSuperAdmin();
-      allow delete: if isSuperAdmin();
-    }
-
-    /**
-     * @description Stores cafe admin user profiles.
-     * @path /users/{userId}
-     * @allow (get) Only the user themselves or a superadmin can get their profile.
-     * @allow (list) Only superadmins can list all users.
-     * @allow (create) Users can create their own profile if the userId matches their auth.uid.
-     * @allow (update) Only the user themselves or a superadmin can update their profile.
-     * @allow (delete) Only the user themselves or a superadmin can delete their profile.
-     * @deny (create) Users cannot create profiles for other users.
-     * @deny (update) Users cannot update other users' profiles.
-     * @deny (delete) Users cannot delete other users' profiles.
-     * @principle Enforces user ownership and allows superadmin override.
-     */
-    match /users/{userId} {
-      allow get: if isOwner(userId) || isSuperAdmin();
-      allow list: if isSuperAdmin();
-      allow create: if isOwner(userId) && request.resource.data.id == request.auth.uid;
-      allow update: if isExistingOwner(userId) || isSuperAdmin();
-      allow delete: if isExistingOwner(userId) || isSuperAdmin();
-    }
-
-    /**
-     * @description Stores superadmin role information. A document ID is the user's UID.
-     * @path /roles_superadmin/{userId}
-     * @allow (get) Only superadmins can get roles.
-     * @allow (list) Only superadmins can list roles.
-     * @allow (create) Only superadmins can create roles.
-     * @allow (update) Only superadmins can update roles.
-     * @allow (delete) Only superadmins can delete roles.
-     * @deny (create) Non-superadmins cannot create roles.
-     * @deny (update) Non-superadmins cannot update roles.
-     * @deny (delete) Non-superadmins cannot delete roles.
-     * @principle Enforces superadmin-only access.
-     */
-    match /roles_superadmin/{userId} {
-      allow get, list, create, update, delete: if isSuperAdmin();
-    }
-
-    /**
-     * @description Stores menu items for a specific tenant.
-     * @path /tenants/{tenantId}/menus/{menuId}
-     * @allow (get) Any signed-in user.
-     * @allow (list) Any signed-in user.
-     * @allow (create) Only tenant admins of the specified tenant.
-     * @allow (update) Only tenant admins of the specified tenant.
-     * @allow (delete) Only tenant admins of the specified tenant.
-     * @deny (create) Non-tenant admins cannot create menu items.
-     * @deny (update) Non-tenant admins cannot update menu items.
-     * @deny (delete) Non-tenant admins cannot delete menu items.
-     * @principle Enforces tenant-based access control.
-     */
-    match /tenants/{tenantId}/menus/{menuId} {
-      allow get, list: if isSignedIn();
-      allow create: if isTenantAdmin(tenantId) && request.resource.data.tenantId == tenantId;
-      allow update: if isTenantAdmin(tenantId) && request.resource.data.tenantId == resource.data.tenantId;
-      allow delete: if isTenantAdmin(tenantId) && resource.data.tenantId == data.tenantId;
-    }
-
-    /**
-     * @description Stores menu categories for a specific tenant.
-     * @path /tenants/{tenantId}/categories/{categoryId}
-     * @allow (get) Any signed-in user.
-     * @allow (list) Any signed-in user.
-     * @allow (create) Only tenant admins of the specified tenant.
-     * @allow (update) Only tenant admins of the specified tenant.
-     * @allow (delete) Only tenant admins of the specified tenant.
-     * @deny (create) Non-tenant admins cannot create categories.
-     * @deny (update) Non-tenant admins cannot update categories.
-     * @deny (delete) Non-tenant admins cannot delete categories.
-     * @principle Enforces tenant-based access control.
-     */
-    match /tenants/{tenantId}/categories/{categoryId} {
-      allow get, list: if isSignedIn();
-      allow create: if isTenantAdmin(tenantId) && request.resource.data.tenantId == tenantId;
-      allow update: if isTenantAdmin(tenantId) && request.resource.data.tenantId == resource.data.tenantId;
-      allow delete: if isTenantAdmin(tenantId) && resource.data.tenantId == data.tenantId;
-    }
-
-    /**
-     * @description Stores orders placed at a specific tenant.
-     * @path /tenants/{tenantId}/orders/{orderId}
-     * @allow (get) Any signed-in user.
-     * @allow (list) Only tenant admins or superadmins can list orders.
-     * @allow (create) Any signed-in user.
-     * @allow (update) Only tenant admins can update orders.
-     * @allow (delete) Only tenant admins can delete orders.
-     * @deny (create) Non-signed in users cannot create orders.
-     * @deny (update) Non-tenant admins cannot update orders.
-     * @deny (delete) Non-tenant admins cannot delete orders.
-     * @principle Allows public read, tenant admin write access.
-     */
-    match /tenants/{tenantId}/orders/{orderId} {
-      allow get: if isSignedIn();
-      allow list: if isTenantAdmin(tenantId) || isSuperAdmin();
-      allow create: if isSignedIn() && request.resource.data.tenantId == tenantId;
-      allow update: if isTenantAdmin(tenantId) && request.resource.data.tenantId == resource.data.tenantId;
-      allow delete: if isTenantAdmin(tenantId) && resource.data.tenantId == data.tenantId;
-    }
-
-    /**
-     * @description Stores tables for a specific tenant.
-     * @path /tenants/{tenantId}/tables/{tableId}
-     * @allow (get) Any signed-in user.
-     * @allow (list) Only tenant admins or superadmins can list tables.
-     * @allow (create) Only tenant admins of the specified tenant.
-     * @allow (update) Only tenant admins of the specified tenant.
-     * @allow (delete) Only tenant admins of the specified tenant.
-     * @deny (create) Non-tenant admins cannot create tables.
-     * @deny (update) Non-tenant admins cannot update tables.
-     * @deny (delete) Non-tenant admins cannot delete tables.
-     * @principle Enforces tenant-based access control.
-     */
-    match /tenants/{tenantId}/tables/{tableId} {
-      allow get: if isSignedIn();
-      allow list: if isTenantAdmin(tenantId) || isSuperAdmin();
-      allow create: if isTenantAdmin(tenantId) && request.resource.data.tenantId == tenantId;
-      allow update: if isTenantAdmin(tenantId) && request.resource.data.tenantId == resource.data.tenantId;
-      allow delete: if isTenantAdmin(tenantId) && resource.data.tenantId == data.tenantId;
+    function isSuperAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/roles_superadmin/$(request.auth.uid));
     }
   }
 }

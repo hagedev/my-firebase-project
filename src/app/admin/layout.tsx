@@ -37,7 +37,30 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       const superAdminCollectionRef = collection(firestore, 'roles_superadmin');
       
       try {
+        const superAdminSnapshot = await getDocs(superAdminCollectionRef);
         const superAdminRef = doc(superAdminCollectionRef, user.uid);
+
+        if (superAdminSnapshot.empty) {
+          // KASUS: Generate Super Admin Pertama Kali (alur "Is data user null? -> Yes")
+          const superAdminData = {
+            userId: user.uid,
+            email: user.email,
+            role: 'superadmin',
+            assignedAt: serverTimestamp(),
+          };
+          
+          await setDoc(superAdminRef, superAdminData);
+
+          toast({
+            title: "Selamat Datang, Super Admin!",
+            description: "Akun Anda telah berhasil dibuat sebagai super admin pertama.",
+          });
+          // Langsung arahkan ke dasbor setelah pembuatan.
+          router.replace('/admin/dashboard'); 
+          return; // Selesai. setIsVerifying tidak perlu diubah karena akan unmount.
+        }
+        
+        // KASUS: Super admin sudah ada. Verifikasi apakah pengguna saat ini adalah super admin.
         const superAdminDoc = await getDoc(superAdminRef);
 
         if (superAdminDoc.exists()) {
@@ -47,60 +70,47 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           } else {
             setIsVerifying(false);
           }
-          return;
+        } else {
+          // KASUS: Pengguna BUKAN Super Admin.
+           const userRef = doc(firestore, `users/${user.uid}`);
+           const userSnap = await getDoc(userRef);
+
+           let errorMessage = "Akun Anda tidak memiliki hak akses super admin.";
+           if (userSnap.exists() && userSnap.data().role === 'admin_kafe') {
+               const tenantRef = doc(firestore, 'tenants', userSnap.data().tenantId);
+               const tenantSnap = await getDoc(tenantRef);
+               if (tenantSnap.exists()) {
+                  // Alur "Is Admin Cafe? -> Yes"
+                  router.replace(`/${tenantSnap.data().slug}/admin/dashboard`);
+                  return;
+               }
+           }
+            
+            // Alur "Is Admin Cafe? -> No"
+            toast({
+              variant: "destructive",
+              title: "Akses Ditolak",
+              description: errorMessage,
+            });
+            await auth.signOut();
+            router.replace('/admin/login');
         }
-
-        // KASUS: Dokumen Super Admin tidak ditemukan. Cek apakah ini harusnya jadi super admin pertama.
-        const superAdminSnapshot = await getDocs(superAdminCollectionRef);
-        if (superAdminSnapshot.empty) {
-          // KASUS: Generate Super Admin Pertama Kali
-          const superAdminData = {
-            userId: user.uid,
-            email: user.email,
-            role: 'superadmin',
-            assignedAt: serverTimestamp(),
-          };
-          await setDoc(superAdminRef, superAdminData);
-          toast({
-            title: "Selamat Datang, Super Admin!",
-            description: "Akun Anda telah berhasil dibuat sebagai super admin pertama.",
-          });
-          router.replace('/admin/dashboard'); // Langsung arahkan ke dasbor
-          return;
-        }
-
-        // KASUS: Pengguna BUKAN Super Admin, dan super admin sudah ada.
-        // Cek apakah dia Admin Kafe? Admin Kafe tidak seharusnya login lewat sini.
-        const userRef = doc(firestore, `users/${user.uid}`);
-        const userSnap = await getDoc(userRef);
-
-        let errorMessage = "Akun Anda tidak memiliki hak akses super admin.";
-        if (userSnap.exists() && userSnap.data().role === 'admin_kafe') {
-            errorMessage = "Ini adalah halaman login Super Admin. Silakan login melalui halaman admin kafe Anda.";
-        }
-
-        toast({
-          variant: "destructive",
-          title: "Akses Ditolak",
-          description: errorMessage,
-        });
-        await auth.signOut();
-        router.replace('/admin/login'); // Tetap di halaman login super admin
-
       } catch (error) {
-        // Menangkap error dari getDoc atau getDocs
+        console.error("Verification failed:", error);
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: 'roles_superadmin',
-            operation: 'list' // atau 'get', tergantung operasi yang gagal
+            operation: 'list'
         }));
         toast({
           variant: "destructive",
           title: "Error Verifikasi",
-          description: "Gagal memverifikasi peran pengguna karena masalah izin."
+          description: "Gagal memverifikasi peran pengguna karena masalah izin atau koneksi."
         });
         await auth.signOut();
         router.replace('/admin/login');
       } finally {
+        // Hanya set isVerifying ke false jika tidak ada pengalihan yang terjadi.
+        // Jika ada pengalihan, komponen akan unmount.
         setIsVerifying(false);
       }
     };
