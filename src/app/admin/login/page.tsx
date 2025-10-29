@@ -10,13 +10,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirestore, errorEmitter } from '@/firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { collection, getDocs, limit, query } from 'firebase/firestore';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { useAuth } from '@/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import Logo from '@/components/Logo';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Terminal } from 'lucide-react';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Alamat email tidak valid.' }),
@@ -30,7 +30,6 @@ export default function SuperAdminLoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   const auth = useAuth();
-  const firestore = useFirestore();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -42,61 +41,24 @@ export default function SuperAdminLoginPage() {
 
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
-    const superAdminCollectionRef = collection(firestore, 'roles_superadmin');
-    const q = query(superAdminCollectionRef, limit(1));
-
     try {
-      const snapshot = await getDocs(q).catch(serverError => {
-        // Implementasi contextual error handling
-        const permissionError = new FirestorePermissionError({
-            path: superAdminCollectionRef.path,
-            operation: 'list',
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        // Lemparkan kembali error untuk ditangkap oleh blok catch utama
-        throw permissionError;
+      await signInWithEmailAndPassword(auth, data.email, data.password);
+      // AdminLayout akan menangani verifikasi peran dan pengalihan
+      toast({
+        title: 'Login Berhasil',
+        description: 'Mengarahkan ke dasbor...',
       });
-      
-      const isSystemEmpty = snapshot.empty;
-
-      if (isSystemEmpty) {
-        // SCENARIO 1: Belum ada super admin, buat pengguna baru.
-        toast({
-          title: 'Membuat Super Admin Pertama',
-          description: 'Sistem kosong, akun Anda akan dibuat sebagai super admin pertama.',
-        });
-        await createUserWithEmailAndPassword(auth, data.email, data.password);
-        // Setelah berhasil, AdminLayout akan mengambil alih untuk membuat dokumen peran.
-        router.push('/admin/dashboard');
-      } else {
-        // SCENARIO 2: Sudah ada super admin, lakukan login biasa.
-        await signInWithEmailAndPassword(auth, data.email, data.password);
-        // AdminLayout akan menangani verifikasi peran dan pengalihan.
-        toast({
-          title: 'Login Berhasil',
-          description: 'Mengarahkan ke dasbor...',
-        });
-        router.push('/admin/dashboard');
-      }
+      router.push('/admin/dashboard'); // Redirect setelah login berhasil
     } catch (error: any) {
-      // Jangan tampilkan toast untuk FirestorePermissionError karena sudah ditangani secara global
-      if (error instanceof FirestorePermissionError) {
-        // Biarkan FirebaseErrorListener yang menanganinya
-        return;
-      }
-
-      console.error('Proses login/registrasi gagal:', error);
-
+      console.error('Login Gagal:', error);
       let description = 'Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.';
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
         description = 'Email atau kata sandi yang Anda masukkan salah.';
-      } else if (error.code === 'auth/email-already-in-use') {
-        description = 'Email ini sudah terdaftar. Silakan coba login.';
       }
       
       toast({
         variant: 'destructive',
-        title: 'Operasi Gagal',
+        title: 'Login Gagal',
         description,
       });
     } finally {
@@ -106,16 +68,29 @@ export default function SuperAdminLoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md">
-        <div className="mb-8 flex justify-center">
+      <div className="w-full max-w-md space-y-6">
+        <div className="flex justify-center">
             <Link href="/">
                 <Logo className="text-foreground" />
             </Link>
         </div>
+
+        <Alert>
+            <Terminal className="h-4 w-4" />
+            <AlertTitle>Setup Awal</AlertTitle>
+            <AlertDescription>
+                Belum punya Super Admin? Kunjungi halaman {' '}
+                <Link href="/admin/seed-super-admin" className="font-semibold underline">
+                    Generator Super Admin
+                </Link>
+                {' '} untuk membuat akun pertama.
+            </AlertDescription>
+        </Alert>
+
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl">Login Super Admin</CardTitle>
-            <CardDescription>Masukkan kredensial Anda. Jika ini login pertama, akun super admin akan dibuat.</CardDescription>
+            <CardDescription>Masukkan kredensial Anda untuk melanjutkan.</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
@@ -147,7 +122,7 @@ export default function SuperAdminLoginPage() {
                   )}
                 />
                 <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Login atau Buat Akun'}
+                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Login'}
                 </Button>
               </form>
             </Form>
