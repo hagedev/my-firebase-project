@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useCallback } from 'react';
 import { useAuth, useFirestore, FirestorePermissionError, errorEmitter } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -13,7 +12,7 @@ import Link from 'next/link';
 import Logo from '@/components/Logo';
 
 export default function SeedSuperAdminPage() {
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
@@ -30,16 +29,16 @@ export default function SeedSuperAdminPage() {
     const password = '123456';
 
     try {
-      // Langkah 1: Buat pengguna di Firebase Authentication
+      // Langkah 1: Coba buat pengguna baru di Firebase Authentication.
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
       toast({
         title: 'Pengguna Berhasil Dibuat',
-        description: `Akun untuk ${email} telah dibuat.`,
+        description: `Akun untuk ${email} telah dibuat. Menetapkan peran...`,
       });
 
-      // Langkah 2: Buat dokumen peran di Firestore
+      // Langkah 2: Buat dokumen peran di Firestore.
       const superAdminRef = doc(firestore, 'roles_superadmin', user.uid);
       const superAdminData = {
         userId: user.uid,
@@ -62,10 +61,10 @@ export default function SeedSuperAdminPage() {
       let errorMessage = 'Terjadi kesalahan yang tidak diketahui.';
 
       if (error.code === 'auth/email-already-in-use') {
-        errorMessage = `Pengguna dengan email ${email} sudah ada. Silakan login.`;
-        setSuccess(true); // Anggap sukses jika user sudah ada, agar bisa lanjut login
+        errorMessage = `Pengguna dengan email ${email} sudah ada. Proses dianggap berhasil. Silakan login.`;
+        setSuccess(true); // Anggap sukses jika user sudah ada.
       } else if (error.code === 'permission-denied') {
-        errorMessage = 'Gagal membuat dokumen peran karena masalah izin. Pastikan aturan keamanan Firestore Anda benar.';
+        errorMessage = 'Gagal membuat dokumen peran karena masalah izin. Kemungkinan besar sudah ada super admin lain.';
         // Emit contextual error
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: `roles_superadmin/${auth.currentUser?.uid || 'unknown'}`,
@@ -77,21 +76,16 @@ export default function SeedSuperAdminPage() {
       }
       
       setError(errorMessage);
-      if (error.code !== 'auth/email-already-in-use') {
-        toast({
-            variant: 'destructive',
-            title: 'Operasi Gagal',
-            description: errorMessage,
-        });
-      }
+      toast({
+        variant: 'destructive',
+        title: 'Operasi Gagal',
+        description: errorMessage,
+      });
+
     } finally {
       setIsLoading(false);
     }
   }, [auth, firestore, toast]);
-
-  useEffect(() => {
-    handleGenerate();
-  }, [handleGenerate]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -104,25 +98,20 @@ export default function SeedSuperAdminPage() {
         <Card>
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">Generator Super Admin</CardTitle>
-            <CardDescription>Mencoba membuat akun super admin pertama secara otomatis.</CardDescription>
+            <CardDescription>
+                Klik tombol di bawah untuk membuat akun super admin pertama.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="rounded-lg border bg-card-foreground/5 p-4 text-sm">
-                <p className="font-semibold">Akun yang dibuat:</p>
+                <p className="font-semibold">Akun yang akan dibuat:</p>
                 <p><span className="text-muted-foreground">Email:</span> bayu@superad.min</p>
                 <p><span className="text-muted-foreground">Password:</span> 123456</p>
             </div>
 
-            {isLoading && (
-                 <div className="flex items-center justify-center gap-3 text-muted-foreground">
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    <span>Memproses...</span>
-                </div>
-            )}
-
             {success && !isLoading && (
               <div className="rounded-md border border-green-500 bg-green-50 p-4 text-green-800">
-                <div className="flex items-center gap-3">
+                <div className="flex items-start gap-3">
                   <ShieldCheck className="h-6 w-6" />
                   <div>
                     <p className="font-semibold">Operasi Berhasil!</p>
@@ -148,8 +137,12 @@ export default function SeedSuperAdminPage() {
             )}
             
             <Button onClick={handleGenerate} className="w-full" disabled={isLoading || success}>
-              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Coba Lagi'}
+              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Buat Super Admin Pertama'}
             </Button>
+            
+            <div className="text-center text-sm text-muted-foreground">
+                <p>Sudah punya akun? <Link href="/admin/login" className="underline">Login di sini</Link>.</p>
+            </div>
             
           </CardContent>
         </Card>
