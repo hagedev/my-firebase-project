@@ -3,8 +3,8 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser, useFirestore, useAuth, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, getDoc, collection, query, updateDoc } from 'firebase/firestore';
-import type { Tenant, User as AppUser, Menu as MenuType } from '@/lib/types';
+import { doc, getDoc, collection, updateDoc } from 'firebase/firestore';
+import type { Tenant, User as AppUser, Menu as MenuType, Category } from '@/lib/types';
 import {
   Loader2,
   LogOut,

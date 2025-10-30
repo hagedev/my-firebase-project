@@ -27,6 +27,7 @@ export interface User {
 // Merepresentasikan struktur data dari sebuah dokumen Menu di Firestore.
 export interface Menu {
     id: string;
+    tenantId: string;
     name: string;
     description?: string;
     imageUrl?: string;
@@ -48,4 +49,29 @@ export interface Table {
     tenantId: string;
     tableNumber: number;
     status: 'available' | 'occupied';
+}
+
+// Item dalam keranjang belanja
+export interface CartItem extends Menu {
+  quantity: number;
+}
+
+// Merepresentasikan struktur data dari sebuah dokumen Order di Firestore.
+export interface Order {
+  id: string;
+  tenantId: string;
+  tableId: string;
+  tableNumber: number; // Denormalized for easier display
+  orderItems: {
+    id: string;
+    name: string;
+    price: number;
+    quantity: number;
+  }[];
+  totalAmount: number;
+  status: 'received' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
+  paymentMethod: 'qris' | 'cash';
+  paymentVerified: boolean;
+  verificationToken: string; // Token harian yang diinput pelanggan
+  createdAt: any; // Firestore Server Timestamp
 }
