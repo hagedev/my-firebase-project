@@ -15,7 +15,6 @@ import Image from 'next/image';
 import { CheckoutDialog } from './_components/checkout-dialog';
 
 type AuthStatus = 'loading' | 'success' | 'error';
-type ViewMode = 'welcome' | 'ordering';
 
 export default function OrderPage() {
   const params = useParams();
@@ -26,7 +25,7 @@ export default function OrderPage() {
   const firestore = useFirestore();
 
   const [authStatus, setAuthStatus] = useState<AuthStatus>('loading');
-  const [viewMode, setViewMode] = useState<ViewMode>('welcome');
+  const [isOrdering, setIsOrdering] = useState(false); // New state to control view
 
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [table, setTable] = useState<TableType | null>(null);
@@ -36,59 +35,54 @@ export default function OrderPage() {
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
-  // Effect for anonymous authentication
+  // Effect for anonymous authentication and subsequent data fetching
   useEffect(() => {
-    if (!auth) {
+    if (!auth || !firestore) {
       setAuthStatus('error');
       return;
     }
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setAuthStatus('success');
-      } else {
-        signInAnonymously(auth).catch(() => setAuthStatus('error'));
-      }
+      const performSignIn = async () => {
+        try {
+          const currentUser = user || (await signInAnonymously(auth)).user;
+          if (currentUser) {
+            setAuthStatus('success');
+            
+            // --- Data Fetching ---
+            // 1. Fetch Tenant
+            const tenantQuery = query(collection(firestore, 'tenants'), where('slug', '==', slug));
+            const tenantSnapshot = await getDocs(tenantQuery);
+            if (tenantSnapshot.empty) throw new Error('Kafe tidak ditemukan.');
+            const tenantData = { id: tenantSnapshot.docs[0].id, ...tenantSnapshot.docs[0].data() } as Tenant;
+            setTenant(tenantData);
+
+            // 2. Fetch Table
+            const tableRef = doc(firestore, `tenants/${tenantData.id}/tables/${tableId}`);
+            const tableSnapshot = await getDoc(tableRef);
+            if (!tableSnapshot.exists()) throw new Error('Meja tidak ditemukan.');
+            const tableData = { id: tableSnapshot.id, ...tableSnapshot.data() } as TableType;
+            setTable(tableData);
+
+            // 3. Fetch Menu
+            const menuQuery = query(collection(firestore, `tenants/${tenantData.id}/menus`), where('available', '==', true));
+            const menuSnapshot = await getDocs(menuQuery);
+            const menuData = menuSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuType));
+            setMenu(menuData);
+          }
+        } catch (error) {
+          console.error("Auth or data fetching error:", error);
+          setAuthStatus('error');
+        } finally {
+          setIsDataLoading(false);
+        }
+      };
+
+      performSignIn();
     });
+
     return () => unsubscribe();
-  }, [auth]);
-
-  // Effect to fetch all necessary data after successful authentication
-  useEffect(() => {
-    if (authStatus !== 'success' || !firestore) return;
-
-    const fetchData = async () => {
-      setIsDataLoading(true);
-      try {
-        // 1. Fetch Tenant
-        const tenantQuery = query(collection(firestore, 'tenants'), where('slug', '==', slug));
-        const tenantSnapshot = await getDocs(tenantQuery);
-        if (tenantSnapshot.empty) throw new Error('Kafe tidak ditemukan.');
-        const tenantData = { id: tenantSnapshot.docs[0].id, ...tenantSnapshot.docs[0].data() } as Tenant;
-        setTenant(tenantData);
-
-        // 2. Fetch Table
-        const tableRef = doc(firestore, `tenants/${tenantData.id}/tables/${tableId}`);
-        const tableSnapshot = await getDoc(tableRef);
-        if (!tableSnapshot.exists()) throw new Error('Meja tidak ditemukan.');
-        const tableData = { id: tableSnapshot.id, ...tableSnapshot.data() } as TableType;
-        setTable(tableData);
-
-        // 3. Fetch Menu
-        const menuQuery = query(collection(firestore, `tenants/${tenantData.id}/menus`), where('available', '==', true));
-        const menuSnapshot = await getDocs(menuQuery);
-        const menuData = menuSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuType));
-        setMenu(menuData);
-        
-      } catch (error) {
-        console.error("Data fetching error:", error);
-        setAuthStatus('error'); // Use auth status to show generic error
-      } finally {
-        setIsDataLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [authStatus, firestore, slug, tableId]);
+  }, [auth, firestore, slug, tableId]);
 
   // --- Cart Logic ---
   const addToCart = (item: MenuType) => {
@@ -118,9 +112,8 @@ export default function OrderPage() {
   const totalItems = useMemo(() => cart.reduce((sum, item) => sum + item.quantity, 0), [cart]);
   const totalPrice = useMemo(() => cart.reduce((sum, item) => sum + item.price * item.quantity, 0), [cart]);
 
-
   // --- Render Logic ---
-  if (authStatus === 'loading' || (authStatus === 'success' && isDataLoading)) {
+  if (authStatus === 'loading' || isDataLoading) {
     return (
       <div className="flex h-screen w-full flex-col items-center justify-center bg-background text-center p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -138,13 +131,14 @@ export default function OrderPage() {
     );
   }
   
-  if (viewMode === 'welcome') {
+  // After loading and success, decide whether to show welcome or ordering screen
+  if (!isOrdering) {
       return (
          <main className="flex h-screen flex-col items-center justify-center bg-background text-center p-4">
             <h1 className="font-headline text-5xl md:text-7xl font-bold drop-shadow-lg">
                 Selamat Datang di {tenant.name}
             </h1>
-            <Button size="lg" className="mt-8" onClick={() => setViewMode('ordering')}>
+            <Button size="lg" className="mt-8" onClick={() => setIsOrdering(true)}>
                 Saya ingin order
             </Button>
         </main>
