@@ -1,18 +1,16 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { useAuth, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { onAuthStateChanged, signInAnonymously, User } from 'firebase/auth';
 import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import type { Tenant, Table as TableType, Menu as MenuType, CartItem } from '@/lib/types';
-import { Loader2, ShoppingCart, Trash2, Plus, Minus } from 'lucide-react';
+import { Loader2, ShoppingCart, Plus, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatRupiah, convertGoogleDriveUrl } from '@/lib/utils';
 import Image from 'next/image';
-import { Badge } from '@/components/ui/badge';
 import { CheckoutDialog } from './_components/checkout-dialog';
 
 // State machine for page flow
@@ -28,7 +26,7 @@ export default function OrderPage() {
   const [pageStatus, setPageStatus] = useState<PageStatus>('authenticating');
   const [errorMsg, setErrorMsg] = useState<string>('');
   
-  // Data states, will be populated AFTER button click
+  // Data states
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [table, setTable] = useState<TableType | null>(null);
   const [menuItems, setMenuItems] = useState<MenuType[]>([]);
@@ -44,8 +42,10 @@ export default function OrderPage() {
     }
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        setPageStatus('welcome'); // Auth success, move to welcome screen
+        // User is authenticated (anonymous or otherwise), show the welcome screen.
+        setPageStatus('welcome');
       } else {
+        // No user, attempt to sign in anonymously.
         signInAnonymously(auth).catch((error) => {
           console.error("Anonymous sign-in error:", error);
           setErrorMsg('Gagal memulai sesi. Coba refresh halaman.');
@@ -56,12 +56,13 @@ export default function OrderPage() {
     return () => unsubscribe();
   }, [auth]);
 
-  // STEP 2 & 3: Handle button click and fetch data.
+  // STEP 2 & 3: Handle button click and fetch data AFTER click.
   const handleStartOrder = async () => {
-    setPageStatus('fetching_data'); // Show loader while fetching
+    setPageStatus('fetching_data');
 
+    // This check is crucial. It ensures we have the most up-to-date user state.
     if (!firestore || !auth?.currentUser) {
-        setErrorMsg('Layanan database tidak siap.');
+        setErrorMsg('Sesi autentikasi tidak valid. Silakan refresh halaman.');
         setPageStatus('error');
         return;
     }
@@ -156,7 +157,7 @@ export default function OrderPage() {
         );
       
       case 'ordering':
-        if (!tenant || !table) return null; // Should not happen
+        if (!tenant || !table) return null;
         const categories = [...new Set(menuItems.map(item => item.category))];
 
         return (
@@ -241,5 +242,3 @@ export default function OrderPage() {
 
   return <>{renderContent()}</>;
 }
-
-    
