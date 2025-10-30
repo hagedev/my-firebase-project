@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -40,7 +40,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 // UID Super Admin yang telah ditentukan.
 const SUPER_ADMIN_UID = 'ttFbsVWt14cdTwVlKs1AbgBLUtx1';
 
-export default function AdminLoginPage() {
+function LoginComponent() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
@@ -179,5 +179,16 @@ export default function AdminLoginPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function AdminLoginPage() {
+  // Wrap the component that uses `useSearchParams` in a Suspense boundary.
+  // This allows the rest of the page to be server-rendered while the dynamic part
+  // is client-rendered.
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LoginComponent />
+    </Suspense>
   );
 }
