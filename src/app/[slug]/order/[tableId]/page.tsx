@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore, useUser } from '@/firebase';
 import { signInAnonymously } from 'firebase/auth';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import type { Tenant, Menu, Table as TableType, CartItem } from '@/lib/types';
@@ -139,7 +139,7 @@ export default function OrderPage() {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-4 text-lg">Menyiapkan menu...</p>
+        <p className="ml-4 text-lg">Menyiapkan sesi...</p>
       </div>
     );
   }
