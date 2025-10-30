@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
-import { useFirestore, useAuth } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { doc, collection, getDocs, getDoc, query, where } from 'firebase/firestore';
 import type { Tenant, Table as TableType, Menu as MenuType, CartItem } from '@/lib/types';
 import { signInAnonymously } from 'firebase/auth';
@@ -28,7 +28,7 @@ export default function OrderPage() {
   const slug = params.slug as string;
   const tableId = params.tableId as string;
 
-  const { auth, isUserLoading: isAuthLoading } = useAuth();
+  const { auth, user, isUserLoading: isAuthLoading } = useAuth();
   const firestore = useFirestore();
 
   const [tenant, setTenant] = useState<Tenant | null>(null);
@@ -39,28 +39,39 @@ export default function OrderPage() {
   const [isCheckoutOpen, setCheckoutOpen] = useState(false);
   const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
   
-  const [initialDataLoading, setInitialDataLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // --- Anonymous Authentication & Data Fetching ---
+  // --- Step 1: Anonymous Authentication ---
+  // This effect's ONLY job is to ensure the user is signed in.
   useEffect(() => {
-    // This effect should only run ONCE after the necessary firebase services are ready.
-    if (!firestore || !auth || isAuthLoading) {
-      // If services are not ready, or auth state is still being determined, do nothing.
+    // Wait until Firebase Auth is initialized.
+    if (!auth || isAuthLoading) {
+      return;
+    }
+    // If there is no active user, sign in anonymously.
+    if (!user) {
+      signInAnonymously(auth).catch((authError) => {
+        console.error("Anonymous sign-in error:", authError);
+        setError("Gagal mendapatkan sesi. Silakan refresh halaman.");
+      });
+    }
+  }, [auth, isAuthLoading, user]);
+
+
+  // --- Step 2: Data Fetching ---
+  // This effect runs ONLY AFTER the user is authenticated (user object is available).
+  useEffect(() => {
+    // Do not proceed if services aren't ready or if there's no authenticated user.
+    if (!firestore || !user) {
       return;
     }
 
     const fetchInitialData = async () => {
+      setDataLoading(true);
+      setError(null);
       try {
-        // Step 1: Ensure anonymous user is signed in.
-        // This is critical. We must have an auth session before querying Firestore.
-        if (!auth.currentUser) {
-          await signInAnonymously(auth);
-        }
-        
-        // At this point, we have an authenticated session (anonymous or otherwise).
-
-        // Step 2: Find the tenant using the URL slug. This is an indexed query.
+        // Find the tenant using the URL slug.
         const tenantsRef = collection(firestore, 'tenants');
         const q = query(tenantsRef, where("slug", "==", slug));
         const tenantSnapshot = await getDocs(q);
@@ -73,11 +84,10 @@ export default function OrderPage() {
         const tenantData = { id: foundTenantDoc.id, ...foundTenantDoc.data() } as Tenant;
         const tenantId = tenantData.id;
 
-        // Step 3: Now that we have the tenantId, get the table and menu data directly.
+        // Get the table and menu data directly using the tenantId.
         const tableDocRef = doc(firestore, `tenants/${tenantId}/tables/${tableId}`);
         const menuCollectionRef = collection(firestore, `tenants/${tenantId}/menus`);
 
-        // Fetch them in parallel for efficiency.
         const [tableDocSnap, menuSnapshot] = await Promise.all([
           getDoc(tableDocRef),
           getDocs(menuCollectionRef)
@@ -90,8 +100,7 @@ export default function OrderPage() {
         const tableData = { id: tableDocSnap.id, ...tableDocSnap.data() } as TableType;
         const menuData = menuSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuType));
 
-        // Step 4: Batch state updates to prevent re-renders within the effect.
-        // This is the ONLY place we set the main data states.
+        // Batch state updates
         setTenant(tenantData);
         setTable(tableData);
         setMenuItems(menuData);
@@ -100,18 +109,13 @@ export default function OrderPage() {
         console.error("Initial data fetch error:", e);
         setError(e.message || "Gagal memuat data kafe.");
       } finally {
-        // This will be called regardless of success or failure.
-        setInitialDataLoading(false);
+        setDataLoading(false);
       }
     };
     
-    // Call the function to start the process.
     fetchInitialData();
   
-  // The dependency array is critical. It ensures this effect runs only when
-  // these fundamental props change, which is typically just once on load.
-  // We DO NOT include state setters here.
-  }, [auth, firestore, isAuthLoading, slug, tableId]);
+  }, [firestore, user, slug, tableId]); // Depends on `user` to ensure auth is complete.
 
 
   // --- Cart Logic ---
@@ -166,7 +170,7 @@ export default function OrderPage() {
     setCheckoutOpen(true);
   }
 
-  const isLoading = isAuthLoading || initialDataLoading;
+  const isLoading = isAuthLoading || dataLoading;
 
   if (isLoading) {
     return (
@@ -193,7 +197,7 @@ export default function OrderPage() {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background p-4 text-center">
         <h1 className="text-2xl font-bold text-destructive">
-          Gagal memuat data. Silakan coba lagi nanti.
+          Gagal memuat data kafe atau meja.
         </h1>
       </div>
     );
@@ -265,46 +269,40 @@ export default function OrderPage() {
       </header>
 
       <main className="container mx-auto px-4 py-6">
-          {initialDataLoading ? (
-             <div className="flex h-64 w-full items-center justify-center">
-              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <div className="space-y-8">
+          {Object.keys(groupedMenu).length > 0 ? Object.entries(groupedMenu).map(([category, items]) => (
+            <div key={category}>
+              <h2 className="font-headline text-2xl font-bold mb-4">{category}</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {items.map((item) => (
+                  <Card key={item.id} className="flex flex-col">
+                      {item.imageUrl && (
+                          <div className="relative w-full h-40">
+                              <Image src={convertGoogleDriveUrl(item.imageUrl)} alt={item.name} fill objectFit="cover" className="rounded-t-lg"/>
+                          </div>
+                      )}
+                    <CardHeader>
+                      <CardTitle>{item.name}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex-grow">
+                      <p className="text-sm text-muted-foreground">{item.description}</p>
+                    </CardContent>
+                    <CardFooter className="flex justify-between items-center">
+                      <p className="font-bold text-primary">{formatRupiah(item.price)}</p>
+                      <Button onClick={() => addToCart(item)} size="sm">
+                        <PlusCircle className="mr-2 h-4 w-4" /> Tambah
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
             </div>
-          ) : (
-            <div className="space-y-8">
-              {Object.keys(groupedMenu).length > 0 ? Object.entries(groupedMenu).map(([category, items]) => (
-                <div key={category}>
-                  <h2 className="font-headline text-2xl font-bold mb-4">{category}</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {items.map((item) => (
-                      <Card key={item.id} className="flex flex-col">
-                          {item.imageUrl && (
-                              <div className="relative w-full h-40">
-                                  <Image src={convertGoogleDriveUrl(item.imageUrl)} alt={item.name} fill objectFit="cover" className="rounded-t-lg"/>
-                              </div>
-                          )}
-                        <CardHeader>
-                          <CardTitle>{item.name}</CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex-grow">
-                          <p className="text-sm text-muted-foreground">{item.description}</p>
-                        </CardContent>
-                        <CardFooter className="flex justify-between items-center">
-                          <p className="font-bold text-primary">{formatRupiah(item.price)}</p>
-                          <Button onClick={() => addToCart(item)} size="sm">
-                            <PlusCircle className="mr-2 h-4 w-4" /> Tambah
-                          </Button>
-                        </CardFooter>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              )) : (
-                  <div className="text-center py-16">
-                      <p className="text-muted-foreground">Belum ada menu yang tersedia saat ini.</p>
-                  </div>
-              )}
-            </div>
+          )) : (
+              <div className="text-center py-16">
+                  <p className="text-muted-foreground">Belum ada menu yang tersedia saat ini.</p>
+              </div>
           )}
+        </div>
       </main>
 
       {/* Mobile Floating Cart Button & Sheet */}
