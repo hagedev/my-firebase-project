@@ -14,9 +14,19 @@ import {
   Armchair,
   PlusCircle,
   MoreHorizontal,
-  QrCode
+  QrCode,
+  Copy,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   SidebarProvider,
   Sidebar,
@@ -48,6 +58,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -71,6 +82,10 @@ export default function CafeTableManagementPage() {
   const [isAddTableDialogOpen, setIsAddTableDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedTable, setSelectedTable] = useState<TableType | null>(null);
+
+  const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState('');
+
 
   // --- Data Fetching ---
   const tablesCollectionRef = useMemoFirebase(
@@ -159,11 +174,16 @@ export default function CafeTableManagementPage() {
   
   const handleGenerateQR = (table: TableType) => {
     const orderUrl = `${window.location.origin}/${slug}/order/${table.id}`;
-    // For now, just log it. Later we can show a QR code modal.
-    console.log(`QR Code URL for Table ${table.tableNumber}: ${orderUrl}`);
+    setQrCodeUrl(orderUrl);
+    setSelectedTable(table);
+    setIsQrDialogOpen(true);
+  };
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(qrCodeUrl);
     toast({
-      title: `URL QR Code untuk Meja ${table.tableNumber}`,
-      description: orderUrl,
+      title: "URL disalin!",
+      description: "URL pemesanan untuk meja ini telah disalin ke clipboard.",
     });
   };
 
@@ -298,6 +318,26 @@ export default function CafeTableManagementPage() {
                 table={selectedTable}
             />
         )}
+        <AlertDialog open={isQrDialogOpen} onOpenChange={setIsQrDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>URL QR Code untuk Meja {selectedTable?.tableNumber}</AlertDialogTitle>
+              <AlertDialogDescription>
+                Salin URL di bawah ini dan gunakan generator QR code untuk membuat kode QR yang bisa dipindai pelanggan di meja.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="flex items-center space-x-2">
+              <Input value={qrCodeUrl} readOnly className="flex-1" />
+              <Button variant="outline" size="icon" onClick={copyToClipboard}>
+                <Copy className="h-4 w-4" />
+                <span className="sr-only">Salin URL</span>
+              </Button>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogAction onClick={() => setIsQrDialogOpen(false)}>Tutup</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </>
     );
   };
