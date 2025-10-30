@@ -26,7 +26,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
-import { nanoid } from 'nanoid';
 import { FirebaseError } from 'firebase/app';
 
 
@@ -73,13 +72,12 @@ export function AddCafeDialog({ isOpen, onOpenChange }: AddCafeDialogProps) {
 
     const tenantsCollection = collection(firestore, 'tenants');
     const slug = createSlug(data.name);
-    const tokenHarian = nanoid(6).toUpperCase();
 
     // Data minimal yang dibuat oleh Super Admin
     const newCafeData = {
       name: data.name,
       slug: slug,
-      tokenHarian: tokenHarian,
+      tokenHarian: "", // Dikosongkan, diisi oleh admin kafe nanti
       createdAt: serverTimestamp(),
       logoUrl: '', // Dikosongkan, diisi oleh admin kafe nanti
       qrisImageUrl: '', // Dikosongkan, diisi oleh admin kafe nanti

@@ -72,7 +72,7 @@ export function CheckoutDialog({
     }
 
     // Basic client-side token check
-    if (data.verificationToken.toUpperCase() !== tenant.tokenHarian.toUpperCase()) {
+    if (data.verificationToken !== tenant.tokenHarian) {
         form.setError('verificationToken', {
             type: 'manual',
             message: 'Token verifikasi tidak valid. Minta pada kasir.',
@@ -96,7 +96,7 @@ export function CheckoutDialog({
       status: 'received' as const,
       paymentMethod: 'qris' as const,
       paymentVerified: false,
-      verificationToken: data.verificationToken.toUpperCase(),
+      verificationToken: data.verificationToken,
       createdAt: serverTimestamp(),
     };
 
@@ -169,7 +169,6 @@ export function CheckoutDialog({
                                     placeholder="Minta token pada kasir" 
                                     {...field}
                                     className="text-center font-bold tracking-widest"
-                                    onChange={(e) => field.onChange(e.target.value.toUpperCase())}
                                 />
                             </FormControl>
                             <FormMessage />

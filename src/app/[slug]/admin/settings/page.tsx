@@ -49,6 +49,7 @@ import Link from 'next/link';
 
 const settingsSchema = z.object({
   name: z.string().min(3, 'Nama kafe minimal 3 karakter.'),
+  tokenHarian: z.string().length(4, 'Token harus 4 digit angka.'),
   logoUrl: z.string().url('URL logo tidak valid.').or(z.literal('')),
   qrisImageUrl: z.string().url('URL gambar QRIS tidak valid.').or(z.literal('')),
   address: z.string().optional(),
@@ -86,6 +87,7 @@ export default function CafeSettingsPage() {
     resolver: zodResolver(settingsSchema),
     defaultValues: {
       name: '',
+      tokenHarian: '',
       logoUrl: '',
       qrisImageUrl: '',
       address: '',
@@ -131,6 +133,7 @@ export default function CafeSettingsPage() {
         // Populate form with fetched data
         form.reset({
           name: tenantData.name,
+          tokenHarian: tenantData.tokenHarian || '',
           logoUrl: tenantData.logoUrl || '',
           qrisImageUrl: tenantData.qrisImageUrl || '',
           address: tenantData.address || '',
@@ -245,6 +248,20 @@ export default function CafeSettingsPage() {
                                             <Input placeholder="Contoh: Kopi Kenangan" {...field} />
                                         </FormControl>
                                         <FormDescription>Perubahan nama akan otomatis mengubah URL kafe Anda.</FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={form.control}
+                                name="tokenHarian"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Token Harian</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Contoh: 1234" maxLength={4} {...field} />
+                                        </FormControl>
+                                        <FormDescription>4 digit angka untuk verifikasi pesanan pelanggan.</FormDescription>
                                         <FormMessage />
                                     </FormItem>
                                 )}
