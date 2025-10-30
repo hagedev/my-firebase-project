@@ -7,6 +7,7 @@ import { signInAnonymously } from 'firebase/auth';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import type { Tenant } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function OrderPageTest() {
   const params = useParams();
@@ -59,17 +60,20 @@ export default function OrderPageTest() {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-4 text-lg">Menjalankan pengujian...</p>
+        <p className="ml-4 text-lg">Menyiapkan sesi...</p>
       </div>
     );
   }
 
   return (
-    <main className="flex h-screen flex-col items-center justify-center bg-background text-center">
+    <main className="flex h-screen flex-col items-center justify-center bg-background text-center p-4">
       {status === 'success' ? (
-        <h1 className="font-headline text-4xl font-bold text-primary">
-          Selamat Datang, di kafe {cafeName}
-        </h1>
+        <div className="flex flex-col items-center gap-6">
+          <h1 className="font-headline text-4xl font-bold text-primary">
+            Selamat Datang, di kafe {cafeName}
+          </h1>
+          <Button size="lg">Saya ingin order</Button>
+        </div>
       ) : (
         <h1 className="font-headline text-4xl font-bold text-destructive">
           Aduh!
