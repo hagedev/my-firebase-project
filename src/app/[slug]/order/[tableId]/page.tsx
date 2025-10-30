@@ -1,44 +1,78 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { signInAnonymously } from 'firebase/auth';
 import { Loader2 } from 'lucide-react';
+import { useParams } from 'next/navigation';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import type { Tenant } from '@/lib/types';
 
 export default function OrderPage() {
-  const [authStatus, setAuthStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [message, setMessage] = useState('Mengautentikasi...');
   const auth = useAuth();
+  const firestore = useFirestore();
+  const params = useParams();
+  const slug = params.slug as string;
 
   useEffect(() => {
-    if (!auth) {
-      // Jika layanan auth belum siap, tunggu.
+    if (!auth || !firestore || !slug) {
       return;
     }
 
-    const attemptAnonymousSignIn = async () => {
+    const testDataAccess = async () => {
       try {
-        // Cek jika sudah ada user (termasuk sesi anonim sebelumnya)
-        if (auth.currentUser) {
-           setAuthStatus('success');
-        } else {
-          // Jika tidak ada, coba login anonim
+        // Step 1: Ensure anonymous sign-in
+        if (!auth.currentUser) {
           await signInAnonymously(auth);
-          setAuthStatus('success');
         }
-      } catch (error) {
-        console.error("Anonymous sign-in failed:", error);
-        setAuthStatus('error');
+        
+        setMessage('Autentikasi berhasil. Mengambil data kafe...');
+
+        // Step 2: Try to access the tenant collection
+        const tenantsRef = collection(firestore, 'tenants');
+        const q = query(tenantsRef, where('slug', '==', slug));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+          throw new Error(`Kafe dengan slug "${slug}" tidak ditemukan.`);
+        }
+
+        const tenantDoc = querySnapshot.docs[0];
+        const tenantData = tenantDoc.data() as Tenant;
+        
+        // Step 3: Display the cafe name
+        setStatus('success');
+        setMessage(`Selamat Datang di ${tenantData.name}`);
+
+      } catch (error: any) {
+        console.error("Test failed:", error);
+        setStatus('error');
+        setMessage(error.message || 'Terjadi kesalahan.');
       }
     };
 
-    attemptAnonymousSignIn();
-  }, [auth]); // Hanya bergantung pada auth object
+    testDataAccess();
+  }, [auth, firestore, slug]);
+
+  const getStatusColor = () => {
+    switch (status) {
+      case 'success':
+        return 'text-green-600';
+      case 'error':
+        return 'text-destructive';
+      default:
+        return '';
+    }
+  }
 
   return (
-    <div className="flex items-center justify-center min-h-screen text-4xl font-bold text-center">
-      {authStatus === 'loading' && <Loader2 className="h-16 w-16 animate-spin" />}
-      {authStatus === 'success' && <h1 className="text-green-600">selamat datang pengunjung yang ganteng</h1>}
-      {authStatus === 'error' && <h1 className="text-destructive">aduh!</h1>}
+    <div className="flex items-center justify-center min-h-screen text-2xl md:text-4xl font-bold text-center p-4">
+      <div className="flex flex-col items-center gap-4">
+        {status === 'loading' && <Loader2 className="h-16 w-16 animate-spin" />}
+        <h1 className={getStatusColor()}>{message}</h1>
+      </div>
     </div>
   );
 }
