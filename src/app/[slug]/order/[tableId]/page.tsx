@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore, useUser } from '@/firebase';
 import { signInAnonymously } from 'firebase/auth';
 import {
   collection,
@@ -11,7 +11,6 @@ import {
   getDocs,
   doc,
   getDoc,
-  onSnapshot,
 } from 'firebase/firestore';
 import type { Tenant, Table as TableType, Menu as MenuType, CartItem } from '@/lib/types';
 import { Loader2, ShoppingCart, PlusCircle, MinusCircle, Trash2, XCircle } from 'lucide-react';
@@ -29,6 +28,7 @@ export default function OrderPage() {
   
   const auth = useAuth();
   const firestore = useFirestore();
+  const { user, isUserLoading: isAuthLoading } = useUser();
   const router = useRouter();
 
   // State for data
@@ -38,73 +38,67 @@ export default function OrderPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   
   // State for UI
-  const [isLoading, setIsLoading] = useState(true);
+  const [isDataLoading, setIsDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   useEffect(() => {
-    if (!firestore || !auth) return;
+    // Wait for auth to be ready and services to be available
+    if (isAuthLoading || !firestore || !auth) {
+      return;
+    }
 
-    const fetchData = async () => {
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        // Step 1: Ensure anonymous sign-in
-        if (!auth.currentUser) {
-          await signInAnonymously(auth);
-          // We need to wait for the next auth state change, so let's just return
-          // and let the hook re-run when the user is available. A small delay is fine.
-          const checkUser = () => new Promise(resolve => {
-            const unsub = onSnapshot(doc(firestore, 'users', 'dummy'), () => {}); // A trick to wait for auth
-            const unsubscribe = auth.onAuthStateChanged(user => {
-              if (user) {
-                unsubscribe();
-                resolve(user);
-              }
-            });
-          });
-          await checkUser();
+    const performSignInAndFetch = async () => {
+        try {
+            // If there's no user, sign in anonymously.
+            if (!user) {
+                await signInAnonymously(auth);
+                // After sign-in, the hook will re-run, so we can wait for the next cycle
+                // where `user` will be available.
+                return;
+            }
+
+            // Now that we have a user (anonymous or otherwise), fetch data.
+            setIsDataLoading(true);
+            
+            // Step 1: Fetch Tenant by slug
+            const tenantsRef = collection(firestore, 'tenants');
+            const tenantQuery = query(tenantsRef, where('slug', '==', slug));
+            const tenantSnapshot = await getDocs(tenantQuery);
+
+            if (tenantSnapshot.empty) {
+                throw new Error(`Kafe dengan slug "${slug}" tidak ditemukan.`);
+            }
+            const foundTenant = { id: tenantSnapshot.docs[0].id, ...tenantSnapshot.docs[0].data() } as Tenant;
+            setTenant(foundTenant);
+
+            // Step 2: Fetch Table by ID
+            const tableRef = doc(firestore, `tenants/${foundTenant.id}/tables/${tableId}`);
+            const tableSnapshot = await getDoc(tableRef);
+            if (!tableSnapshot.exists()) {
+                throw new Error('Meja tidak valid atau tidak ditemukan.');
+            }
+            const foundTable = { id: tableSnapshot.id, ...tableSnapshot.data() } as TableType;
+            setTable(foundTable);
+
+            // Step 3: Fetch Menu items
+            const menuRef = collection(firestore, `tenants/${foundTenant.id}/menus`);
+            const menuQuery = query(menuRef, where('available', '==', true));
+            const menuSnapshot = await getDocs(menuQuery);
+            const fetchedMenus = menuSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as MenuType));
+            setMenuItems(fetchedMenus);
+
+        } catch (e: any) {
+            console.error('Failed to fetch order page data:', e);
+            setError(e.message || 'Terjadi kesalahan saat memuat data.');
+        } finally {
+            setIsDataLoading(false);
         }
-
-        // Step 2: Fetch Tenant by slug
-        const tenantsRef = collection(firestore, 'tenants');
-        const tenantQuery = query(tenantsRef, where('slug', '==', slug));
-        const tenantSnapshot = await getDocs(tenantQuery);
-
-        if (tenantSnapshot.empty) {
-          throw new Error(`Kafe dengan slug "${slug}" tidak ditemukan.`);
-        }
-        const foundTenant = { id: tenantSnapshot.docs[0].id, ...tenantSnapshot.docs[0].data() } as Tenant;
-        setTenant(foundTenant);
-
-        // Step 3: Fetch Table by ID
-        const tableRef = doc(firestore, `tenants/${foundTenant.id}/tables/${tableId}`);
-        const tableSnapshot = await getDoc(tableRef);
-        if (!tableSnapshot.exists()) {
-          throw new Error('Meja tidak valid atau tidak ditemukan.');
-        }
-        const foundTable = { id: tableSnapshot.id, ...tableSnapshot.data() } as TableType;
-        setTable(foundTable);
-
-        // Step 4: Fetch Menu items
-        const menuRef = collection(firestore, `tenants/${foundTenant.id}/menus`);
-        const menuQuery = query(menuRef, where('available', '==', true));
-        const menuSnapshot = await getDocs(menuQuery);
-        const fetchedMenus = menuSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as MenuType));
-        setMenuItems(fetchedMenus);
-
-      } catch (e: any) {
-        console.error('Failed to fetch order page data:', e);
-        setError(e.message || 'Terjadi kesalahan saat memuat data.');
-      } finally {
-        setIsLoading(false);
-      }
     };
+    
+    performSignInAndFetch();
 
-    fetchData();
-
-  }, [auth, firestore, slug, tableId, router]);
+  }, [user, isAuthLoading, firestore, auth, slug, tableId]);
 
   const groupedMenu = useMemo(() => {
     return menuItems.reduce((acc, item) => {
@@ -158,7 +152,7 @@ export default function OrderPage() {
 
 
   // --- Render Logic ---
-  if (isLoading) {
+  if (isAuthLoading || isDataLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen text-center p-4">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />
@@ -243,7 +237,7 @@ export default function OrderPage() {
          </footer>
       )}
 
-      {isCheckoutOpen && (
+      {isCheckoutOpen && tenant && table && (
         <CheckoutDialog 
             isOpen={isCheckoutOpen}
             onOpenChange={setIsCheckoutOpen}
