@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser, useFirestore, useAuth, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, getDoc, collection, query } from 'firebase/firestore';
-import type { Tenant, User as AppUser, Menu as MenuType } from '@/lib/types';
+import { doc, getDoc, collection, query, updateDoc } from 'firebase/firestore';
+import type { Tenant, User as AppUser, Menu as MenuType, Category } from '@/lib/types';
 import {
   Loader2,
   LogOut,
@@ -50,6 +50,7 @@ import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { formatRupiah } from '@/lib/utils';
+import { AddMenuDialog } from './_components/add-menu-dialog';
 
 export default function CafeMenuManagementPage() {
   const router = useRouter();
@@ -64,19 +65,29 @@ export default function CafeMenuManagementPage() {
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAddMenuDialogOpen, setIsAddMenuDialogOpen] = useState(false);
 
+  // --- Data Fetching ---
   const menusCollectionRef = useMemoFirebase(
     () => (firestore && tenant ? collection(firestore, `tenants/${tenant.id}/menus`) : null),
     [firestore, tenant]
   );
-
+  const categoriesCollectionRef = useMemoFirebase(
+    () => (firestore && tenant ? collection(firestore, `tenants/${tenant.id}/categories`) : null),
+    [firestore, tenant]
+  );
+  
   const { data: menuItems, isLoading: isMenuLoading } = useCollection<MenuType>(menusCollectionRef);
+  const { data: categories, isLoading: isCategoriesLoading } = useCollection<Category>(categoriesCollectionRef);
 
+  const categoryMap = useMemo(() => {
+    if (!categories) return new Map();
+    return new Map(categories.map(cat => [cat.id, cat.name]));
+  }, [categories]);
+
+  // --- User and Tenant Verification ---
   useEffect(() => {
-    if (isUserLoading || !firestore) {
-      return;
-    }
-
+    if (isUserLoading || !firestore) return;
     if (!user) {
       router.replace('/admin/cafe/login');
       return;
@@ -116,6 +127,7 @@ export default function CafeMenuManagementPage() {
     verifyUserAndTenant();
   }, [user, isUserLoading, firestore, slug, router]);
 
+  // --- Handlers ---
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -127,6 +139,25 @@ export default function CafeMenuManagementPage() {
     }
   };
 
+  const handleAvailabilityChange = async (menuId: string, available: boolean) => {
+    if (!firestore || !tenant) return;
+    try {
+        const menuDocRef = doc(firestore, `tenants/${tenant.id}/menus`, menuId);
+        await updateDoc(menuDocRef, { available });
+        toast({
+            title: 'Ketersediaan Diperbarui',
+            description: `Menu sekarang ${available ? 'tersedia' : 'tidak tersedia'}.`,
+        });
+    } catch (error: any) {
+        toast({
+            variant: 'destructive',
+            title: 'Gagal Memperbarui',
+            description: error.message,
+        });
+    }
+  };
+
+  // --- Page Content Rendering ---
   const pageContent = () => {
     if (isLoading || isUserLoading) {
       return (
@@ -153,80 +184,89 @@ export default function CafeMenuManagementPage() {
     }
 
     return (
-      <main className="flex-1 p-4 md:p-6 lg:p-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="font-headline text-2xl md:text-3xl font-bold">Manajemen Menu</h1>
-            <p className="text-muted-foreground">Tambah, edit, atau hapus item menu untuk kafe Anda.</p>
+      <>
+        <main className="flex-1 p-4 md:p-6 lg:p-8">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="font-headline text-2xl md:text-3xl font-bold">Manajemen Menu</h1>
+              <p className="text-muted-foreground">Tambah, edit, atau hapus item menu untuk kafe Anda.</p>
+            </div>
+            <Button onClick={() => setIsAddMenuDialogOpen(true)}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Tambah Menu
+            </Button>
           </div>
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Tambah Menu
-          </Button>
-        </div>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="border rounded-md">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nama Menu</TableHead>
-                    <TableHead>Kategori</TableHead>
-                    <TableHead>Harga</TableHead>
-                    <TableHead>Ketersediaan</TableHead>
-                    <TableHead className="text-right">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isMenuLoading ? (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="border rounded-md">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center h-24">
-                        <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
-                      </TableCell>
+                      <TableHead>Nama Menu</TableHead>
+                      <TableHead>Kategori</TableHead>
+                      <TableHead>Harga</TableHead>
+                      <TableHead>Ketersediaan</TableHead>
+                      <TableHead className="text-right">Aksi</TableHead>
                     </TableRow>
-                  ) : menuItems && menuItems.length > 0 ? (
-                    menuItems.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.name}</TableCell>
-                        <TableCell><Badge variant="secondary">{item.categoryId || 'N/A'}</Badge></TableCell>
-                        <TableCell>{formatRupiah(item.price)}</TableCell>
-                        <TableCell>
-                          <Switch
-                            checked={item.available}
-                            // onCheckedChange={(checked) => handleAvailabilityChange(item.id, checked)}
-                          />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Buka menu</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Aksi</DropdownMenuLabel>
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem className="text-destructive">Hapus</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                  </TableHeader>
+                  <TableBody>
+                    {isMenuLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center h-24">
+                          <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center h-24">
-                        Belum ada menu yang ditambahkan.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      </main>
+                    ) : menuItems && menuItems.length > 0 ? (
+                      menuItems.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-medium">{item.name}</TableCell>
+                          <TableCell><Badge variant="secondary">{categoryMap.get(item.categoryId) || 'N/A'}</Badge></TableCell>
+                          <TableCell>{formatRupiah(item.price)}</TableCell>
+                          <TableCell>
+                            <Switch
+                              checked={item.available}
+                              onCheckedChange={(checked) => handleAvailabilityChange(item.id, checked)}
+                            />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                  <span className="sr-only">Buka menu</span>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Aksi</DropdownMenuLabel>
+                                <DropdownMenuItem>Edit</DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="text-destructive">Hapus</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center h-24">
+                          Belum ada menu yang ditambahkan.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </main>
+        
+        <AddMenuDialog
+            isOpen={isAddMenuDialogOpen}
+            onOpenChange={setIsAddMenuDialogOpen}
+            tenantId={tenant?.id || ''}
+            categories={categories || []}
+        />
+      </>
     );
   };
   
