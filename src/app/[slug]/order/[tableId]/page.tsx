@@ -28,9 +28,8 @@ export default function OrderPage() {
   const slug = params.slug as string;
   const tableId = params.tableId as string;
 
+  const { auth, isUserLoading: isAuthLoading } = useAuth();
   const firestore = useFirestore();
-  const auth = useAuth();
-  const { isUserLoading } = auth ? auth.onAuthStateChanged(() => {}) : { isUserLoading: true };
 
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [table, setTable] = useState<TableType | null>(null);
@@ -45,23 +44,18 @@ export default function OrderPage() {
 
   // --- Anonymous Authentication ---
   useEffect(() => {
-    if (auth) {
-      const unsubscribe = auth.onAuthStateChanged(user => {
-        if (!user) {
-          signInAnonymously(auth).catch((error) => {
+    if (auth && !auth.currentUser) {
+        signInAnonymously(auth).catch((error) => {
             console.error("Anonymous sign-in failed:", error);
             setError("Gagal menginisialisasi sesi. Silakan refresh halaman.");
-          });
-        }
-      });
-      return () => unsubscribe();
+        });
     }
   }, [auth]);
 
   // --- Efficient Data Fetching ---
   useEffect(() => {
-    // Wait until auth is initialized and the user state is determined.
-    if (!firestore || !auth || isUserLoading) return;
+    // Wait until auth is initialized and user session is ready.
+    if (!firestore || !auth || isAuthLoading) return;
 
     const fetchInitialData = async () => {
       try {
@@ -111,9 +105,12 @@ export default function OrderPage() {
       }
     };
 
-    fetchInitialData();
+    // We need a valid user session to proceed, even an anonymous one.
+    if (auth.currentUser) {
+        fetchInitialData();
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [firestore, slug, tableId, isUserLoading, auth]);
+  }, [firestore, slug, tableId, isAuthLoading, auth]);
 
 
   // --- Cart Logic ---
@@ -168,7 +165,7 @@ export default function OrderPage() {
     setCheckoutOpen(true);
   }
 
-  const isLoading = isUserLoading || initialDataLoading;
+  const isLoading = isAuthLoading || initialDataLoading;
 
   if (isLoading) {
     return (
