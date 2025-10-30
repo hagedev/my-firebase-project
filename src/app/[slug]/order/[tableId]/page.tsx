@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { useFirestore, useAuth } from '@/firebase';
 import { doc, collection, getDocs, getDoc, query, where } from 'firebase/firestore';
@@ -58,10 +58,13 @@ export default function OrderPage() {
     if (!firestore || !auth || isAuthLoading) return;
 
     const fetchInitialData = async () => {
-      try {
-        setInitialDataLoading(true);
-        setError(null);
+      // We only run this if there is a logged in user, even an anonymous one
+      if (!auth.currentUser) return;
         
+      setInitialDataLoading(true);
+      setError(null);
+      
+      try {
         // 1. Find the tenant using the URL slug (this is an indexed query)
         const tenantsRef = collection(firestore, 'tenants');
         const q = query(tenantsRef, where("slug", "==", slug));
@@ -104,13 +107,11 @@ export default function OrderPage() {
         setInitialDataLoading(false);
       }
     };
-
-    // We need a valid user session to proceed, even an anonymous one.
-    if (auth.currentUser) {
-        fetchInitialData();
-    }
+    
+    fetchInitialData();
+  
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [firestore, slug, tableId, isAuthLoading, auth]);
+  }, [auth, firestore, isAuthLoading, slug, tableId]);
 
 
   // --- Cart Logic ---
