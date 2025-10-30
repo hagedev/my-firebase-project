@@ -15,6 +15,7 @@ import {
   Info,
   ClipboardList,
   CheckCircle,
+  FileText,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
@@ -322,6 +323,14 @@ export default function CafeOrdersManagementPage() {
                 <Link href={`/${slug}/admin/orders`}>
                   <ClipboardList />
                   Manajemen Pesanan
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <Link href={`/${slug}/admin/reports`}>
+                  <FileText />
+                  Laporan Transaksi
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

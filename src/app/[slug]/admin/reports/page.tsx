@@ -3,20 +3,20 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser, useFirestore, useAuth, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, getDoc, collection, updateDoc } from 'firebase/firestore';
-import type { Tenant, User as AppUser, Menu as MenuType, Category } from '@/lib/types';
+import { doc, getDoc, collection, query, where, Timestamp, orderBy } from 'firebase/firestore';
+import type { Tenant, User as AppUser, Order } from '@/lib/types';
 import {
   Loader2,
   LogOut,
   Settings,
   Store,
   Utensils,
-  PlusCircle,
-  MoreHorizontal,
   Armchair,
   Info,
   ClipboardList,
   FileText,
+  Calendar as CalendarIcon,
+  DollarSign,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
@@ -41,22 +41,17 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { format } from 'date-fns';
+import { id as idLocale } from 'date-fns/locale';
 import { formatRupiah } from '@/lib/utils';
-import { AddMenuDialog } from './_components/add-menu-dialog';
 
-export default function CafeMenuManagementPage() {
+
+export default function CafeReportsPage() {
   const router = useRouter();
   const params = useParams();
   const slug = params.slug as string;
@@ -69,15 +64,44 @@ export default function CafeMenuManagementPage() {
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isAddMenuDialogOpen, setIsAddMenuDialogOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+
+  // --- Date Range for Query ---
+  const dateRange = useMemo(() => {
+    if (!selectedDate) return { start: null, end: null };
+    const start = new Date(selectedDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(selectedDate);
+    end.setHours(23, 59, 59, 999);
+    return {
+      start: Timestamp.fromDate(start),
+      end: Timestamp.fromDate(end),
+    };
+  }, [selectedDate]);
+
 
   // --- Data Fetching ---
-  const menusCollectionRef = useMemoFirebase(
-    () => (firestore && tenant ? collection(firestore, `tenants/${tenant.id}/menus`) : null),
-    [firestore, tenant]
+  const ordersQuery = useMemoFirebase(
+    () => {
+        if (!firestore || !tenant || !dateRange.start || !dateRange.end) return null;
+        return query(
+            collection(firestore, `tenants/${tenant.id}/orders`),
+            where('createdAt', '>=', dateRange.start),
+            where('createdAt', '<=', dateRange.end),
+            orderBy('createdAt', 'desc')
+        );
+    },
+    [firestore, tenant, dateRange]
   );
   
-  const { data: menuItems, isLoading: isMenuLoading } = useCollection<MenuType>(menusCollectionRef);
+  const { data: orders, isLoading: isOrdersLoading } = useCollection<Order>(ordersQuery);
+
+  const reportSummary = useMemo(() => {
+    if (!orders) return { totalRevenue: 0, totalTransactions: 0 };
+    const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
+    const totalTransactions = orders.length;
+    return { totalRevenue, totalTransactions };
+  }, [orders]);
 
   // --- User and Tenant Verification ---
   useEffect(() => {
@@ -133,23 +157,6 @@ export default function CafeMenuManagementPage() {
     }
   };
 
-  const handleAvailabilityChange = async (menuId: string, available: boolean) => {
-    if (!firestore || !tenant) return;
-    try {
-        const menuDocRef = doc(firestore, `tenants/${tenant.id}/menus`, menuId);
-        await updateDoc(menuDocRef, { available });
-        toast({
-            title: 'Ketersediaan Diperbarui',
-            description: `Menu sekarang ${available ? 'tersedia' : 'tidak tersedia'}.`,
-        });
-    } catch (error: any) {
-        toast({
-            variant: 'destructive',
-            title: 'Gagal Memperbarui',
-            description: error.message,
-        });
-    }
-  };
 
   // --- Page Content Rendering ---
   const pageContent = () => {
@@ -178,88 +185,113 @@ export default function CafeMenuManagementPage() {
     }
 
     return (
-      <>
-        <main className="flex-1 p-4 md:p-6 lg:p-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="font-headline text-2xl md:text-3xl font-bold">Manajemen Menu</h1>
-              <p className="text-muted-foreground">Tambah, edit, atau hapus item menu untuk kafe Anda.</p>
-            </div>
-            <Button onClick={() => setIsAddMenuDialogOpen(true)}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Tambah Menu
-            </Button>
+      <main className="flex-1 p-4 md:p-6 lg:p-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="font-headline text-2xl md:text-3xl font-bold">Laporan Transaksi</h1>
+            <p className="text-muted-foreground">Analisis penjualan dan transaksi kafe Anda.</p>
           </div>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="border rounded-md">
-                <Table>
-                  <TableHeader>
+          <div>
+             <Popover>
+                <PopoverTrigger asChild>
+                    <Button
+                    variant={"outline"}
+                    className="w-[280px] justify-start text-left font-normal"
+                    >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {selectedDate ? format(selectedDate, "PPP", { locale: idLocale }) : <span>Pilih tanggal</span>}
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                    <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={setSelectedDate}
+                    initialFocus
+                    />
+                </PopoverContent>
+            </Popover>
+          </div>
+        </div>
+
+        {/* Summary Cards */}
+         <div className="grid gap-4 md:grid-cols-2 mb-6">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Pendapatan</CardTitle>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  {isOrdersLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{formatRupiah(reportSummary.totalRevenue)}</div>}
+                  <p className="text-xs text-muted-foreground">Total pendapatan pada tanggal yang dipilih</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Transaksi</CardTitle>
+                  <ClipboardList className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                   {isOrdersLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{reportSummary.totalTransactions}</div>}
+                  <p className="text-xs text-muted-foreground">Jumlah transaksi pada tanggal yang dipilih</p>
+                </CardContent>
+              </Card>
+            </div>
+
+
+        <Card>
+          <CardHeader>
+              <CardTitle>Detail Transaksi</CardTitle>
+              <CardDescription>Daftar semua transaksi yang tercatat pada tanggal yang dipilih.</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="border rounded-md">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Waktu</TableHead>
+                    <TableHead>Meja</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead>Pembayaran</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isOrdersLoading ? (
                     <TableRow>
-                      <TableHead>Nama Menu</TableHead>
-                      <TableHead>Kategori</TableHead>
-                      <TableHead>Harga</TableHead>
-                      <TableHead>Ketersediaan</TableHead>
-                      <TableHead className="text-right">Aksi</TableHead>
+                      <TableCell colSpan={5} className="text-center h-24">
+                        <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isMenuLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center h-24">
-                          <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
+                  ) : orders && orders.length > 0 ? (
+                    orders.map((order) => (
+                      <TableRow key={order.id}>
+                        <TableCell className="font-medium">
+                            {order.createdAt ? format(order.createdAt.toDate(), 'HH:mm:ss') : 'N/A'}
                         </TableCell>
-                      </TableRow>
-                    ) : menuItems && menuItems.length > 0 ? (
-                      menuItems.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.name}</TableCell>
-                          <TableCell><Badge variant="secondary">{item.category || 'N/A'}</Badge></TableCell>
-                          <TableCell>{formatRupiah(item.price)}</TableCell>
-                          <TableCell>
-                            <Switch
-                              checked={item.available}
-                              onCheckedChange={(checked) => handleAvailabilityChange(item.id, checked)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                  <span className="sr-only">Buka menu</span>
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Aksi</DropdownMenuLabel>
-                                <DropdownMenuItem>Edit</DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-destructive">Hapus</DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center h-24">
-                          Belum ada menu yang ditambahkan.
+                        <TableCell>Meja {order.tableNumber}</TableCell>
+                        <TableCell>{formatRupiah(order.totalAmount)}</TableCell>
+                        <TableCell>
+                          <Badge variant={order.paymentVerified ? 'secondary' : 'default'}>
+                            {order.paymentMethod.toUpperCase()} - {order.paymentVerified ? 'Lunas' : 'Belum'}
+                          </Badge>
                         </TableCell>
+                        <TableCell><Badge variant="outline">{order.status}</Badge></TableCell>
                       </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </main>
-        
-        <AddMenuDialog
-            isOpen={isAddMenuDialogOpen}
-            onOpenChange={setIsAddMenuDialogOpen}
-            tenantId={tenant?.id || ''}
-        />
-      </>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center h-24">
+                        Tidak ada transaksi pada tanggal yang dipilih.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      </main>
     );
   };
   
@@ -283,7 +315,7 @@ export default function CafeMenuManagementPage() {
                 </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive>
+              <SidebarMenuButton asChild>
                 <Link href={`/${slug}/admin/menu`}>
                   <Utensils />
                   Manajemen Menu
@@ -306,8 +338,8 @@ export default function CafeMenuManagementPage() {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
+             <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive>
                 <Link href={`/${slug}/admin/reports`}>
                   <FileText />
                   Laporan Transaksi
@@ -336,7 +368,7 @@ export default function CafeMenuManagementPage() {
           <div className="flex items-center gap-2">
             <SidebarTrigger className="md:hidden" />
             <h1 className="font-headline text-xl font-semibold">
-              Manajemen Menu
+              Laporan Transaksi
             </h1>
           </div>
            <div className="flex items-center gap-2">
