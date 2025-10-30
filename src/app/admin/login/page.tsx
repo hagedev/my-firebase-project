@@ -24,8 +24,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/firebase';
-import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { Coffee, ShieldAlert } from 'lucide-react';
+import { signInWithEmailAndPassword, signOut, FirebaseError } from 'firebase/auth';
+import { Coffee, ShieldAlert, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
 
@@ -80,14 +80,26 @@ export default function AdminLoginPage() {
       }
     } catch (error: any) {
       // 5. GAGAL AUTENTIKASI: Tangani error dari Firebase Auth (misal: email/pass salah).
-      let description = 'Email atau password yang Anda masukkan salah.';
-      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-        description = 'Email atau password yang Anda masukkan salah.';
-      } else if (error.code === 'auth/too-many-requests') {
-        description = 'Terlalu banyak percobaan login. Coba lagi nanti.';
+      let description = 'Terjadi kesalahan yang tidak diketahui. Silakan coba lagi.';
+      if (error instanceof FirebaseError) {
+          switch (error.code) {
+              case 'auth/invalid-credential':
+              case 'auth/user-not-found':
+              case 'auth/wrong-password':
+                  description = 'Email atau password yang Anda masukkan salah.';
+                  break;
+              case 'auth/too-many-requests':
+                  description = 'Terlalu banyak percobaan login. Akun Anda ditangguhkan sementara. Coba lagi nanti.';
+                  break;
+              case 'auth/network-request-failed':
+                  description = 'Gagal terhubung ke server. Periksa koneksi internet Anda.';
+                  break;
+              default:
+                  description = `Terjadi kesalahan: [${error.code}]`;
+                  break;
+          }
       }
       
-      console.error('Login Process Error:', error);
       toast({ 
         variant: 'destructive', 
         title: 'Login Gagal', 
@@ -146,7 +158,14 @@ export default function AdminLoginPage() {
                 )}
               />
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Memverifikasi...' : 'Masuk'}
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Memverifikasi...
+                  </>
+                ) : (
+                  'Masuk'
+                )}
               </Button>
             </form>
           </Form>
