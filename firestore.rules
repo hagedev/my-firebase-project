@@ -1,23 +1,155 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Tenants can be listed by any authenticated user (for dropdowns)
-    // but can only be created, updated, or deleted by the super admin.
-    match /tenants/{tenantId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth.uid == 'ttFbsVWt14cdTwVlKs1AbgBLUtx1';
+    /**
+     * @description Checks if the user is signed in.
+     */
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    // Users collection can be managed only by the super admin
-    match /users/{userId} {
-      allow read, write: if request.auth.uid == 'ttFbsVWt14cdTwVlKs1AbgBLUtx1';
+    /**
+     * @description Checks if the user is the owner of the document, based on the provided userId.
+     */
+    function isOwner(userId) {
+      return request.auth.uid == userId;
     }
-    
-    // Explicitly allow list operations for the super admin on users.
-    match /users {
-        allow read, write: if request.auth.uid == 'ttFbsVWt14cdTwVlKs1AbgBLUtx1';
+
+    /**
+     * @description Checks if the user is an existing owner of the document.
+     * This function is used for update and delete operations.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * @description Checks if the user has the superadmin role.
+     */
+    function isSuperAdmin() {
+      return exists(/databases/$(database)/documents/roles_superadmin/$(request.auth.uid));
+    }
+
+    /**
+     * @description Checks if the user is an admin of the specified tenant.
+     */
+    function isAdminKafe(tenantId) {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin_kafe'
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.tenantId == tenantId;
+    }
+
+    /**
+     * @description Enforces that verificationToken sent by anonymous user matches the tokenHarian stored in the tenant document.
+     */
+    function isValidVerificationToken(tenantId, verificationToken) {
+      return request.resource.data.verificationToken == verificationToken
+        && get(/databases/$(database)/documents/tenants/$(tenantId)).data.tokenHarian == verificationToken;
+    }
+
+    /**
+     * @description Rule for the /tenants/{tenantId} collection.
+     * @path /tenants/{tenantId}
+     * @allow (create, update, delete) if isSuperAdmin()
+     * @deny (create, update, delete) if isSignedIn() && !isSuperAdmin()
+     * @principle Superadmins can manage all tenants.
+     */
+    match /tenants/{tenantId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    /**
+     * @description Rule for the /users/{userId} collection.
+     * @path /users/{userId}
+     * @allow (create, update, delete) if isSuperAdmin()
+     * @deny (create, update, delete) if isSignedIn() && !isSuperAdmin()
+     * @principle Superadmins can manage all users.
+     */
+    match /users/{userId} {
+      allow get: if isSuperAdmin();
+      allow list: if false;
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin();
+      allow delete: if isSuperAdmin() && userId == request.auth.uid;
+    }
+
+    /**
+     * @description Rule for the /tenants/{tenantId}/menus/{menuId} collection.
+     * @path /tenants/{tenantId}/menus/{menuId}
+     * @allow (create, update, delete) if isAdminKafe(tenantId)
+     * @deny (create, update, delete) if isSignedIn() && !isAdminKafe(tenantId)
+     * @principle Cafe admins can manage menus within their tenant.
+     */
+    match /tenants/{tenantId}/menus/{menuId} {
+      allow get: if isAdminKafe(tenantId);
+      allow list: if isAdminKafe(tenantId);
+      allow create: if isAdminKafe(tenantId);
+      allow update: if isAdminKafe(tenantId);
+      allow delete: if isAdminKafe(tenantId);
+    }
+
+    /**
+     * @description Rule for the /tenants/{tenantId}/categories/{categoryId} collection.
+     * @path /tenants/{tenantId}/categories/{categoryId}
+     * @allow (create, update, delete) if isAdminKafe(tenantId)
+     * @deny (create, update, delete) if isSignedIn() && !isAdminKafe(tenantId)
+     * @principle Cafe admins can manage categories within their tenant.
+     */
+    match /tenants/{tenantId}/categories/{categoryId} {
+      allow get: if isAdminKafe(tenantId);
+      allow list: if isAdminKafe(tenantId);
+      allow create: if isAdminKafe(tenantId);
+      allow update: if isAdminKafe(tenantId);
+      allow delete: if isAdminKafe(tenantId);
+    }
+
+    /**
+     * @description Rule for the /tenants/{tenantId}/orders/{orderId} collection.
+     * @path /tenants/{tenantId}/orders/{orderId}
+     * @allow (create, update, delete) if isAdminKafe(tenantId)
+     * @allow (create) if isValidVerificationToken(tenantId, request.resource.data.verificationToken)
+     * @deny (create, update, delete) if isSignedIn() && !isAdminKafe(tenantId)
+     * @principle Cafe admins can manage orders within their tenant and anonymous users can create orders with valid verification tokens.
+     */
+    match /tenants/{tenantId}/orders/{orderId} {
+      allow get: if isAdminKafe(tenantId);
+      allow list: if isAdminKafe(tenantId);
+      allow create: if request.auth == null && isValidVerificationToken(tenantId, request.resource.data.verificationToken);
+      allow update: if isAdminKafe(tenantId);
+      allow delete: if isAdminKafe(tenantId);
+    }
+
+    /**
+     * @description Rule for the /tenants/{tenantId}/tables/{tableId} collection.
+     * @path /tenants/{tenantId}/tables/{tableId}
+     * @allow (read, update) if isAdminKafe(tenantId)
+     * @deny (create, delete)
+     * @principle Cafe admins can read and update tables within their tenant.
+     */
+    match /tenants/{tenantId}/tables/{tableId} {
+      allow get: if isAdminKafe(tenantId);
+      allow list: if isAdminKafe(tenantId);
+      allow create: if false;
+      allow update: if isAdminKafe(tenantId);
+      allow delete: if false;
+    }
+
+    /**
+     * @description Rule for the /roles_superadmin/{userId} collection.
+     * @path /roles_superadmin/{userId}
+     * @deny (all operations)
+     * @principle Only the backend can modify the superadmin roles.
+     */
+    match /roles_superadmin/{userId} {
+      allow get: if false;
+      allow list: if false;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
   }
 }

@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useAuth } from '@/firebase';
-import { collection, addDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { Loader2 } from 'lucide-react';
 import type { Tenant } from '@/lib/types';
@@ -56,7 +56,7 @@ export function AddUserDialog({ isOpen, onOpenChange, tenants }: AddUserDialogPr
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
-  const auth = useAuth(); // Temporary auth instance for user creation
+  const auth = useAuth(); 
 
   const form = useForm<AddUserFormValues>({
     resolver: zodResolver(addUserSchema),
@@ -74,10 +74,11 @@ export function AddUserDialog({ isOpen, onOpenChange, tenants }: AddUserDialogPr
     }
     setIsSubmitting(true);
 
+    let newAuthUser;
     try {
       // Step 1: Create user in Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-      const newAuthUser = userCredential.user;
+      newAuthUser = userCredential.user;
 
       // Step 2: Create user document in Firestore within a batch
       const selectedTenant = tenants.find(t => t.id === data.tenantId);
@@ -87,7 +88,11 @@ export function AddUserDialog({ isOpen, onOpenChange, tenants }: AddUserDialogPr
       
       const batch = writeBatch(firestore);
       const usersCollection = collection(firestore, 'users');
-      const newUserDocRef = addDoc(usersCollection, {
+      // Create a new document reference with a unique ID
+      const newUserDocRef = doc(usersCollection); 
+
+      // Use batch.set() to create the document
+      batch.set(newUserDocRef, {
         authUid: newAuthUser.uid,
         email: data.email,
         role: 'admin_kafe',
@@ -116,6 +121,18 @@ export function AddUserDialog({ isOpen, onOpenChange, tenants }: AddUserDialogPr
             description = 'Password terlalu lemah. Gunakan minimal 6 karakter.';
         }
       }
+      
+      // Rollback auth user creation if firestore write fails
+      if (newAuthUser) {
+        try {
+          await newAuthUser.delete();
+          console.log("Orphaned auth user deleted successfully.");
+        } catch (deleteError) {
+          console.error("Failed to delete orphaned auth user:", deleteError);
+          description += " Gagal menghapus user auth yang gagal dibuat di database. Harap hapus manual.";
+        }
+      }
+      
       toast({
         variant: 'destructive',
         title: 'Gagal Membuat User',
