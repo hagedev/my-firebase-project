@@ -25,13 +25,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Loader2, Save } from 'lucide-react';
-import type { Category, Menu } from '@/lib/types';
+import type { Menu } from '@/lib/types';
+
+const DEFAULT_CATEGORIES = ["Makanan", "Snack", "Minuman Kopi", "Minuman Non Kopi"];
 
 // Schema for form validation
 const menuFormSchema = z.object({
   name: z.string().min(3, { message: 'Nama menu minimal 3 karakter.' }),
   price: z.coerce.number().min(0, { message: 'Harga tidak boleh negatif.' }),
-  categoryId: z.string().min(1, { message: 'Silakan pilih kategori.' }),
+  category: z.string().min(1, { message: 'Silakan pilih kategori.' }),
   description: z.string().optional(),
   imageUrl: z.string().url({ message: 'URL gambar tidak valid.' }).or(z.literal('')),
   available: z.boolean(),
@@ -41,14 +43,12 @@ type MenuFormValues = z.infer<typeof menuFormSchema>;
 
 interface MenuFormProps {
   initialData?: Menu;
-  categories: Category[];
   onSubmit: (values: MenuFormValues) => Promise<boolean>;
   onSubmissionSuccess?: () => void; // Optional: Callback for after successful submission
 }
 
 export function MenuForm({
   initialData,
-  categories,
   onSubmit,
   onSubmissionSuccess,
 }: MenuFormProps) {
@@ -64,7 +64,7 @@ export function MenuForm({
       : {
           name: '',
           price: 0,
-          categoryId: '',
+          category: '',
           description: '',
           imageUrl: '',
           available: true,
@@ -113,7 +113,7 @@ export function MenuForm({
             />
             <FormField
             control={form.control}
-            name="categoryId"
+            name="category"
             render={({ field }) => (
                 <FormItem>
                 <FormLabel>Kategori</FormLabel>
@@ -124,17 +124,11 @@ export function MenuForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {categories.length > 0 ? (
-                        categories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>
-                            {cat.name}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                            Tidak ada kategori.
-                        </div>
-                      )}
+                      {DEFAULT_CATEGORIES.map((cat) => (
+                        <SelectItem key={cat} value={cat}>
+                          {cat}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 <FormMessage />

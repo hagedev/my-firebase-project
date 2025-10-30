@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser, useFirestore, useAuth, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, getDoc, collection, query, updateDoc } from 'firebase/firestore';
-import type { Tenant, User as AppUser, Menu as MenuType, Category } from '@/lib/types';
+import type { Tenant, User as AppUser, Menu as MenuType } from '@/lib/types';
 import {
   Loader2,
   LogOut,
@@ -13,7 +13,6 @@ import {
   Utensils,
   PlusCircle,
   MoreHorizontal,
-  LayoutGrid,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
@@ -73,18 +72,8 @@ export default function CafeMenuManagementPage() {
     () => (firestore && tenant ? collection(firestore, `tenants/${tenant.id}/menus`) : null),
     [firestore, tenant]
   );
-  const categoriesCollectionRef = useMemoFirebase(
-    () => (firestore && tenant ? collection(firestore, `tenants/${tenant.id}/categories`) : null),
-    [firestore, tenant]
-  );
   
   const { data: menuItems, isLoading: isMenuLoading } = useCollection<MenuType>(menusCollectionRef);
-  const { data: categories, isLoading: isCategoriesLoading } = useCollection<Category>(categoriesCollectionRef);
-
-  const categoryMap = useMemo(() => {
-    if (!categories) return new Map();
-    return new Map(categories.map(cat => [cat.id, cat.name]));
-  }, [categories]);
 
   // --- User and Tenant Verification ---
   useEffect(() => {
@@ -221,7 +210,7 @@ export default function CafeMenuManagementPage() {
                       menuItems.map((item) => (
                         <TableRow key={item.id}>
                           <TableCell className="font-medium">{item.name}</TableCell>
-                          <TableCell><Badge variant="secondary">{categoryMap.get(item.categoryId) || 'N/A'}</Badge></TableCell>
+                          <TableCell><Badge variant="secondary">{item.category || 'N/A'}</Badge></TableCell>
                           <TableCell>{formatRupiah(item.price)}</TableCell>
                           <TableCell>
                             <Switch
@@ -265,7 +254,6 @@ export default function CafeMenuManagementPage() {
             isOpen={isAddMenuDialogOpen}
             onOpenChange={setIsAddMenuDialogOpen}
             tenantId={tenant?.id || ''}
-            categories={categories || []}
         />
       </>
     );
@@ -295,14 +283,6 @@ export default function CafeMenuManagementPage() {
                 <Link href={`/${slug}/admin/menu`}>
                   <Utensils />
                   Manajemen Menu
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-             <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <Link href={`/${slug}/admin/categories`}>
-                  <LayoutGrid />
-                  Manajemen Kategori
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

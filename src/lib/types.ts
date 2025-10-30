@@ -31,7 +31,7 @@ export interface Menu {
     description?: string;
     imageUrl?: string;
     price: number;
-    categoryId: string;
+    category: string;
     available: boolean;
 }
 

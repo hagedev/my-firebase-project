@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import type { Category, Menu } from '@/lib/types';
+import type { Menu } from '@/lib/types';
 import { MenuForm } from './menu-form';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -17,19 +17,19 @@ interface AddMenuDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   tenantId: string;
-  categories: Category[];
 }
 
-export function AddMenuDialog({ isOpen, onOpenChange, tenantId, categories }: AddMenuDialogProps) {
+export function AddMenuDialog({ isOpen, onOpenChange, tenantId }: AddMenuDialogProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const handleAddMenu = async (values: Omit<Menu, 'id'>) => {
+  const handleAddMenu = async (values: Omit<Menu, 'id' | 'tenantId'>) => {
     if (!firestore || !tenantId) return false;
 
     const menuCollectionRef = collection(firestore, `tenants/${tenantId}/menus`);
     try {
-      await addDoc(menuCollectionRef, values);
+      const newMenu = { ...values, tenantId: tenantId };
+      await addDoc(menuCollectionRef, newMenu);
       toast({
         title: 'Menu Ditambahkan',
         description: `"${values.name}" telah berhasil ditambahkan ke daftar menu.`,
@@ -55,7 +55,6 @@ export function AddMenuDialog({ isOpen, onOpenChange, tenantId, categories }: Ad
           </DialogDescription>
         </DialogHeader>
         <MenuForm
-          categories={categories}
           onSubmit={handleAddMenu}
           onSubmissionSuccess={() => onOpenChange(false)}
         />
