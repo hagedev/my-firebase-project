@@ -2,12 +2,12 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useFirestore, useMemoFirebase, useAuth } from '@/firebase';
+import { useFirestore, useAuth } from '@/firebase';
 import { doc, collection, getDocs, getDoc, query, where } from 'firebase/firestore';
 import type { Tenant, Table as TableType, Menu as MenuType, CartItem } from '@/lib/types';
 import { signInAnonymously } from 'firebase/auth';
 
-import { Loader2, ShoppingCart, Trash2, MinusCircle, PlusCircle, X } from 'lucide-react';
+import { Loader2, ShoppingCart, Trash2, MinusCircle, PlusCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -34,8 +34,7 @@ export default function OrderPage() {
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [table, setTable] = useState<TableType | null>(null);
   const [menuItems, setMenuItems] = useState<MenuType[]>([]);
-  const [isMenuLoading, setIsMenuLoading] = useState(true);
-
+  
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCheckoutOpen, setCheckoutOpen] = useState(false);
   const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
@@ -49,11 +48,12 @@ export default function OrderPage() {
     if (auth) {
       const unsubscribe = auth.onAuthStateChanged(user => {
         if (user) {
-          setIsAuthLoading(false);
+          setIsAuthLoading(false); // User is authenticated (anonymous or otherwise)
         } else {
+          // No user, sign in anonymously, then onAuthStateChanged will re-trigger
           signInAnonymously(auth).catch((error) => {
             console.error("Anonymous sign-in failed:", error);
-            setError("Gagal menginisialisasi sesi.");
+            setError("Gagal menginisialisasi sesi. Silakan refresh halaman.");
             setIsAuthLoading(false);
           });
         }
@@ -64,63 +64,59 @@ export default function OrderPage() {
 
   // --- Efficient Data Fetching ---
   useEffect(() => {
-    if (!firestore || !tableId || isAuthLoading) return;
+    if (!firestore || isAuthLoading || !auth.currentUser) return;
 
     const fetchInitialData = async () => {
       try {
         setInitialDataLoading(true);
         setError(null);
         
-        // 1. First, find the table's tenantId. This is inefficient but necessary
-        // without changing the URL structure. A better structure would be /[tenantId]/order/[tableId]
-        const tenantsCollection = collection(firestore, 'tenants');
-        const tenantsSnapshot = await getDocs(tenantsCollection);
-        let foundTenant: Tenant | null = null;
-        let foundTable: TableType | null = null;
+        // 1. Find the tenant using the URL slug (this is an indexed query)
+        const tenantsRef = collection(firestore, 'tenants');
+        const q = query(tenantsRef, where("slug", "==", slug));
+        const tenantSnapshot = await getDocs(q);
 
-        for (const tenantDoc of tenantsSnapshot.docs) {
-          const tenantData = { id: tenantDoc.id, ...tenantDoc.data() } as Tenant;
-          if (tenantData.slug !== slug) continue;
-
-          const tableDocRef = doc(firestore, `tenants/${tenantData.id}/tables/${tableId}`);
-          const tableDocSnap = await getDoc(tableDocRef);
-
-          if (tableDocSnap.exists()) {
-            foundTenant = tenantData;
-            foundTable = { id: tableDocSnap.id, ...tableDocSnap.data() } as TableType;
-            break; 
-          }
+        if (tenantSnapshot.empty) {
+          throw new Error("Kafe tidak ditemukan. Pastikan URL Anda benar.");
         }
         
-        if (!foundTenant || !foundTable) {
-          throw new Error("Kafe atau meja tidak ditemukan.");
-        }
-        
+        const foundTenantDoc = tenantSnapshot.docs[0];
+        const foundTenant = { id: foundTenantDoc.id, ...foundTenantDoc.data() } as Tenant;
         setTenant(foundTenant);
+
+        // 2. Now that we have the tenantId, get the table and menu data directly.
+        const tenantId = foundTenant.id;
+
+        const tableDocRef = doc(firestore, `tenants/${tenantId}/tables/${tableId}`);
+        const menuCollectionRef = collection(firestore, `tenants/${tenantId}/menus`);
+
+        // Fetch them in parallel
+        const [tableDocSnap, menuSnapshot] = await Promise.all([
+          getDoc(tableDocRef),
+          getDocs(menuCollectionRef)
+        ]);
+
+        if (!tableDocSnap.exists()) {
+          throw new Error("Meja tidak ditemukan. Silakan pindai ulang QR Code.");
+        }
+        
+        const foundTable = { id: tableDocSnap.id, ...tableDocSnap.data() } as TableType;
         setTable(foundTable);
 
-        // 2. Fetch menus now that we have the tenant ID
-        setIsMenuLoading(true);
-        const menuCollectionRef = collection(firestore, `tenants/${foundTenant.id}/menus`);
-        const menuSnapshot = await getDocs(menuCollectionRef);
-        const menus: MenuType[] = [];
-        menuSnapshot.forEach(doc => {
-            menus.push({ id: doc.id, ...doc.data() } as MenuType);
-        });
+        const menus = menuSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuType));
         setMenuItems(menus);
-
 
       } catch (e: any) {
         console.error("Initial data fetch error:", e);
-        setError(e.message);
+        setError(e.message || "Gagal memuat data kafe.");
       } finally {
         setInitialDataLoading(false);
-        setIsMenuLoading(false);
       }
     };
 
     fetchInitialData();
-  }, [firestore, tableId, slug, isAuthLoading]);
+  }, [firestore, tableId, slug, isAuthLoading, auth.currentUser]);
+
 
   // --- Cart Logic ---
   const addToCart = (item: MenuType) => {
@@ -161,7 +157,6 @@ export default function OrderPage() {
 
 
   const groupedMenu = useMemo(() => {
-    if (!menuItems) return {};
     return menuItems.reduce((acc, item) => {
         if (item.available) { 
             (acc[item.category] = acc[item.category] || []).push(item);
@@ -185,11 +180,24 @@ export default function OrderPage() {
     );
   }
 
-  if (error || !tenant || !table) {
+  if (error) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background p-4 text-center">
+        <Card className="max-w-md w-full border-destructive">
+            <CardHeader><CardTitle className="text-destructive text-center">Terjadi Kesalahan</CardTitle></CardHeader>
+            <CardContent>
+              <p className="text-center text-destructive">{error}</p>
+            </CardContent>
+          </Card>
+      </div>
+    );
+  }
+
+   if (!tenant || !table) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background p-4 text-center">
         <h1 className="text-2xl font-bold text-destructive">
-          {error || "Kafe atau Meja tidak ditemukan. Pastikan URL Anda benar."}
+          Gagal memuat data. Silakan coba lagi nanti.
         </h1>
       </div>
     );
@@ -261,7 +269,7 @@ export default function OrderPage() {
       </header>
 
       <main className="container mx-auto px-4 py-6">
-          {isMenuLoading ? (
+          {initialDataLoading ? (
              <div className="flex h-64 w-full items-center justify-center">
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
             </div>
