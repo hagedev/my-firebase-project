@@ -30,10 +30,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore } from '@/firebase';
+import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import type { User as AppUser, Tenant } from '@/lib/types';
+import { FirebaseError } from 'firebase/app';
 
 const editUserSchema = z.object({
   tenantId: z.string().min(1, { message: 'Silakan pilih kafe.' }),
@@ -84,10 +85,12 @@ export function EditUserDialog({ isOpen, onOpenChange, user, tenants }: EditUser
       }
 
       const userDocRef = doc(firestore, 'users', user.id);
-      await updateDoc(userDocRef, {
+      const updatedData = {
         tenantId: data.tenantId,
         tenantName: selectedTenant.name, // Update denormalized name
-      });
+      };
+      
+      await updateDoc(userDocRef, updatedData);
 
       toast({
         title: 'User Berhasil Diperbarui',
@@ -96,12 +99,23 @@ export function EditUserDialog({ isOpen, onOpenChange, user, tenants }: EditUser
 
       onOpenChange(false);
     } catch (error: any) {
-      console.error('Error updating user: ', error);
-      toast({
-        variant: 'destructive',
-        title: 'Gagal Memperbarui User',
-        description: error.message || 'Terjadi kesalahan pada server.',
-      });
+      if (error instanceof FirebaseError && error.code === 'permission-denied') {
+        const contextualError = new FirestorePermissionError({
+            operation: 'update',
+            path: `users/${user.id}`,
+            requestResourceData: {
+                tenantId: data.tenantId,
+                tenantName: tenants.find(t => t.id === data.tenantId)?.name,
+            }
+        });
+        errorEmitter.emit('permission-error', contextualError);
+      } else {
+         toast({
+            variant: 'destructive',
+            title: 'Gagal Memperbarui User',
+            description: error.message || 'Terjadi kesalahan pada server.',
+         });
+      }
     } finally {
       setIsSubmitting(false);
     }
