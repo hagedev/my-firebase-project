@@ -25,7 +25,6 @@ export default function OrderPage() {
   const firestore = useFirestore();
 
   const [authStatus, setAuthStatus] = useState<AuthStatus>('loading');
-  const [isOrdering, setIsOrdering] = useState(false); // New state to control view
 
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [table, setTable] = useState<TableType | null>(null);
@@ -43,7 +42,7 @@ export default function OrderPage() {
     }
 
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      const performSignIn = async () => {
+      const performSignInAndFetch = async () => {
         try {
           const currentUser = user || (await signInAnonymously(auth)).user;
           if (currentUser) {
@@ -78,7 +77,7 @@ export default function OrderPage() {
         }
       };
 
-      performSignIn();
+      performSignInAndFetch();
     });
 
     return () => unsubscribe();
@@ -131,20 +130,6 @@ export default function OrderPage() {
     );
   }
   
-  // After loading and success, decide whether to show welcome or ordering screen
-  if (!isOrdering) {
-      return (
-         <main className="flex h-screen flex-col items-center justify-center bg-background text-center p-4">
-            <h1 className="font-headline text-5xl md:text-7xl font-bold drop-shadow-lg">
-                Selamat Datang di {tenant.name}
-            </h1>
-            <Button size="lg" className="mt-8" onClick={() => setIsOrdering(true)}>
-                Saya ingin order
-            </Button>
-        </main>
-      )
-  }
-
   // --- Ordering View ---
   return (
     <>
