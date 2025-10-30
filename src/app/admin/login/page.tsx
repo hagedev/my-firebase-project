@@ -27,6 +27,7 @@ import { useAuth } from '@/firebase';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { Coffee, ShieldAlert } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import Link from 'next/link';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Format email tidak valid.' }),
@@ -66,7 +67,7 @@ export default function AdminLoginPage() {
           title: 'Login Berhasil',
           description: 'Anda akan diarahkan ke dashboard super admin.',
         });
-        router.replace('/admin');
+        router.replace('/admin/cafe-management');
         return; // Hentikan eksekusi lebih lanjut
       } else {
         // 4. GAGAL AUTORISASI: Kredensial benar, tapi bukan Super Admin.
@@ -74,7 +75,7 @@ export default function AdminLoginPage() {
         toast({
           variant: 'destructive',
           title: 'Akses Ditolak',
-          description: 'Akun Anda tidak memiliki hak akses super admin.',
+          description: 'Akun ini tidak memiliki hak akses super admin. Coba login sebagai admin kafe.',
         });
       }
     } catch (error: any) {
@@ -149,6 +150,12 @@ export default function AdminLoginPage() {
               </Button>
             </form>
           </Form>
+           <div className="mt-4 text-center text-sm">
+            Login sebagai admin kafe?{' '}
+            <Link href="/admin/cafe/login" className="underline">
+              Klik di sini
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </div>
