@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useFirestore, useAuth } from '@/firebase';
 import { doc, collection, getDocs, getDoc, query, where } from 'firebase/firestore';
 import type { Tenant, Table as TableType, Menu as MenuType, CartItem } from '@/lib/types';
@@ -30,6 +30,7 @@ export default function OrderPage() {
 
   const firestore = useFirestore();
   const auth = useAuth();
+  const { isUserLoading } = auth ? auth.onAuthStateChanged(() => {}) : { isUserLoading: true };
 
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [table, setTable] = useState<TableType | null>(null);
@@ -39,7 +40,6 @@ export default function OrderPage() {
   const [isCheckoutOpen, setCheckoutOpen] = useState(false);
   const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
   
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [initialDataLoading, setInitialDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,14 +47,10 @@ export default function OrderPage() {
   useEffect(() => {
     if (auth) {
       const unsubscribe = auth.onAuthStateChanged(user => {
-        if (user) {
-          setIsAuthLoading(false); // User is authenticated (anonymous or otherwise)
-        } else {
-          // No user, sign in anonymously, then onAuthStateChanged will re-trigger
+        if (!user) {
           signInAnonymously(auth).catch((error) => {
             console.error("Anonymous sign-in failed:", error);
             setError("Gagal menginisialisasi sesi. Silakan refresh halaman.");
-            setIsAuthLoading(false);
           });
         }
       });
@@ -64,7 +60,8 @@ export default function OrderPage() {
 
   // --- Efficient Data Fetching ---
   useEffect(() => {
-    if (!firestore || isAuthLoading || !auth.currentUser) return;
+    // Wait until auth is initialized and the user state is determined.
+    if (!firestore || !auth || isUserLoading) return;
 
     const fetchInitialData = async () => {
       try {
@@ -115,7 +112,8 @@ export default function OrderPage() {
     };
 
     fetchInitialData();
-  }, [firestore, tableId, slug, isAuthLoading, auth.currentUser]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firestore, slug, tableId, isUserLoading, auth]);
 
 
   // --- Cart Logic ---
@@ -170,7 +168,7 @@ export default function OrderPage() {
     setCheckoutOpen(true);
   }
 
-  const isLoading = isAuthLoading || initialDataLoading;
+  const isLoading = isUserLoading || initialDataLoading;
 
   if (isLoading) {
     return (
