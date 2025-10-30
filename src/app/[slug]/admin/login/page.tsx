@@ -108,7 +108,20 @@ export default function CafeAdminLoginPage() {
       // 2. Authorize user: Fetch user profile from Firestore
       const usersRef = collection(firestore, 'users');
       const q = query(usersRef, where('authUid', '==', authUser.uid));
-      const userQuerySnapshot = await getDocs(q);
+      
+      const userQuerySnapshot = await getDocs(q).catch(error => {
+        // This is where a permission error on the 'users' collection would likely occur
+        if (error instanceof FirebaseError && error.code === 'permission-denied') {
+            const permissionError = new FirestorePermissionError({
+                path: 'users',
+                operation: 'list', // getDocs with a query is a 'list' operation
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        }
+        // Re-throw the original error to be caught by the outer try-catch
+        throw error;
+      });
+
 
       if (userQuerySnapshot.empty) {
         throw new Error('Profil user tidak ditemukan.');
@@ -141,16 +154,9 @@ export default function CafeAdminLoginPage() {
         } else {
           description = error.message || description;
         }
-      } else if (error instanceof FirebaseError && error.message.includes('permission-denied')) {
-        // This is a Firestore permission error
-        const permissionError = new FirestorePermissionError({
-          path: 'users',
-          operation: 'list'
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        // The listener will throw, so this toast might not be seen, which is ok.
-        description = 'Akses ditolak oleh aturan keamanan.';
       }
+      // The contextual error is now thrown by the listener, so we don't need a special case here.
+      // We just use the error.message if it exists.
       else {
         description = error.message || description;
       }
