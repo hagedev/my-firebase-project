@@ -23,12 +23,13 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore, FirestorePermissionError, errorEmitter } from '@/firebase';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { Coffee, Loader2, ShieldX } from 'lucide-react';
 import type { Tenant } from '@/lib/types';
 import Link from 'next/link';
+import { FirebaseError } from 'firebase/app';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Format email tidak valid.' }),
@@ -68,7 +69,9 @@ export default function CafeAdminLoginPage() {
           const tenantDoc = querySnapshot.docs[0];
           setTenant({ id: tenantDoc.id, ...tenantDoc.data() } as Tenant);
         }
-      } catch (error) {
+      } catch (error: any) {
+        // This is a public read, if it fails, it's likely a config or network issue
+        // not a security rule issue, as tenants are public.
         console.error('Error fetching tenant:', error);
         setTenant(null);
         toast({
@@ -95,11 +98,12 @@ export default function CafeAdminLoginPage() {
         return;
     }
     setIsSubmitting(true);
-
+    
+    let authUser;
     try {
       // 1. Authenticate user
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
-      const authUser = userCredential.user;
+      authUser = userCredential.user;
 
       // 2. Authorize user: Fetch user profile from Firestore
       const usersRef = collection(firestore, 'users');
@@ -131,13 +135,26 @@ export default function CafeAdminLoginPage() {
       }
       
       let description = 'Terjadi kesalahan. Silakan coba lagi.';
-      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-        description = 'Email atau password yang Anda masukkan salah.';
-      } else {
+      if (error instanceof FirebaseError && error.code.startsWith('auth/')) {
+        if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+          description = 'Email atau password yang Anda masukkan salah.';
+        } else {
+          description = error.message || description;
+        }
+      } else if (error instanceof FirebaseError && error.message.includes('permission-denied')) {
+        // This is a Firestore permission error
+        const permissionError = new FirestorePermissionError({
+          path: 'users',
+          operation: 'list'
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        // The listener will throw, so this toast might not be seen, which is ok.
+        description = 'Akses ditolak oleh aturan keamanan.';
+      }
+      else {
         description = error.message || description;
       }
       
-      console.error('Login Process Error:', error);
       toast({ 
         variant: 'destructive', 
         title: 'Login Gagal', 
