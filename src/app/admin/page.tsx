@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogOut, Shield, Store } from 'lucide-react';
+import { LogOut, Shield, Store, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   SidebarProvider,
@@ -80,6 +80,14 @@ export default function AdminDashboardPage() {
                   Manajemen Kafe
                 </Link>
               </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                <Link href="/admin/user-management">
+                    <Users />
+                    Manajemen User
+                </Link>
+                </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarContent>

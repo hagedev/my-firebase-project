@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { collection } from 'firebase/firestore';
-import { PlusCircle, Loader2, MoreHorizontal } from 'lucide-react';
+import { PlusCircle, Loader2, MoreHorizontal, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -125,6 +125,14 @@ export default function CafeManagementPage() {
               <Link href="/admin/cafe-management">
                 <Store />
                 Manajemen Kafe
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <Link href="/admin/user-management">
+                <Users />
+                Manajemen User
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
