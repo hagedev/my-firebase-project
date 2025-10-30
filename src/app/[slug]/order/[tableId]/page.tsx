@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useDoc, useMemoFirebase, useAuth } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 import type { Tenant, Table as TableType, Menu as MenuType, CartItem } from '@/lib/types';
+import { signInAnonymously } from 'firebase/auth';
 
 import { Loader2, ShoppingCart, Trash2, MinusCircle, PlusCircle, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -28,10 +29,21 @@ export default function OrderPage() {
   const tableId = params.tableId as string;
 
   const firestore = useFirestore();
+  const auth = useAuth(); // Get auth instance
+
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCheckoutOpen, setCheckoutOpen] = useState(false);
   const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
+
+  // --- Anonymous Authentication ---
+  useEffect(() => {
+    if (auth && !auth.currentUser) {
+      signInAnonymously(auth).catch((error) => {
+        console.error("Anonymous sign-in failed:", error);
+      });
+    }
+  }, [auth]);
 
   // --- Data Fetching ---
   const tenantQuery = useMemoFirebase(
@@ -113,7 +125,7 @@ export default function OrderPage() {
     setCheckoutOpen(true);
   }
 
-  const isLoading = isTenantsLoading || isTableLoading || isMenuLoading;
+  const isLoading = isTenantsLoading || isTableLoading || isMenuLoading || (auth && !auth.currentUser);
 
   if (isLoading) {
     return (
