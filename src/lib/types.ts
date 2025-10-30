@@ -12,7 +12,7 @@ export interface Tenant {
 
 // Merepresentasikan struktur data dari sebuah dokumen User di Firestore.
 export interface User {
-    id: string; // ID dokumen dari Firestore
+    id: string; // ID dokumen dari Firestore, akan sama dengan authUid
     authUid: string; // Firebase Auth UID
     email: string;
     role: 'admin_kafe' | 'superadmin';

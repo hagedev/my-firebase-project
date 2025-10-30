@@ -45,11 +45,11 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
-      "description": "Represents a user of the AirCafe application (admin or superadmin).",
+      "description": "Represents a user of the AirCafe application (admin or superadmin). The document ID for this entity is the same as the Firebase Auth UID.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the user.",
+          "description": "Unique identifier for the user, which is the Firebase Auth UID.",
           "format": "uuid"
         },
         "authUid": {
@@ -269,11 +269,11 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Stores user information, including role and tenantId. Accessible by superadmin for CRUD operations.",
+          "description": "Stores user information, including role and tenantId. The document ID is the Firebase Auth UID. Accessible by superadmin for CRUD operations. Users can only read their own document.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier for the user."
+              "description": "The unique identifier for the user (must match auth UID)."
             }
           ]
         }

@@ -23,9 +23,9 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirestore, FirestorePermissionError, errorEmitter } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { Coffee, Loader2 } from 'lucide-react';
 import type { Tenant, User } from '@/lib/types';
 import Link from 'next/link';
@@ -63,16 +63,15 @@ export default function CafeAdminLoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
       authUser = userCredential.user;
 
-      // 2. Fetch user profile from Firestore
-      const usersRef = collection(firestore, 'users');
-      const q = query(usersRef, where('authUid', '==', authUser.uid));
-      const userQuerySnapshot = await getDocs(q);
+      // 2. Fetch user profile from Firestore using UID as document ID
+      const userDocRef = doc(firestore, 'users', authUser.uid);
+      const userDocSnap = await getDoc(userDocRef);
 
-      if (userQuerySnapshot.empty) {
+      if (!userDocSnap.exists()) {
         throw new Error('Profil user tidak ditemukan atau Anda bukan admin kafe.');
       }
 
-      const userDocData = userQuerySnapshot.docs[0].data() as User;
+      const userDocData = userDocSnap.data() as User;
 
       // 3. Check role and tenantId
       if (userDocData.role !== 'admin_kafe' || !userDocData.tenantId) {
@@ -105,7 +104,10 @@ export default function CafeAdminLoginPage() {
       if (error instanceof FirebaseError) {
          if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
           description = 'Email atau password yang Anda masukkan salah.';
-        } else {
+         } else if (error.code === 'permission-denied') {
+          description = 'Izin akses ditolak. Pastikan akun Anda memiliki peran yang benar.'
+         }
+         else {
           description = `[${error.code}] ${error.message}`;
         }
       } else {

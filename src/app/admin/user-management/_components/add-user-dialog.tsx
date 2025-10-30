@@ -87,11 +87,11 @@ export function AddUserDialog({ isOpen, onOpenChange, tenants }: AddUserDialogPr
       }
       
       const batch = writeBatch(firestore);
-      const usersCollection = collection(firestore, 'users');
-      // Create a new document reference with a unique ID
-      const newUserDocRef = doc(usersCollection); 
+      
+      // IMPORTANT: Use the user's UID as the document ID
+      const newUserDocRef = doc(firestore, 'users', newAuthUser.uid);
 
-      // Use batch.set() to create the document
+      // Use batch.set() to create the document with the specified ID
       batch.set(newUserDocRef, {
         authUid: newAuthUser.uid,
         email: data.email,

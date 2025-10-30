@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { collection } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { PlusCircle, Loader2, MoreHorizontal, Users, Shield, Store, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -57,8 +57,8 @@ export default function UserManagementPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
 
-  const usersCollectionRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'users') : null),
+  const usersQuery = useMemoFirebase(
+    () => (firestore ? query(collection(firestore, 'users'), where('role', '==', 'admin_kafe')) : null),
     [firestore]
   );
   const tenantsCollectionRef = useMemoFirebase(
@@ -66,7 +66,7 @@ export default function UserManagementPage() {
     [firestore]
   );
   
-  const { data: users, isLoading: isUsersLoading } = useCollection<AppUser>(usersCollectionRef);
+  const { data: adminUsers, isLoading: isUsersLoading } = useCollection<AppUser>(usersQuery);
   const { data: tenants, isLoading: isTenantsLoading } = useCollection<Tenant>(tenantsCollectionRef);
 
   useEffect(() => {
@@ -111,8 +111,6 @@ export default function UserManagementPage() {
     );
   }
   
-  const adminUsers = users?.filter(u => u.role === 'admin_kafe');
-
   return (
     <SidebarProvider>
       <Sidebar>
