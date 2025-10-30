@@ -88,14 +88,6 @@ export default function UserManagementPage() {
     if (isUserLoading) return;
     if (!user) {
       router.replace('/admin/login?error=unauthorized');
-    } else if (user.uid !== SUPER_ADMIN_UID) {
-      // Jika user bukan super admin, tendang dari halaman ini.
-      toast({
-        variant: 'destructive',
-        title: 'Akses Ditolak',
-        description: 'Anda tidak memiliki izin untuk mengakses halaman manajemen user.'
-      })
-      router.replace('/admin/cafe/login');
     }
   }, [user, isUserLoading, router, toast]);
 
