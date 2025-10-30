@@ -15,7 +15,6 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { CheckoutDialog } from './_components/checkout-dialog';
 
-
 export default function OrderPage() {
   const params = useParams();
   const { slug, tableId } = params as { slug: string; tableId: string; };
@@ -27,7 +26,7 @@ export default function OrderPage() {
   const [menu, setMenu] = useState<Menu[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   
-  const [status, setStatus] = useState<'loading' | 'ordering' | 'error'>('loading');
+  const [status, setStatus] = useState<'loading' | 'welcome' | 'ordering' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState('');
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
@@ -80,10 +79,9 @@ export default function OrderPage() {
         const menuData = menuSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Menu));
         setMenu(menuData);
         
-        setStatus('ordering');
+        setStatus('welcome');
 
       } catch (error: any) {
-        console.error('Test failed:', error);
         setErrorMessage(error.message || 'Terjadi kesalahan tidak diketahui.');
         setStatus('error');
       }
@@ -146,13 +144,26 @@ export default function OrderPage() {
     );
   }
 
-  if (status === 'error' || !tenant || !table) {
+  if (status === 'error' || !tenant) {
     return (
       <main className="flex h-screen flex-col items-center justify-center bg-background text-center p-4">
         <h1 className="font-headline text-4xl font-bold text-destructive">Aduh!</h1>
         <p className="mt-2 text-muted-foreground">{errorMessage || 'Gagal memuat data kafe atau meja.'}</p>
       </main>
     );
+  }
+  
+  if (status === 'welcome') {
+      return (
+        <main className="flex h-screen flex-col items-center justify-center bg-background text-center p-4">
+            <h1 className="font-headline text-5xl md:text-7xl font-bold drop-shadow-lg">
+                Selamat Datang di {tenant.name}
+            </h1>
+            <Button size="lg" className="mt-8" onClick={() => setStatus('ordering')}>
+                Saya ingin order
+            </Button>
+        </main>
+      )
   }
 
   return (
@@ -161,7 +172,7 @@ export default function OrderPage() {
         <header className="bg-card shadow-md sticky top-0 z-20">
             <div className="container mx-auto p-4">
                 <h1 className="font-headline text-3xl font-bold text-primary">{tenant.name}</h1>
-                <p className="text-muted-foreground">Memesan dari <span className="font-semibold text-foreground">Meja {table.tableNumber}</span></p>
+                <p className="text-muted-foreground">Memesan dari <span className="font-semibold text-foreground">Meja {table?.tableNumber}</span></p>
             </div>
         </header>
         
@@ -178,8 +189,8 @@ export default function OrderPage() {
                            <Image 
                             src={convertGoogleDriveUrl(item.imageUrl)} 
                             alt={item.name} 
-                            layout="fill"
-                            objectFit="cover"
+                            fill={true}
+                            style={{objectFit: "cover"}}
                            />
                         </div>
                       )}
@@ -199,7 +210,7 @@ export default function OrderPage() {
           ))}
         </main>
 
-        {cart.length > 0 && (
+        {cart.length > 0 && table && (
             <footer className="fixed bottom-0 left-0 right-0 z-10 bg-card border-t shadow-lg">
                 <div className="container mx-auto p-4">
                     <div className="flex justify-between items-center">
@@ -216,14 +227,14 @@ export default function OrderPage() {
         )}
       </div>
 
-      <CheckoutDialog 
+      {table && <CheckoutDialog 
         isOpen={isCheckoutOpen}
         onOpenChange={setIsCheckoutOpen}
         cart={cart}
         totalAmount={totalAmount}
         tenant={tenant}
         table={table}
-      />
+      />}
     </>
   );
 }
