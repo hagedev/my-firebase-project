@@ -30,8 +30,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useAuth } from '@/firebase';
-import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { useFirestore, useAuth, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { collection, doc, writeBatch } from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { Loader2 } from 'lucide-react';
 import type { Tenant } from '@/lib/types';
@@ -75,32 +75,30 @@ export function AddUserDialog({ isOpen, onOpenChange, tenants }: AddUserDialogPr
     setIsSubmitting(true);
 
     let newAuthUser;
+    const selectedTenant = tenants.find(t => t.id === data.tenantId);
+    if (!selectedTenant) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Tenant yang dipilih tidak valid.' });
+        setIsSubmitting(false);
+        return;
+    }
+
+    const newUserProfile = {
+        authUid: '', // Will be filled after auth user creation
+        email: data.email,
+        role: 'admin_kafe' as const,
+        tenantId: data.tenantId,
+        tenantName: selectedTenant.name,
+    };
+
     try {
       // Step 1: Create user in Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       newAuthUser = userCredential.user;
+      newUserProfile.authUid = newAuthUser.uid;
 
       // Step 2: Create user document in Firestore within a batch
-      const selectedTenant = tenants.find(t => t.id === data.tenantId);
-      if (!selectedTenant) {
-        throw new Error("Tenant tidak ditemukan.");
-      }
-      
       const batch = writeBatch(firestore);
-      
-      // IMPORTANT: Use the user's UID as the document ID
       const newUserDocRef = doc(firestore, 'users', newAuthUser.uid);
-
-      // Minimal user data
-      const newUserProfile = {
-        authUid: newAuthUser.uid,
-        email: data.email,
-        role: 'admin_kafe',
-        tenantId: data.tenantId,
-        tenantName: selectedTenant.name, // Denormalize tenant name for easy display
-      };
-
-      // Use batch.set() to create the document with the specified ID
       batch.set(newUserDocRef, newUserProfile);
 
       // Commit the batch
@@ -113,33 +111,44 @@ export function AddUserDialog({ isOpen, onOpenChange, tenants }: AddUserDialogPr
       
       form.reset();
       onOpenChange(false);
+
     } catch (error: any) {
-      console.error('Error adding user: ', error);
-      let description = 'Terjadi kesalahan pada server.';
-      if (error instanceof FirebaseError) {
-        if (error.code === 'auth/email-already-in-use') {
-            description = 'Email ini sudah digunakan oleh akun lain.';
-        } else if (error.code === 'auth/weak-password') {
-            description = 'Password terlalu lemah. Gunakan minimal 6 karakter.';
-        }
-      }
-      
       // Rollback auth user creation if firestore write fails
       if (newAuthUser) {
         try {
           await newAuthUser.delete();
-          console.log("Orphaned auth user deleted successfully.");
+          console.log("Orphaned auth user deleted successfully due to Firestore write failure.");
         } catch (deleteError) {
-          console.error("Failed to delete orphaned auth user:", deleteError);
-          description += " Gagal menghapus user auth yang gagal dibuat di database. Harap hapus manual.";
+          console.error("CRITICAL: Failed to delete orphaned auth user:", deleteError);
         }
       }
       
-      toast({
-        variant: 'destructive',
-        title: 'Gagal Membuat User',
-        description: description,
-      });
+      if (error instanceof FirebaseError && error.code === 'permission-denied') {
+            const contextualError = new FirestorePermissionError({
+                operation: 'create',
+                path: `users/${newUserProfile.authUid || 'unknown_uid'}`,
+                requestResourceData: newUserProfile,
+            });
+            errorEmitter.emit('permission-error', contextualError);
+            // The global listener will handle the toast.
+      } else {
+            let description = 'Terjadi kesalahan pada server.';
+            if (error instanceof FirebaseError) {
+                if (error.code === 'auth/email-already-in-use') {
+                    description = 'Email ini sudah digunakan oleh akun lain.';
+                } else if (error.code === 'auth/weak-password') {
+                    description = 'Password terlalu lemah. Gunakan minimal 6 karakter.';
+                } else {
+                    description = `[${error.code}] ${error.message}`;
+                }
+            }
+             toast({
+                variant: 'destructive',
+                title: 'Gagal Membuat User',
+                description: description,
+            });
+      }
+
     } finally {
       setIsSubmitting(false);
     }
