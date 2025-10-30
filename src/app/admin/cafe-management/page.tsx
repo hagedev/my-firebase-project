@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { collection } from 'firebase/firestore';
-import { PlusCircle, Loader2 } from 'lucide-react';
+import { PlusCircle, Loader2, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -15,8 +15,18 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { AddCafeDialog } from './_components/add-cafe-dialog';
+import { EditCafeDialog } from './_components/edit-cafe-dialog';
+import { DeleteCafeDialog } from './_components/delete-cafe-dialog';
 import type { Tenant } from '@/lib/types';
 import {
   SidebarProvider,
@@ -44,8 +54,10 @@ export default function CafeManagementPage() {
   const { toast } = useToast();
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedCafe, setSelectedCafe] = useState<Tenant | null>(null);
 
-  // Memoize the collection reference
   const tenantsCollectionRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'tenants') : null),
     [firestore]
@@ -79,6 +91,15 @@ export default function CafeManagementPage() {
     }
   };
 
+  const handleEditClick = (cafe: Tenant) => {
+    setSelectedCafe(cafe);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleDeleteClick = (cafe: Tenant) => {
+    setSelectedCafe(cafe);
+    setIsDeleteDialogOpen(true);
+  };
 
   if (isUserLoading || !user) {
     return (
@@ -142,7 +163,7 @@ export default function CafeManagementPage() {
                     <TableRow>
                     <TableHead>Nama Kafe</TableHead>
                     <TableHead>Slug</TableHead>
-                    <TableHead>Aksi</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -162,8 +183,28 @@ export default function CafeManagementPage() {
                         <TableCell>
                             <Badge variant="outline">{tenant.slug}</Badge>
                         </TableCell>
-                        <TableCell>
-                            {/* Actions like Edit, Delete will be here */}
+                        <TableCell className="text-right">
+                           <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                  <span className="sr-only">Buka menu</span>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Aksi</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={() => handleEditClick(tenant)}>
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive-foreground focus:bg-destructive"
+                                  onClick={() => handleDeleteClick(tenant)}
+                                >
+                                  Hapus
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                         </TableCell>
                         </TableRow>
                     ))
@@ -181,6 +222,20 @@ export default function CafeManagementPage() {
         </Card>
         </main>
         <AddCafeDialog isOpen={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} />
+        {selectedCafe && (
+          <>
+            <EditCafeDialog
+              isOpen={isEditDialogOpen}
+              onOpenChange={setIsEditDialogOpen}
+              cafe={selectedCafe}
+            />
+            <DeleteCafeDialog
+              isOpen={isDeleteDialogOpen}
+              onOpenChange={setIsDeleteDialogOpen}
+              cafe={selectedCafe}
+            />
+          </>
+        )}
     </SidebarInset>
   </SidebarProvider>
   );
