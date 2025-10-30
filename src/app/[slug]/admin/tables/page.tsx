@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser, useFirestore, useAuth, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, getDoc, collection, query } from 'firebase/firestore';
+import { doc, getDoc, collection, updateDoc } from 'firebase/firestore';
 import type { Tenant, User as AppUser, Table as TableType } from '@/lib/types';
 import {
   Loader2,
@@ -46,6 +46,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
@@ -133,6 +134,24 @@ export default function CafeTableManagementPage() {
     }
   };
 
+  const handleStatusChange = async (tableId: string, newStatus: 'available' | 'occupied') => {
+    if (!firestore || !tenant) return;
+    try {
+        const tableDocRef = doc(firestore, `tenants/${tenant.id}/tables`, tableId);
+        await updateDoc(tableDocRef, { status: newStatus });
+        toast({
+            title: 'Status Meja Diperbarui',
+            description: `Status meja telah diubah menjadi ${newStatus === 'occupied' ? 'Ditempati' : 'Tersedia'}.`,
+        });
+    } catch (error: any) {
+        toast({
+            variant: 'destructive',
+            title: 'Gagal Memperbarui',
+            description: error.message,
+        });
+    }
+  };
+
   const handleDeleteClick = (table: TableType) => {
     setSelectedTable(table);
     setIsDeleteDialogOpen(true);
@@ -199,7 +218,7 @@ export default function CafeTableManagementPage() {
                       <TableRow>
                         <TableHead>Nomor Meja</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>URL Pesan</TableHead>
+                        <TableHead>Ubah Status (Ditempati)</TableHead>
                         <TableHead className="text-right">Aksi</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -219,8 +238,13 @@ export default function CafeTableManagementPage() {
                                 {table.status === 'available' ? 'Tersedia' : 'Terisi'}
                                 </Badge>
                             </TableCell>
-                            <TableCell className='text-xs text-muted-foreground'>
-                              {`/${slug}/order/${table.id}`}
+                            <TableCell>
+                               <Switch
+                                  checked={table.status === 'occupied'}
+                                  onCheckedChange={(checked) => 
+                                    handleStatusChange(table.id, checked ? 'occupied' : 'available')
+                                  }
+                                />
                             </TableCell>
                             <TableCell className="text-right">
                               <DropdownMenu>
