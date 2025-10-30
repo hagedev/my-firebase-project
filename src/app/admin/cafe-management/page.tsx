@@ -34,6 +34,7 @@ import { LogOut, Shield, Store } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { useAuth } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
 
 export default function CafeManagementPage() {
   const { user, isUserLoading } = useUser();
@@ -99,9 +100,11 @@ export default function CafeManagementPage() {
       <SidebarContent>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton href="/admin/cafe-management" isActive>
-              <Store />
-              Manajemen Kafe
+            <SidebarMenuButton asChild isActive>
+              <Link href="/admin/cafe-management">
+                <Store />
+                Manajemen Kafe
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

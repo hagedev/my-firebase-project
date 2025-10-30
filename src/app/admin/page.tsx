@@ -20,6 +20,7 @@ import {
   SidebarTrigger,
   SidebarFooter,
 } from '@/components/ui/sidebar';
+import Link from 'next/link';
 
 export default function AdminDashboardPage() {
   const { user, isUserLoading } = useUser();
@@ -73,9 +74,11 @@ export default function AdminDashboardPage() {
         <SidebarContent>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton href="/admin/cafe-management" isActive>
-                <Store />
-                Manajemen Kafe
+              <SidebarMenuButton asChild>
+                <Link href="/admin/cafe-management">
+                  <Store />
+                  Manajemen Kafe
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
