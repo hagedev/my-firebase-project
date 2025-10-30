@@ -186,7 +186,7 @@ export default function OrderPage() {
 
   return (
     <>
-    <div className="min-h-screen bg-background font-body pb-28 md:pb-0">
+    <div className="min-h-screen bg-background font-body pb-28">
       <header className="sticky top-0 z-20 bg-card/80 backdrop-blur-sm shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
             <div className="flex items-center gap-3">
@@ -205,10 +205,8 @@ export default function OrderPage() {
       </header>
 
       <main className="container mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
           {/* Menu Section */}
-          <div className="lg:col-span-2 space-y-8">
+          <div className="space-y-8">
             {Object.keys(groupedMenu).length > 0 ? Object.entries(groupedMenu).map(([category, items]) => (
               <div key={category}>
                 <h2 className="font-headline text-2xl font-bold mb-4">{category}</h2>
@@ -242,28 +240,10 @@ export default function OrderPage() {
                 </div>
             )}
           </div>
-
-          {/* Desktop Cart Section */}
-          <div className="lg:col-span-1 hidden lg:block">
-            <div className="sticky top-24">
-              <Card className="shadow-lg">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <ShoppingCart />
-                    Keranjang Anda
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className='flex flex-col h-[calc(100vh-12rem)]'>
-                   <CartContent />
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </div>
       </main>
 
       {/* Mobile Floating Cart Button & Sheet */}
-       <div className="lg:hidden">
+        <div>
             <Sheet open={isCartSheetOpen} onOpenChange={setIsCartSheetOpen}>
                 <SheetTrigger asChild>
                     <Button 
