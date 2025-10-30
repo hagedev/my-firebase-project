@@ -9,3 +9,13 @@ export interface Tenant {
   logoUrl?: string;
   qrisImageUrl?: string;
 }
+
+// Merepresentasikan struktur data dari sebuah dokumen User di Firestore.
+export interface User {
+    id: string; // ID dokumen dari Firestore
+    authUid: string; // Firebase Auth UID
+    email: string;
+    role: 'admin_kafe' | 'superadmin';
+    tenantId?: string; // ID tenant/kafe yang dikelola
+    tenantName?: string; // Denormalized tenant name for easy display
+}
