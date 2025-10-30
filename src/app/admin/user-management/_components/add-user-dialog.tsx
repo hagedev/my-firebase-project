@@ -32,10 +32,10 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
-import { createUserWithEmailAndPassword, getAuth, deleteApp, initializeApp } from 'firebase/auth';
+import { createUserWithEmailAndPassword, getAuth } from 'firebase/auth';
+import { deleteApp, initializeApp, FirebaseError } from 'firebase/app';
 import { Loader2 } from 'lucide-react';
 import type { Tenant } from '@/lib/types';
-import { FirebaseError } from 'firebase/app';
 import { firebaseConfig } from '@/firebase/config';
 
 const addUserSchema = z.object({
