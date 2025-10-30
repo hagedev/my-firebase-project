@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { useUser, useFirestore, useCollection } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { collection } from 'firebase/firestore';
 import { PlusCircle, Loader2 } from 'lucide-react';
@@ -46,7 +46,7 @@ export default function CafeManagementPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
   // Memoize the collection reference
-  const tenantsCollectionRef = useMemo(
+  const tenantsCollectionRef = useMemoFirebase(
     () => (firestore ? collection(firestore, 'tenants') : null),
     [firestore]
   );
