@@ -1,23 +1,23 @@
 rules_version = '2';
 
 service cloud.firestore {
-  database {
-    // Super admin full access to tenants
+  match /databases/{database}/documents {
+
+    // Tenants can be listed by any authenticated user (for dropdowns)
+    // but can only be created, updated, or deleted by the super admin.
     match /tenants/{tenantId} {
-      allow read, write: if request.auth.uid == 'ttFbsVWt14cdTwVlKs1AbgBLUtx1';
+      allow read: if request.auth != null;
+      allow write: if request.auth.uid == 'ttFbsVWt14cdTwVlKs1AbgBLUtx1';
     }
 
-    match /tenants {
-       allow read, write: if request.auth.uid == 'ttFbsVWt14cdTwVlKs1AbgBLUtx1';
-    }
-
-    // Super admin full access to users
+    // Users collection can be managed only by the super admin
     match /users/{userId} {
       allow read, write: if request.auth.uid == 'ttFbsVWt14cdTwVlKs1AbgBLUtx1';
     }
-
+    
+    // Explicitly allow list operations for the super admin on users.
     match /users {
-       allow read, write: if request.auth.uid == 'ttFbsVWt14cdTwVlKs1AbgBLUtx1';
+        allow read, write: if request.auth.uid == 'ttFbsVWt14cdTwVlKs1AbgBLUtx1';
     }
   }
 }
