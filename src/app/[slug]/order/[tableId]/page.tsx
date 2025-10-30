@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
-import { formatRupiah } from '@/lib/utils';
+import { formatRupiah, convertGoogleDriveUrl } from '@/lib/utils';
 import { CheckoutDialog } from './_components/checkout-dialog';
 import {
   Sheet,
@@ -191,7 +191,7 @@ export default function OrderPage() {
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
             <div className="flex items-center gap-3">
                 {tenant.logoUrl && (
-                     <Image src={tenant.logoUrl} alt={`${tenant.name} logo`} width={40} height={40} className="rounded-full object-cover"/>
+                     <Image src={convertGoogleDriveUrl(tenant.logoUrl)} alt={`${tenant.name} logo`} width={40} height={40} className="rounded-full object-cover"/>
                 )}
                 <h1 className="font-headline text-2xl md:text-3xl font-bold text-foreground">
                     {tenant.name}
@@ -215,7 +215,7 @@ export default function OrderPage() {
                     <Card key={item.id} className="flex flex-col">
                         {item.imageUrl && (
                             <div className="relative w-full h-40">
-                                <Image src={item.imageUrl} alt={item.name} fill objectFit="cover" className="rounded-t-lg"/>
+                                <Image src={convertGoogleDriveUrl(item.imageUrl)} alt={item.name} fill objectFit="cover" className="rounded-t-lg"/>
                             </div>
                         )}
                       <CardHeader>
@@ -247,7 +247,7 @@ export default function OrderPage() {
             <Sheet open={isCartSheetOpen} onOpenChange={setIsCartSheetOpen}>
                 <SheetTrigger asChild>
                     <Button 
-                        className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-2xl z-30" 
+                        className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-2xl z-30 lg:hidden" 
                         size="icon"
                         disabled={cart.length === 0}
                     >

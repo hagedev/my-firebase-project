@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
+import { doc, collection, query, where, getDocs } from 'firebase/firestore';
 import type { Tenant, Table as TableType, Order } from '@/lib/types';
 import { Loader2, CheckCircle, Clock, Wallet } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -27,34 +27,31 @@ export default function OrderStatusPage() {
 
     const firestore = useFirestore();
 
-    // Fetch tenant, table, and order data
-    const tenantRef = useMemoFirebase(() => firestore ? doc(firestore, `tenants/${slug}`) : null, [firestore, slug]);
-    const { data: tenantData, isLoading: isTenantLoading } = useDoc<Tenant>(tenantRef);
-    
-    // In a real app with many tenants, you'd query by slug. For now we fetch one document by its slug-derived ID.
-    // This assumes the tenant ID is the same as the slug, which is the case for our initial setup.
     const [tenant, setTenant] = useState<Tenant | null>(null);
-    const tenantDocRef = useMemoFirebase(
-        () => firestore && slug ? doc(firestore, 'tenants', slug) : null,
-        [firestore, slug]
-    );
+
+    // This is a more robust way to get tenant by slug
+    useEffect(() => {
+        if (!firestore) return;
+        const getTenantBySlug = async () => {
+            const tenantsRef = collection(firestore, "tenants");
+            const q = query(tenantsRef, where("slug", "==", slug));
+            const querySnapshot = await getDocs(q);
+            if (!querySnapshot.empty) {
+                const tenantDoc = querySnapshot.docs[0];
+                setTenant({ id: tenantDoc.id, ...tenantDoc.data() } as Tenant);
+            }
+        };
+        getTenantBySlug();
+    }, [firestore, slug]);
+
 
     const orderRef = useMemoFirebase(
-        () => (firestore && tenantData?.id ? doc(firestore, `tenants/${tenantData.id}/orders/${orderId}`) : null),
-        [firestore, tenantData, orderId]
+        () => (firestore && tenant ? doc(firestore, `tenants/${tenant.id}/orders/${orderId}`) : null),
+        [firestore, tenant, orderId]
     );
     const { data: order, isLoading: isOrderLoading } = useDoc<Order>(orderRef);
 
-    useEffect(() => {
-        if(tenantData) {
-            // A limitation of our current setup: we assume the slug is the tenant ID.
-            // This is incorrect. We need to query tenants by slug.
-            // For now, we'll just set it directly.
-             setTenant(tenantData)
-        }
-    }, [tenantData])
-
-    const isLoading = isTenantLoading || isOrderLoading;
+    const isLoading = !tenant || isOrderLoading;
 
     if (isLoading) {
         return (
@@ -64,7 +61,7 @@ export default function OrderStatusPage() {
         );
     }
 
-    if (!order || !tenantData) {
+    if (!order || !tenant) {
         return (
             <div className="flex h-screen w-full items-center justify-center bg-background p-4 text-center">
                 <h1 className="text-2xl font-bold text-destructive">
@@ -94,10 +91,10 @@ export default function OrderStatusPage() {
                     <p className="text-center text-xs text-muted-foreground mb-4">
                         Pindai kode QRIS di bawah ini dengan aplikasi perbankan atau e-wallet Anda.
                     </p>
-                    {tenantData.qrisImageUrl ? (
+                    {tenant.qrisImageUrl ? (
                         <div className="relative aspect-square w-full max-w-xs mx-auto border-4 border-primary rounded-lg overflow-hidden">
                             <Image 
-                                src={convertGoogleDriveUrl(tenantData.qrisImageUrl)} 
+                                src={convertGoogleDriveUrl(tenant.qrisImageUrl)} 
                                 alt="QRIS Payment Code" 
                                 layout="fill" 
                                 objectFit="contain" 
@@ -136,7 +133,7 @@ export default function OrderStatusPage() {
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
             <Card className="w-full max-w-md mx-auto shadow-2xl">
                 <CardHeader className="text-center">
-                    <h1 className="font-headline text-3xl font-bold text-primary">{tenantData.name}</h1>
+                    <h1 className="font-headline text-3xl font-bold text-primary">{tenant.name}</h1>
                     <CardDescription>Terima kasih atas pesanan Anda!</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
