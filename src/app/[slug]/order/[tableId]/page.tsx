@@ -73,11 +73,9 @@ export default function OrderPage() {
         
         const foundTenantDoc = tenantSnapshot.docs[0];
         const foundTenant = { id: foundTenantDoc.id, ...foundTenantDoc.data() } as Tenant;
-        setTenant(foundTenant);
-
-        // 2. Now that we have the tenantId, get the table and menu data directly.
         const tenantId = foundTenant.id;
 
+        // 2. Now that we have the tenantId, get the table and menu data directly.
         const tableDocRef = doc(firestore, `tenants/${tenantId}/tables/${tableId}`);
         const menuCollectionRef = collection(firestore, `tenants/${tenantId}/menus`);
 
@@ -92,9 +90,11 @@ export default function OrderPage() {
         }
         
         const foundTable = { id: tableDocSnap.id, ...tableDocSnap.data() } as TableType;
-        setTable(foundTable);
-
         const menus = menuSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuType));
+
+        // Batch state updates to prevent re-renders within the effect
+        setTenant(foundTenant);
+        setTable(foundTable);
         setMenuItems(menus);
 
       } catch (e: any) {
