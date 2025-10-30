@@ -86,10 +86,15 @@ export default function UserManagementPage() {
 
   useEffect(() => {
     if (isUserLoading) return;
+    // Redirect if not logged in at all
     if (!user) {
       router.replace('/admin/login?error=unauthorized');
     }
-  }, [user, isUserLoading, router, toast]);
+    // DO NOT redirect if the user is logged in but is not the super admin.
+    // This prevents the page from redirecting away after creating a new user,
+    // which briefly changes the auth state. The UI will handle showing a loading
+    // or access denied state instead.
+  }, [user, isUserLoading, router]);
 
   const handleLogout = async () => {
     try {
@@ -277,3 +282,5 @@ export default function UserManagementPage() {
     </SidebarProvider>
   );
 }
+
+    
