@@ -218,7 +218,7 @@ export default function CafeAdminLoginPage() {
                       <Input type="password" placeholder="••••••••" {...field} disabled={isSubmitting} />
                     </FormControl>
                     <FormMessage />
-                  </Item>
+                  </FormItem>
                 )}
               />
               <Button type="submit" className="w-full" disabled={isSubmitting}>
