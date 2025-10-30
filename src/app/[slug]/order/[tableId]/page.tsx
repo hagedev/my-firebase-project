@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { useFirestore, useAuth } from '@/firebase';
 import { doc, collection, getDocs, getDoc, query, where } from 'firebase/firestore';
@@ -42,30 +42,25 @@ export default function OrderPage() {
   const [initialDataLoading, setInitialDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // --- Anonymous Authentication ---
+  // --- Anonymous Authentication & Data Fetching ---
   useEffect(() => {
-    if (auth && !auth.currentUser) {
-        signInAnonymously(auth).catch((error) => {
-            console.error("Anonymous sign-in failed:", error);
-            setError("Gagal menginisialisasi sesi. Silakan refresh halaman.");
-        });
+    // This effect should only run ONCE after the necessary firebase services are ready.
+    if (!firestore || !auth || isAuthLoading) {
+      // If services are not ready, or auth state is still being determined, do nothing.
+      return;
     }
-  }, [auth]);
-
-  // --- Efficient Data Fetching ---
-  useEffect(() => {
-    // Wait until auth is initialized and user session is ready.
-    if (!firestore || !auth || isAuthLoading) return;
 
     const fetchInitialData = async () => {
-      // We only run this if there is a logged in user, even an anonymous one
-      if (!auth.currentUser) return;
-        
-      setInitialDataLoading(true);
-      setError(null);
-      
       try {
-        // 1. Find the tenant using the URL slug (this is an indexed query)
+        // Step 1: Ensure anonymous user is signed in.
+        // This is critical. We must have an auth session before querying Firestore.
+        if (!auth.currentUser) {
+          await signInAnonymously(auth);
+        }
+        
+        // At this point, we have an authenticated session (anonymous or otherwise).
+
+        // Step 2: Find the tenant using the URL slug. This is an indexed query.
         const tenantsRef = collection(firestore, 'tenants');
         const q = query(tenantsRef, where("slug", "==", slug));
         const tenantSnapshot = await getDocs(q);
@@ -75,14 +70,14 @@ export default function OrderPage() {
         }
         
         const foundTenantDoc = tenantSnapshot.docs[0];
-        const foundTenant = { id: foundTenantDoc.id, ...foundTenantDoc.data() } as Tenant;
-        const tenantId = foundTenant.id;
+        const tenantData = { id: foundTenantDoc.id, ...foundTenantDoc.data() } as Tenant;
+        const tenantId = tenantData.id;
 
-        // 2. Now that we have the tenantId, get the table and menu data directly.
+        // Step 3: Now that we have the tenantId, get the table and menu data directly.
         const tableDocRef = doc(firestore, `tenants/${tenantId}/tables/${tableId}`);
         const menuCollectionRef = collection(firestore, `tenants/${tenantId}/menus`);
 
-        // Fetch them in parallel
+        // Fetch them in parallel for efficiency.
         const [tableDocSnap, menuSnapshot] = await Promise.all([
           getDoc(tableDocRef),
           getDocs(menuCollectionRef)
@@ -92,25 +87,30 @@ export default function OrderPage() {
           throw new Error("Meja tidak ditemukan. Silakan pindai ulang QR Code.");
         }
         
-        const foundTable = { id: tableDocSnap.id, ...tableDocSnap.data() } as TableType;
-        const menus = menuSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuType));
+        const tableData = { id: tableDocSnap.id, ...tableDocSnap.data() } as TableType;
+        const menuData = menuSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuType));
 
-        // Batch state updates to prevent re-renders within the effect
-        setTenant(foundTenant);
-        setTable(foundTable);
-        setMenuItems(menus);
+        // Step 4: Batch state updates to prevent re-renders within the effect.
+        // This is the ONLY place we set the main data states.
+        setTenant(tenantData);
+        setTable(tableData);
+        setMenuItems(menuData);
 
       } catch (e: any) {
         console.error("Initial data fetch error:", e);
         setError(e.message || "Gagal memuat data kafe.");
       } finally {
+        // This will be called regardless of success or failure.
         setInitialDataLoading(false);
       }
     };
     
+    // Call the function to start the process.
     fetchInitialData();
   
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // The dependency array is critical. It ensures this effect runs only when
+  // these fundamental props change, which is typically just once on load.
+  // We DO NOT include state setters here.
   }, [auth, firestore, isAuthLoading, slug, tableId]);
 
 
