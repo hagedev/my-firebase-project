@@ -1,21 +1,23 @@
 rules_version = '2';
 
 service cloud.firestore {
-  match /databases/{database}/documents {
-    
-    // Super admin (Anda) memiliki akses penuh ke koleksi 'tenants'.
+  database {
+    // Super admin full access to tenants
     match /tenants/{tenantId} {
       allow read, write: if request.auth.uid == 'ttFbsVWt14cdTwVlKs1AbgBLUtx1';
     }
-    
-    // Super admin (Anda) memiliki akses penuh ke koleksi 'users'.
-    match /users/{userId} {
+
+    match /tenants {
        allow read, write: if request.auth.uid == 'ttFbsVWt14cdTwVlKs1AbgBLUtx1';
     }
 
-    // Aturan default: Tolak semua akses ke koleksi lain.
-    match /{document=**} {
-      allow read, write: if false;
+    // Super admin full access to users
+    match /users/{userId} {
+      allow read, write: if request.auth.uid == 'ttFbsVWt14cdTwVlKs1AbgBLUtx1';
+    }
+
+    match /users {
+       allow read, write: if request.auth.uid == 'ttFbsVWt14cdTwVlKs1AbgBLUtx1';
     }
   }
 }
