@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useUser, useFirestore, useAuth } from '@/firebase';
-import { doc, getDoc } from 'firebase/firestore';
-import type { Tenant, User as AppUser } from '@/lib/types';
+import { useUser, useFirestore, useAuth, useCollection, useMemoFirebase } from '@/firebase';
+import { doc, getDoc, collection, query, where, Timestamp } from 'firebase/firestore';
+import type { Tenant, User as AppUser, Order, Menu as MenuType } from '@/lib/types';
 import {
   Loader2,
   LogOut,
@@ -36,6 +36,7 @@ import { Button } from '@/components/ui/button';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { formatRupiah } from '@/lib/utils';
 
 export default function CafeAdminDashboardPage() {
   const router = useRouter();
@@ -50,6 +51,45 @@ export default function CafeAdminDashboardPage() {
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // --- Data Fetching for Stats ---
+  const todayStart = useMemo(() => {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    return Timestamp.fromDate(start);
+  }, []);
+
+  const ordersQuery = useMemoFirebase(
+    () => (firestore && tenant ? query(
+        collection(firestore, `tenants/${tenant.id}/orders`),
+        where('createdAt', '>=', todayStart)
+      ) : null),
+    [firestore, tenant, todayStart]
+  );
+  
+  const menuQuery = useMemoFirebase(
+      () => (firestore && tenant ? collection(firestore, `tenants/${tenant.id}/menus`) : null),
+      [firestore, tenant]
+  );
+
+  const { data: todayOrders, isLoading: isOrdersLoading } = useCollection<Order>(ordersQuery);
+  const { data: menuItems, isLoading: isMenuLoading } = useCollection<MenuType>(menuQuery);
+
+
+  // --- Stats Calculation ---
+  const stats = useMemo(() => {
+    const totalOrders = todayOrders?.length || 0;
+    const totalRevenue = todayOrders?.reduce((sum, order) => sum + order.totalAmount, 0) || 0;
+    const availableMenus = menuItems?.filter(item => item.available).length || 0;
+    const unavailableMenus = (menuItems?.length || 0) - availableMenus;
+    
+    return {
+      totalOrders,
+      totalRevenue,
+      availableMenus,
+      unavailableMenus
+    }
+  }, [todayOrders, menuItems]);
 
   useEffect(() => {
     if (isUserLoading || !firestore) {
@@ -243,8 +283,8 @@ export default function CafeAdminDashboardPage() {
                   <ClipboardList className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">12</div>
-                  <p className="text-xs text-muted-foreground">+5 dari kemarin</p>
+                  {isOrdersLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{stats.totalOrders}</div>}
+                  <p className="text-xs text-muted-foreground">Jumlah pesanan yang masuk hari ini</p>
                 </CardContent>
               </Card>
               <Card>
@@ -253,8 +293,8 @@ export default function CafeAdminDashboardPage() {
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">Rp 1.250.000</div>
-                  <p className="text-xs text-muted-foreground">+15% dari kemarin</p>
+                  {isOrdersLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{formatRupiah(stats.totalRevenue)}</div>}
+                  <p className="text-xs text-muted-foreground">Total pendapatan dari pesanan hari ini</p>
                 </CardContent>
               </Card>
               <Card>
@@ -263,8 +303,10 @@ export default function CafeAdminDashboardPage() {
                   <BookOpen className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">34</div>
-                  <p className="text-xs text-muted-foreground">2 menu tidak tersedia</p>
+                  {isMenuLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{stats.availableMenus}</div>}
+                  <p className="text-xs text-muted-foreground">
+                    {stats.unavailableMenus > 0 ? `${stats.unavailableMenus} menu tidak tersedia` : 'Semua menu tersedia'}
+                  </p>
                 </CardContent>
               </Card>
             </div>
