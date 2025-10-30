@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useFirestore, useCollection, useDoc, useMemoFirebase, useAuth } from '@/firebase';
-import { doc, collection } from 'firebase/firestore';
+import { doc, collection, query, where } from 'firebase/firestore';
 import type { Tenant, Table as TableType, Menu as MenuType, CartItem } from '@/lib/types';
 import { signInAnonymously } from 'firebase/auth';
 
@@ -35,20 +35,31 @@ export default function OrderPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCheckoutOpen, setCheckoutOpen] = useState(false);
   const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+
 
   // --- Anonymous Authentication ---
   useEffect(() => {
-    if (auth && !auth.currentUser) {
-      signInAnonymously(auth).catch((error) => {
-        console.error("Anonymous sign-in failed:", error);
+    if (auth) {
+      const unsubscribe = auth.onAuthStateChanged(user => {
+        if (user) {
+          setIsAuthLoading(false); // User is signed in (either anon or otherwise)
+        } else {
+          // No user, attempt anonymous sign-in
+          signInAnonymously(auth).catch((error) => {
+            console.error("Anonymous sign-in failed:", error);
+            setIsAuthLoading(false); // Stop loading even if sign-in fails
+          });
+        }
       });
+       return () => unsubscribe(); // Cleanup subscription
     }
   }, [auth]);
 
   // --- Data Fetching ---
   const tenantQuery = useMemoFirebase(
-      () => (firestore && slug ? collection(firestore, 'tenants') : null),
-      [firestore, slug]
+    () => (firestore && slug && !isAuthLoading ? query(collection(firestore, 'tenants'), where('slug', '==', slug)) : null),
+    [firestore, slug, isAuthLoading]
   );
   
   const { data: tenants, isLoading: isTenantsLoading } = useCollection<Tenant>(tenantQuery);
@@ -61,14 +72,14 @@ export default function OrderPage() {
   }, [tenants, slug]);
 
   const tableRef = useMemoFirebase(
-    () => (firestore && tenant ? doc(firestore, `tenants/${tenant.id}/tables/${tableId}`) : null),
-    [firestore, tenant, tableId]
+    () => (firestore && tenant && !isAuthLoading ? doc(firestore, `tenants/${tenant.id}/tables/${tableId}`) : null),
+    [firestore, tenant, tableId, isAuthLoading]
   );
   const { data: table, isLoading: isTableLoading } = useDoc<TableType>(tableRef);
 
   const menuRef = useMemoFirebase(
-    () => (firestore && tenant ? collection(firestore, `tenants/${tenant.id}/menus`) : null),
-    [firestore, tenant]
+    () => (firestore && tenant && !isAuthLoading ? collection(firestore, `tenants/${tenant.id}/menus`) : null),
+    [firestore, tenant, isAuthLoading]
   );
   const { data: menuItems, isLoading: isMenuLoading } = useCollection<MenuType>(menuRef);
 
@@ -125,7 +136,7 @@ export default function OrderPage() {
     setCheckoutOpen(true);
   }
 
-  const isLoading = isTenantsLoading || isTableLoading || isMenuLoading || (auth && !auth.currentUser);
+  const isLoading = isAuthLoading || isTenantsLoading || isTableLoading || isMenuLoading;
 
   if (isLoading) {
     return (
