@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
-import { useAuth, useFirestore, useUser } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { signInAnonymously } from 'firebase/auth';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import type { Tenant, Menu, Table as TableType, CartItem } from '@/lib/types';
@@ -31,28 +31,15 @@ export default function OrderPage() {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (!auth || !firestore || !slug || !tableId) {
+    if (!auth || !firestore || !slug || !tableId) {
+        setStatus('error');
+        setErrorMessage('Komponen Firebase tidak siap.');
         return;
-      }
+    }
 
+    const fetchData = async () => {
       try {
-        // Step 1: Ensure user is signed in anonymously
-        if (!auth.currentUser) {
-          await signInAnonymously(auth);
-        }
-        
-        // Wait for auth state to be confirmed
-        await new Promise(resolve => {
-            const unsubscribe = auth.onAuthStateChanged(user => {
-                if (user) {
-                    unsubscribe();
-                    resolve(user);
-                }
-            });
-        });
-
-        // Step 2: Fetch tenant data
+        // Step 1: Fetch tenant data
         const tenantsRef = collection(firestore, 'tenants');
         const tenantQuery = query(tenantsRef, where('slug', '==', slug));
         const tenantSnapshot = await getDocs(tenantQuery);
@@ -63,7 +50,7 @@ export default function OrderPage() {
         const tenantData = { id: tenantSnapshot.docs[0].id, ...tenantSnapshot.docs[0].data() } as Tenant;
         setTenant(tenantData);
 
-        // Step 3: Fetch table data
+        // Step 2: Fetch table data
         const tableRef = doc(firestore, `tenants/${tenantData.id}/tables/${tableId}`);
         const tableSnap = await getDoc(tableRef);
         if (!tableSnap.exists()) {
@@ -72,7 +59,7 @@ export default function OrderPage() {
         const tableData = { id: tableSnap.id, ...tableSnap.data() } as TableType;
         setTable(tableData);
 
-        // Step 4: Fetch menu data
+        // Step 3: Fetch menu data
         const menuRef = collection(firestore, `tenants/${tenantData.id}/menus`);
         const menuQuery = query(menuRef, where('available', '==', true));
         const menuSnapshot = await getDocs(menuQuery);
@@ -82,12 +69,29 @@ export default function OrderPage() {
         setStatus('welcome');
 
       } catch (error: any) {
-        setErrorMessage(error.message || 'Terjadi kesalahan tidak diketahui.');
+        setErrorMessage(error.message || 'Terjadi kesalahan tidak diketahui saat mengambil data.');
         setStatus('error');
       }
     };
 
-    fetchData();
+    // Ensure user is signed in, then fetch data
+    const unsubscribe = auth.onAuthStateChanged(user => {
+      if (user) {
+        // User is signed in, we can fetch the data.
+        fetchData();
+      } else {
+        // No user, sign in anonymously.
+        // onAuthStateChanged will be triggered again once sign-in is complete.
+        signInAnonymously(auth).catch(err => {
+            setErrorMessage('Gagal melakukan autentikasi. Silakan refresh halaman.');
+            setStatus('error');
+        });
+      }
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+    
   }, [auth, firestore, slug, tableId]);
 
   // --- Cart Handlers ---
