@@ -17,6 +17,7 @@ import {
   ArrowRight,
   Utensils,
   Armchair,
+  Info,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
@@ -164,7 +165,7 @@ export default function CafeAdminDashboardPage() {
             <SidebarMenuItem>
                  <SidebarMenuButton asChild isActive>
                     <Link href={`/${slug}/admin`}>
-                        <Settings />
+                        <Info />
                         Dashboard
                     </Link>
                 </SidebarMenuButton>
