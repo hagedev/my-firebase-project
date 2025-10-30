@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useFirestore, useCollection, useDoc, useMemoFirebase, useAuth } from '@/firebase';
-import { doc, collection, getDoc } from 'firebase/firestore';
+import { doc, collection, getDocs, getDoc } from 'firebase/firestore';
 import type { Tenant, Table as TableType, Menu as MenuType, CartItem } from '@/lib/types';
 import { signInAnonymously } from 'firebase/auth';
 
