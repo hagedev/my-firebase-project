@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useFirestore, useCollection, useDoc, useMemoFirebase, useAuth } from '@/firebase';
-import { doc, collection, getDocs, getDoc } from 'firebase/firestore';
+import { useFirestore, useMemoFirebase, useAuth } from '@/firebase';
+import { doc, collection, getDocs, getDoc, query, where } from 'firebase/firestore';
 import type { Tenant, Table as TableType, Menu as MenuType, CartItem } from '@/lib/types';
 import { signInAnonymously } from 'firebase/auth';
 
@@ -33,9 +33,13 @@ export default function OrderPage() {
 
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [table, setTable] = useState<TableType | null>(null);
+  const [menuItems, setMenuItems] = useState<MenuType[]>([]);
+  const [isMenuLoading, setIsMenuLoading] = useState(true);
+
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCheckoutOpen, setCheckoutOpen] = useState(false);
   const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
+  
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [initialDataLoading, setInitialDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,6 +80,8 @@ export default function OrderPage() {
 
         for (const tenantDoc of tenantsSnapshot.docs) {
           const tenantData = { id: tenantDoc.id, ...tenantDoc.data() } as Tenant;
+          if (tenantData.slug !== slug) continue;
+
           const tableDocRef = doc(firestore, `tenants/${tenantData.id}/tables/${tableId}`);
           const tableDocSnap = await getDoc(tableDocRef);
 
@@ -90,29 +96,31 @@ export default function OrderPage() {
           throw new Error("Kafe atau meja tidak ditemukan.");
         }
         
-        if (foundTenant.slug !== slug) {
-          throw new Error("URL tidak valid. Kafe tidak cocok dengan meja.");
-        }
-        
         setTenant(foundTenant);
         setTable(foundTable);
+
+        // 2. Fetch menus now that we have the tenant ID
+        setIsMenuLoading(true);
+        const menuCollectionRef = collection(firestore, `tenants/${foundTenant.id}/menus`);
+        const menuSnapshot = await getDocs(menuCollectionRef);
+        const menus: MenuType[] = [];
+        menuSnapshot.forEach(doc => {
+            menus.push({ id: doc.id, ...doc.data() } as MenuType);
+        });
+        setMenuItems(menus);
+
 
       } catch (e: any) {
         console.error("Initial data fetch error:", e);
         setError(e.message);
       } finally {
         setInitialDataLoading(false);
+        setIsMenuLoading(false);
       }
     };
 
     fetchInitialData();
   }, [firestore, tableId, slug, isAuthLoading]);
-  
-  const menuRef = useMemoFirebase(
-    () => (firestore && tenant ? collection(firestore, `tenants/${tenant.id}/menus`) : null),
-    [firestore, tenant]
-  );
-  const { data: menuItems, isLoading: isMenuLoading } = useCollection<MenuType>(menuRef);
 
   // --- Cart Logic ---
   const addToCart = (item: MenuType) => {
@@ -322,14 +330,16 @@ export default function OrderPage() {
             </SheetContent>
         </Sheet>
     </div>
-    <CheckoutDialog 
-        isOpen={isCheckoutOpen}
-        onOpenChange={setCheckoutOpen}
-        cart={cart}
-        totalAmount={totalAmount}
-        tenant={tenant}
-        table={table}
-    />
+    {tenant && table && (
+      <CheckoutDialog 
+          isOpen={isCheckoutOpen}
+          onOpenChange={setCheckoutOpen}
+          cart={cart}
+          totalAmount={totalAmount}
+          tenant={tenant}
+          table={table}
+      />
+    )}
     </>
   );
 }
