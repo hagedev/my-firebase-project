@@ -41,7 +41,7 @@ export function TableForm({
     resolver: zodResolver(tableFormSchema),
     defaultValues: initialData
       ? { ...initialData }
-      : { tableNumber: undefined },
+      : { tableNumber: '' as any }, // Fix: change undefined to empty string
   });
 
   const handleFormSubmit = async (values: TableFormValues) => {
