@@ -70,7 +70,7 @@ export default function OrderPageTest() {
       {status === 'success' ? (
         <div className="flex flex-col items-center gap-6">
           <h1 className="font-headline text-4xl font-bold text-primary">
-            Selamat Datang, di kafe {cafeName}
+            Selamat Datang di {cafeName}
           </h1>
           <Button size="lg">Saya ingin order</Button>
         </div>
