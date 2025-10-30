@@ -28,50 +28,38 @@ export default function OrderPage() {
   const slug = params.slug as string;
   const tableId = params.tableId as string;
 
-  const { auth, user, isUserLoading: isAuthLoading } = useAuth();
+  const { auth } = useAuth();
   const firestore = useFirestore();
 
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [table, setTable] = useState<TableType | null>(null);
   const [menuItems, setMenuItems] = useState<MenuType[]>([]);
-  
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCheckoutOpen, setCheckoutOpen] = useState(false);
   const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
   
-  const [dataLoading, setDataLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // --- Step 1: Anonymous Authentication ---
-  // This effect's ONLY job is to ensure the user is signed in.
   useEffect(() => {
-    // Wait until Firebase Auth is initialized.
-    if (!auth || isAuthLoading) {
-      return;
-    }
-    // If there is no active user, sign in anonymously.
-    if (!user) {
-      signInAnonymously(auth).catch((authError) => {
-        console.error("Anonymous sign-in error:", authError);
-        setError("Gagal mendapatkan sesi. Silakan refresh halaman.");
-      });
-    }
-  }, [auth, isAuthLoading, user]);
+    // This effect runs ONCE when the component mounts and dependencies are ready.
+    // It handles both authentication and data fetching in a strict sequence.
+    const fetchAllData = async () => {
+      // Guard: Do not run if services are not ready.
+      if (!firestore || !auth) {
+        return;
+      }
 
-
-  // --- Step 2: Data Fetching ---
-  // This effect runs ONLY AFTER the user is authenticated (user object is available).
-  useEffect(() => {
-    // Do not proceed if services aren't ready or if there's no authenticated user.
-    if (!firestore || !user) {
-      return;
-    }
-
-    const fetchInitialData = async () => {
-      setDataLoading(true);
+      setIsLoading(true);
       setError(null);
+
       try {
-        // Find the tenant using the URL slug.
+        // Step 1: Ensure user is authenticated (anonymously).
+        if (!auth.currentUser) {
+          await signInAnonymously(auth);
+        }
+        
+        // Step 2: Fetch Tenant data based on slug.
         const tenantsRef = collection(firestore, 'tenants');
         const q = query(tenantsRef, where("slug", "==", slug));
         const tenantSnapshot = await getDocs(q);
@@ -84,9 +72,9 @@ export default function OrderPage() {
         const tenantData = { id: foundTenantDoc.id, ...foundTenantDoc.data() } as Tenant;
         const tenantId = tenantData.id;
 
-        // Get the table and menu data directly using the tenantId.
+        // Step 3: Fetch Table and Menu data using the now-known tenantId.
         const tableDocRef = doc(firestore, `tenants/${tenantId}/tables/${tableId}`);
-        const menuCollectionRef = collection(firestore, `tenants/${tenantId}/menus`);
+        const menuCollectionRef = query(collection(firestore, `tenants/${tenantId}/menus`), where("available", "==", true));
 
         const [tableDocSnap, menuSnapshot] = await Promise.all([
           getDoc(tableDocRef),
@@ -100,7 +88,7 @@ export default function OrderPage() {
         const tableData = { id: tableDocSnap.id, ...tableDocSnap.data() } as TableType;
         const menuData = menuSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuType));
 
-        // Batch state updates
+        // Step 4: Batch state updates.
         setTenant(tenantData);
         setTable(tableData);
         setMenuItems(menuData);
@@ -109,13 +97,13 @@ export default function OrderPage() {
         console.error("Initial data fetch error:", e);
         setError(e.message || "Gagal memuat data kafe.");
       } finally {
-        setDataLoading(false);
+        setIsLoading(false);
       }
     };
     
-    fetchInitialData();
-  
-  }, [firestore, user, slug, tableId]); // Depends on `user` to ensure auth is complete.
+    fetchAllData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth, firestore, slug, tableId]); // Stable dependencies, ensures it runs only once.
 
 
   // --- Cart Logic ---
@@ -158,10 +146,8 @@ export default function OrderPage() {
 
   const groupedMenu = useMemo(() => {
     return menuItems.reduce((acc, item) => {
-        if (item.available) { 
-            (acc[item.category] = acc[item.category] || []).push(item);
-        }
-        return acc;
+      (acc[item.category] = acc[item.category] || []).push(item);
+      return acc;
     }, {} as Record<string, MenuType[]>);
   }, [menuItems]);
   
@@ -169,8 +155,6 @@ export default function OrderPage() {
     setIsCartSheetOpen(false);
     setCheckoutOpen(true);
   }
-
-  const isLoading = isAuthLoading || dataLoading;
 
   if (isLoading) {
     return (
