@@ -27,6 +27,22 @@
         "tokenHarian": {
           "type": "string",
           "description": "The daily verification token for anti-spam."
+        },
+        "address": {
+            "type": "string",
+            "description": "The physical address of the cafe."
+        },
+        "ownerName": {
+            "type": "string",
+            "description": "The name of the cafe owner."
+        },
+        "phoneNumber": {
+            "type": "string",
+            "description": "The contact phone number for the cafe."
+        },
+        "receiptMessage": {
+            "type": "string",
+            "description": "A custom message to be printed on customer receipts."
         }
       },
       "required": [
@@ -378,3 +394,5 @@
     "reasoning": "The Firestore data structure is designed to support a multi-tenant SaaS application (AirCafe) with distinct roles (superadmin, admin_kafe, and anonymous customer). It prioritizes authorization independence by denormalizing tenant-specific data and access control information where needed. The structure also ensures clear segregation of data based on tenant and role, simplifying security rules. Path-based ownership is used where appropriate to secure user-owned data.\n\nAuthorization Independence (Denormalization):\n*   The `User` document stores the `tenantId`.  This is essential for admins, linking them directly to a specific tenant. The `Order` documents store `tenantId`, `tableId` and `verificationToken`.\n*   The `Menu`, `Category`, and `Table` documents also contain `tenantId`, ensuring that all data related to a tenant is easily accessible and securable.\n*   Token verification for creating orders is enforced by comparing `request.resource.data.verificationToken` with `get(/databases/(default)/documents/tenants/$(request.resource.data.tenantId)).data.tokenHarian`.\n\nQAPs (Query Assurance Patterns):\n*   Secure List Operations:  The structure facilitates secure list operations by segregating data based on tenant ID.  Rules can easily filter based on the `tenantId` of the requesting user (for admin_kafe) or based on the requested `tenantId` for public reads.\n*   The admin role can only read and write data within their assigned tenant's subcollections, ensuring data isolation."
   }
 }
+
+    

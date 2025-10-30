@@ -40,6 +40,7 @@ import {
   FormDescription,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -48,6 +49,10 @@ const settingsSchema = z.object({
   name: z.string().min(3, 'Nama kafe minimal 3 karakter.'),
   logoUrl: z.string().url('URL logo tidak valid.').or(z.literal('')),
   qrisImageUrl: z.string().url('URL gambar QRIS tidak valid.').or(z.literal('')),
+  address: z.string().optional(),
+  ownerName: z.string().optional(),
+  phoneNumber: z.string().optional(),
+  receiptMessage: z.string().optional(),
 });
 
 type SettingsFormValues = z.infer<typeof settingsSchema>;
@@ -81,6 +86,10 @@ export default function CafeSettingsPage() {
       name: '',
       logoUrl: '',
       qrisImageUrl: '',
+      address: '',
+      ownerName: '',
+      phoneNumber: '',
+      receiptMessage: '',
     },
   });
 
@@ -122,6 +131,10 @@ export default function CafeSettingsPage() {
           name: tenantData.name,
           logoUrl: tenantData.logoUrl || '',
           qrisImageUrl: tenantData.qrisImageUrl || '',
+          address: tenantData.address || '',
+          ownerName: tenantData.ownerName || '',
+          phoneNumber: tenantData.phoneNumber || '',
+          receiptMessage: tenantData.receiptMessage || '',
         });
 
       } catch (e: any) {
@@ -214,7 +227,7 @@ export default function CafeSettingsPage() {
                 <CardHeader>
                     <CardTitle>Setting Profil Kafe</CardTitle>
                     <CardDescription>
-                        Perbarui informasi umum tentang kafe Anda. Perubahan nama akan otomatis mengubah URL kafe Anda.
+                        Perbarui informasi umum dan detail tentang kafe Anda.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -229,6 +242,60 @@ export default function CafeSettingsPage() {
                                         <FormControl>
                                             <Input placeholder="Contoh: Kopi Kenangan" {...field} />
                                         </FormControl>
+                                        <FormDescription>Perubahan nama akan otomatis mengubah URL kafe Anda.</FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="ownerName"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Nama Pemilik</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="John Doe" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="phoneNumber"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Nomor Handphone</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="081234567890" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={form.control}
+                                name="address"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Alamat Kafe</FormLabel>
+                                        <FormControl>
+                                            <Textarea placeholder="Jl. Sudirman No. 123, Jakarta" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={form.control}
+                                name="receiptMessage"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Pesan Pada Struk</FormLabel>
+                                        <FormControl>
+                                            <Textarea placeholder="Terima kasih telah berkunjung!" {...field} />
+                                        </FormControl>
+                                        <FormDescription>Pesan ini akan tercetak di bagian bawah struk pelanggan.</FormDescription>
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -337,3 +404,5 @@ export default function CafeSettingsPage() {
     </SidebarProvider>
   );
 }
+
+    

@@ -8,6 +8,10 @@ export interface Tenant {
   tokenHarian: string;
   logoUrl?: string;
   qrisImageUrl?: string;
+  address?: string;
+  ownerName?: string;
+  phoneNumber?: string;
+  receiptMessage?: string;
 }
 
 // Merepresentasikan struktur data dari sebuah dokumen User di Firestore.
@@ -19,3 +23,5 @@ export interface User {
     tenantId?: string; // ID tenant/kafe yang dikelola
     tenantName?: string; // Denormalized tenant name for easy display
 }
+
+    
