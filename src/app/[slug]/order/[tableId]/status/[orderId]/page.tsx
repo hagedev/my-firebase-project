@@ -9,7 +9,7 @@ import { Loader2, CheckCircle, Clock, Wallet } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
-import { formatRupiah } from '@/lib/utils';
+import { formatRupiah, convertGoogleDriveUrl } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 
 const statusConfig = {
@@ -97,7 +97,7 @@ export default function OrderStatusPage() {
                     {tenantData.qrisImageUrl ? (
                         <div className="relative aspect-square w-full max-w-xs mx-auto border-4 border-primary rounded-lg overflow-hidden">
                             <Image 
-                                src={tenantData.qrisImageUrl} 
+                                src={convertGoogleDriveUrl(tenantData.qrisImageUrl)} 
                                 alt="QRIS Payment Code" 
                                 layout="fill" 
                                 objectFit="contain" 
