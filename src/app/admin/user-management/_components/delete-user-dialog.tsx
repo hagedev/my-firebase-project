@@ -13,10 +13,11 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore } from '@/firebase';
+import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import type { User as AppUser } from '@/lib/types';
+import { FirebaseError } from 'firebase/app';
 
 interface DeleteUserDialogProps {
   isOpen: boolean;
@@ -41,24 +42,30 @@ export function DeleteUserDialog({ isOpen, onOpenChange, user }: DeleteUserDialo
     setIsDeleting(true);
 
     try {
-      // Note: This only deletes the Firestore record, not the Firebase Auth user.
-      // Deleting auth users requires a secure backend environment (e.g., Cloud Functions).
       const userDocRef = doc(firestore, 'users', user.id);
       await deleteDoc(userDocRef);
 
       toast({
         title: 'User Berhasil Dihapus',
-        description: `Data user ${user.email} telah dihapus dari database.`,
+        description: `Data user ${user.email} telah dihapus dari database. Operasi ini tidak menghapus akun autentikasi user.`,
       });
 
       onOpenChange(false);
     } catch (error: any) {
-      console.error('Error deleting user document: ', error);
-      toast({
-        variant: 'destructive',
-        title: 'Gagal Menghapus User',
-        description: error.message || 'Terjadi kesalahan pada server.',
-      });
+      if (error instanceof FirebaseError && error.code === 'permission-denied') {
+        const contextualError = new FirestorePermissionError({
+            operation: 'delete',
+            path: `users/${user.id}`,
+        });
+        errorEmitter.emit('permission-error', contextualError);
+        // We let the global error handler manage the UI feedback
+      } else {
+         toast({
+            variant: 'destructive',
+            title: 'Gagal Menghapus User',
+            description: error.message || 'Terjadi kesalahan pada server.',
+         });
+      }
     } finally {
       setIsDeleting(false);
     }
@@ -71,7 +78,7 @@ export function DeleteUserDialog({ isOpen, onOpenChange, user }: DeleteUserDialo
           <AlertDialogTitle>Apakah Anda Yakin?</AlertDialogTitle>
           <AlertDialogDescription>
             Tindakan ini akan menghapus data user <span className="font-semibold text-foreground">{user?.email}</span> secara permanen dari database.
-            Anda tidak bisa membatalkan tindakan ini.
+            Operasi ini <span className="font-bold">tidak menghapus akun autentikasi user</span>, hanya data profilnya di Firestore.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -87,7 +94,7 @@ export function DeleteUserDialog({ isOpen, onOpenChange, user }: DeleteUserDialo
                 <span>Menghapus...</span>
               </>
             ) : (
-              'Ya, Hapus User'
+              'Ya, Hapus Data User'
             )}
           </AlertDialogAction>
         </AlertDialogFooter>
