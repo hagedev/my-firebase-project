@@ -15,6 +15,7 @@ import {
   PlusCircle,
   BookOpen,
   ArrowRight,
+  Utensils,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
@@ -166,6 +167,14 @@ export default function CafeAdminDashboardPage() {
                         Dashboard
                     </Link>
                 </SidebarMenuButton>
+            </SidebarMenuItem>
+             <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <Link href={`/${slug}/admin/menu`}>
+                  <Utensils />
+                  Manajemen Menu
+                </Link>
+              </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild>

@@ -24,4 +24,13 @@ export interface User {
     tenantName?: string; // Denormalized tenant name for easy display
 }
 
-    
+// Merepresentasikan struktur data dari sebuah dokumen Menu di Firestore.
+export interface Menu {
+    id: string;
+    name: string;
+    description?: string;
+    imageUrl?: string;
+    price: number;
+    categoryId: string;
+    available: boolean;
+}
