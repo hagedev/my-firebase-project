@@ -29,11 +29,13 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Loader2 } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Loader2, Wallet, QrCode } from 'lucide-react';
 import { FirebaseError } from 'firebase/app';
 
 const checkoutSchema = z.object({
   verificationToken: z.string().min(1, { message: 'Token verifikasi harus diisi.' }),
+  paymentMethod: z.enum(['qris', 'cash'], { required_error: 'Pilih metode pembayaran.' }),
 });
 
 type CheckoutFormValues = z.infer<typeof checkoutSchema>;
@@ -62,7 +64,10 @@ export function CheckoutDialog({
 
   const form = useForm<CheckoutFormValues>({
     resolver: zodResolver(checkoutSchema),
-    defaultValues: { verificationToken: '' },
+    defaultValues: { 
+        verificationToken: '',
+        paymentMethod: 'qris',
+    },
   });
 
   const handleOrderSubmit = async (data: CheckoutFormValues) => {
@@ -71,7 +76,6 @@ export function CheckoutDialog({
         return;
     }
 
-    // Basic client-side token check
     if (data.verificationToken !== tenant.tokenHarian) {
         form.setError('verificationToken', {
             type: 'manual',
@@ -94,7 +98,7 @@ export function CheckoutDialog({
       })),
       totalAmount: totalAmount,
       status: 'received' as const,
-      paymentMethod: 'qris' as const,
+      paymentMethod: data.paymentMethod,
       paymentVerified: false,
       verificationToken: data.verificationToken,
       createdAt: serverTimestamp(),
@@ -106,7 +110,7 @@ export function CheckoutDialog({
         
         toast({
             title: 'Pesanan Berhasil Dibuat!',
-            description: 'Anda akan diarahkan ke halaman pembayaran.',
+            description: 'Anda akan diarahkan ke halaman status pesanan.',
         });
 
         // Redirect to status/payment page
@@ -139,11 +143,11 @@ export function CheckoutDialog({
         <DialogHeader>
           <DialogTitle>Konfirmasi Pesanan Anda</DialogTitle>
           <DialogDescription>
-            Periksa kembali pesanan Anda. Masukkan token verifikasi dari kasir untuk melanjutkan.
+            Periksa pesanan, pilih metode pembayaran, dan masukkan token dari kasir.
           </DialogDescription>
         </DialogHeader>
         
-        <div className="max-h-60 overflow-y-auto pr-2 space-y-2 my-4">
+        <div className="max-h-48 overflow-y-auto pr-2 space-y-2 my-4">
             {cart.map(item => (
                 <div key={item.id} className="flex justify-between items-center">
                     <p>{item.quantity}x {item.name}</p>
@@ -157,7 +161,44 @@ export function CheckoutDialog({
         </div>
         
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleOrderSubmit)} className="space-y-4 mt-4">
+            <form onSubmit={form.handleSubmit(handleOrderSubmit)} className="space-y-6 mt-4">
+                <FormField
+                    control={form.control}
+                    name="paymentMethod"
+                    render={({ field }) => (
+                        <FormItem className="space-y-3">
+                        <FormLabel>Pilih Metode Pembayaran</FormLabel>
+                        <FormControl>
+                            <RadioGroup
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                                className="grid grid-cols-2 gap-4"
+                            >
+                                <FormItem>
+                                    <FormControl>
+                                        <RadioGroupItem value="qris" id="qris" className="sr-only" />
+                                    </FormControl>
+                                    <FormLabel htmlFor="qris" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
+                                        <QrCode className="mb-3 h-6 w-6" />
+                                        QRIS
+                                    </FormLabel>
+                                </FormItem>
+                                <FormItem>
+                                     <FormControl>
+                                        <RadioGroupItem value="cash" id="cash" className="sr-only" />
+                                    </FormControl>
+                                    <FormLabel htmlFor="cash" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-primary">
+                                        <Wallet className="mb-3 h-6 w-6" />
+                                        Tunai (Kasir)
+                                    </FormLabel>
+                                </FormItem>
+                            </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
                 <FormField
                     control={form.control}
                     name="verificationToken"
@@ -183,7 +224,7 @@ export function CheckoutDialog({
                             Mengirim Pesanan...
                         </>
                         ) : (
-                        'Konfirmasi & Bayar dengan QRIS'
+                        'Konfirmasi Pesanan'
                         )}
                     </Button>
                 </DialogFooter>

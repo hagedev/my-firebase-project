@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { Tenant, Table as TableType, Order } from '@/lib/types';
-import { Loader2, CheckCircle, Clock } from 'lucide-react';
+import { Loader2, CheckCircle, Clock, Wallet } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
@@ -76,6 +76,62 @@ export default function OrderStatusPage() {
     
     const currentStatus = statusConfig[order.status] || statusConfig.received;
 
+    const PaymentInstructions = () => {
+        if (order.paymentVerified) {
+            return (
+                <div className="text-center p-4 rounded-lg bg-green-50 border-l-4 border-green-500">
+                    <CheckCircle className="mx-auto h-12 w-12 text-green-500 mb-2"/>
+                    <h3 className="font-semibold text-green-800">Pembayaran Lunas</h3>
+                    <p className="text-sm text-green-700">Terima kasih! Pesanan Anda sedang kami siapkan.</p>
+                </div>
+            )
+        }
+
+        if (order.paymentMethod === 'qris') {
+            return (
+                <div>
+                    <h3 className="font-semibold text-center mb-2">Silakan Lakukan Pembayaran</h3>
+                    <p className="text-center text-xs text-muted-foreground mb-4">
+                        Pindai kode QRIS di bawah ini dengan aplikasi perbankan atau e-wallet Anda.
+                    </p>
+                    {tenantData.qrisImageUrl ? (
+                        <div className="relative aspect-square w-full max-w-xs mx-auto border-4 border-primary rounded-lg overflow-hidden">
+                            <Image 
+                                src={tenantData.qrisImageUrl} 
+                                alt="QRIS Payment Code" 
+                                layout="fill" 
+                                objectFit="contain" 
+                            />
+                        </div>
+                    ) : (
+                        <div className="text-center p-4 bg-destructive/10 rounded-lg">
+                            <p className="font-semibold text-destructive">Gambar QRIS tidak tersedia.</p>
+                            <p className="text-sm text-destructive-foreground">Silakan bayar di kasir.</p>
+                        </div>
+                    )}
+                    <p className="text-center text-xs text-muted-foreground mt-4">
+                        Tunjukkan halaman ini ke kasir jika pembayaran sudah berhasil.
+                    </p>
+                </div>
+            )
+        }
+
+        if (order.paymentMethod === 'cash') {
+            return (
+                 <div className="text-center p-6 rounded-lg bg-blue-50 border-l-4 border-blue-500">
+                    <Wallet className="mx-auto h-12 w-12 text-blue-500 mb-2"/>
+                    <h3 className="font-semibold text-blue-800">Pembayaran di Kasir</h3>
+                    <p className="text-sm text-blue-700">
+                        Silakan lakukan pembayaran tunai di kasir dan tunjukkan halaman ini.
+                    </p>
+                </div>
+            )
+        }
+        
+        return null;
+    }
+
+
     return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
             <Card className="w-full max-w-md mx-auto shadow-2xl">
@@ -109,43 +165,10 @@ export default function OrderStatusPage() {
                         </div>
                     </div>
 
-                    {!order.paymentVerified && (
-                         <div>
-                            <h3 className="font-semibold text-center mb-2">Silakan Lakukan Pembayaran</h3>
-                            <p className="text-center text-xs text-muted-foreground mb-4">
-                                Pindai kode QRIS di bawah ini dengan aplikasi perbankan atau e-wallet Anda.
-                            </p>
-                            {tenantData.qrisImageUrl ? (
-                                <div className="relative aspect-square w-full max-w-xs mx-auto border-4 border-primary rounded-lg overflow-hidden">
-                                    <Image 
-                                        src={tenantData.qrisImageUrl} 
-                                        alt="QRIS Payment Code" 
-                                        layout="fill" 
-                                        objectFit="contain" 
-                                    />
-                                </div>
-                            ) : (
-                                <div className="text-center p-4 bg-destructive/10 rounded-lg">
-                                    <p className="font-semibold text-destructive">Gambar QRIS tidak tersedia.</p>
-                                    <p className="text-sm text-destructive-foreground">Silakan bayar di kasir.</p>
-                                </div>
-                            )}
-                            <p className="text-center text-xs text-muted-foreground mt-4">
-                                Tunjukkan halaman ini ke kasir jika pembayaran sudah berhasil.
-                            </p>
-                        </div>
-                    )}
-                     {order.paymentVerified && (
-                        <div className="text-center p-4 rounded-lg bg-green-50 border-l-4 border-green-500">
-                             <CheckCircle className="mx-auto h-12 w-12 text-green-500 mb-2"/>
-                            <h3 className="font-semibold text-green-800">Pembayaran Lunas</h3>
-                            <p className="text-sm text-green-700">Terima kasih! Pesanan Anda sedang kami siapkan.</p>
-                        </div>
-                    )}
+                    <PaymentInstructions />
 
                 </CardContent>
             </Card>
         </div>
     );
 }
-
