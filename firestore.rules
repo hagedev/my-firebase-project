@@ -1,246 +1,55 @@
-/**
- * @file Firebase Security Rules for AirCafe Firestore Database
- *
- * Core Philosophy:
- * This ruleset enforces a multi-tenant security model where access is primarily governed by user roles (superadmin, admin_kafe) and tenant ownership.
- * Superadmins have broad access, while cafe admins (admin_kafe) are restricted to their assigned tenant's data.
- * Anonymous customers can create orders with a valid verification token.
- *
- * Data Structure:
- * - /tenants/{tenantId}: Stores tenant-specific data.
- * - /users/{userId}: Stores user profiles and roles.
- * - /tenants/{tenantId}/menus/{menuId}: Stores menu items for a tenant.
- * - /tenants/{tenantId}/categories/{categoryId}: Stores menu categories.
- * - /tenants/{tenantId}/orders/{orderId}: Stores customer orders.
- * - /tenants/{tenantId}/tables/{tableId}: Stores table information.
- * - /roles_superadmin/{userId}: Indicates superadmin privileges.
- *
- * Key Security Decisions:
- * - Superadmins have full CRUD access to tenants and users.
- * - Cafe admins (admin_kafe) have CRUD access to menus, categories, and orders within their tenant.
- * - Cafe admins (admin_kafe) have read and update access to tables within their tenant.
- * - Anonymous users can create orders if they provide a valid `verificationToken` that matches the `tokenHarian` for the tenant.
- * - User listing is disabled to prevent information disclosure.
- * - Superadmin role is determined by the existence of a document in the `roles_superadmin` collection.
- * - All destructive operations (update, delete) check for resource existence.
- *
- * Denormalization for Authorization:
- * - Each User document stores a `tenantId` to quickly determine the tenant the user belongs to.
- * - Each Menu, Category, Order, and Table document stores a `tenantId` to enforce tenant-specific access.
- *
- * Structural Segregation:
- * - Superadmin status is stored in a separate `roles_superadmin` collection, avoiding the need to query user documents to check for admin privileges and preventing accidental modification of user roles.
- */
+
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * @description Checks if the user is signed in.
-     * @path N/A
-     * @allow N/A
-     * @deny N/A
-     * @principle Verifies user authentication.
-     */
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    /**
-     * @description Checks if the user is the owner of the resource based on the provided userId.
-     * @path N/A
-     * @allow N/A
-     * @deny N/A
-     * @principle Enforces document ownership.
-     */
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-
-    /**
-     * @description Checks if the user is a superadmin by verifying the existence of a document in the `roles_superadmin` collection.
-     * @path N/A
-     * @allow N/A
-     * @deny N/A
-     * @principle Checks for superadmin privileges.
-     */
+    // =================================
+    // Helper Functions
+    // =================================
     function isSuperAdmin() {
-      return exists(/databases/$(database)/documents/roles_superadmin/$(request.auth.uid));
+      return request.auth.uid == 'ttFbsVWt14cdTwVlKs1AbgBLUtx1';
     }
 
-    /**
-     * @description Checks if the user is an admin_kafe and has the specified tenantId.
-     * @path N/A
-     * @allow N/A
-     * @deny N/A
-     * @principle Checks for cafe admin role and tenant association.
-     */
-    function isAdminKafeForTenant(tenantId) {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin_kafe'
-          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.tenantId == tenantId;
+    function isCafeAdmin() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin_kafe';
     }
 
-    /**
-     * @description Checks if the tenant exists.
-     * @path N/A
-     * @allow N/A
-     * @deny N/A
-     * @principle Checks for tenant existence.
-     */
-    function tenantExists(tenantId) {
-      return exists(/databases/$(database)/documents/tenants/$(tenantId));
-    }
-
-    /**
-     * @description Checks if the user is the existing owner of the resource.
-     * @path N/A
-     * @allow N/A
-     * @deny N/A
-     * @principle Enforces document ownership and resource existence for updates and deletes.
-     */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
-    }
-
-
-    /**
-     * @description Manages Tenant documents. Allows superadmins full access and cafe admins to update their own tenant.
-     * @path /tenants/{tenantId}
-     * @allow (create) User with superadmin role can create a new tenant.
-     * @allow (update) User with admin_kafe role can update their own tenant data.
-     * @deny (create) User with admin_kafe role cannot create a tenant.
-     * @deny (update) User with admin_kafe role cannot update a tenant other than their own.
-     * @principle Restricts tenant creation to superadmins and tenant updates to the owning cafe admin.
-     */
+    // =================================
+    // Collection: tenants
+    // =================================
     match /tenants/{tenantId} {
-      allow get: if true;
-      allow list: if false;
+      // Super Admin bisa melakukan apa saja
+      allow read, write: if isSuperAdmin();
 
-      allow create: if isSuperAdmin();
+      // Admin Kafe hanya bisa mengupdate tenant mereka sendiri (misal: token harian)
+      allow update: if isCafeAdmin() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.tenantId == tenantId;
 
-      allow update: if isSuperAdmin() || (isSignedIn() && isAdminKafeForTenant(tenantId));
-
-      allow delete: if isSuperAdmin();
+      // Siapa pun (termasuk user belum login) bisa membaca daftar tenant dan detailnya
+      allow list, get: if true;
     }
 
-    /**
-     * @description Manages User documents. Only superadmins can create, update, and delete user accounts.
-     * @path /users/{userId}
-     * @allow (create) User with superadmin role can create a new user.
-     * @allow (update) User with superadmin role can update any user.
-     * @deny (create) User without superadmin role cannot create a user.
-     * @deny (update) User without superadmin role cannot update other users.
-     * @principle Restricts user management to superadmins.
-     */
+    // =_=_=_=_=_=_=_=_=_=_=_=_=_=_=_=_=_=_=_=_=_=_=_=_=
+    //  Collection: users
+    // =================================
     match /users/{userId} {
-      allow get: if isSuperAdmin() || isOwner(userId);
-      allow list: if false;
+      // Super Admin bisa melakukan apa saja
+      allow read, write: if isSuperAdmin();
 
-      allow create: if isSuperAdmin();
-
-      allow update: if isSuperAdmin();
-
-      allow delete: if isSuperAdmin();
+      // Pengguna hanya bisa membaca dan mengedit data mereka sendiri
+      allow read, update: if request.auth.uid == userId;
     }
+    
+    // =================================
+    // Tenant Sub-collections
+    // =================================
+    match /tenants/{tenantId}/{collection}/{docId} {
+        // Super Admin bisa melakukan apa saja
+        allow read, write: if isSuperAdmin();
 
-    /**
-     * @description Manages Menu documents within a tenant. Only cafe admins for the specific tenant can manage menu items.
-     * @path /tenants/{tenantId}/menus/{menuId}
-     * @allow (create) User with admin_kafe role can create a menu item within their tenant.
-     * @allow (update) User with admin_kafe role can update a menu item within their tenant.
-     * @deny (create) User with admin_kafe role cannot create a menu item for another tenant.
-     * @deny (update) User with admin_kafe role cannot update a menu item for another tenant.
-     * @principle Restricts menu management to the owning cafe admin.
-     */
-    match /tenants/{tenantId}/menus/{menuId} {
-      allow get: if true;
-      allow list: if true;
-
-      allow create: if isSignedIn() && isAdminKafeForTenant(tenantId);
-
-      allow update: if isSignedIn() && isAdminKafeForTenant(tenantId);
-
-      allow delete: if isSignedIn() && isAdminKafeForTenant(tenantId);
-    }
-
-    /**
-     * @description Manages Category documents within a tenant. Only cafe admins for the specific tenant can manage categories.
-     * @path /tenants/{tenantId}/categories/{categoryId}
-     * @allow (create) User with admin_kafe role can create a category within their tenant.
-     * @allow (update) User with admin_kafe role can update a category within their tenant.
-     * @deny (create) User with admin_kafe role cannot create a category for another tenant.
-     * @deny (update) User with admin_kafe role cannot update a category for another tenant.
-     * @principle Restricts category management to the owning cafe admin.
-     */
-    match /tenants/{tenantId}/categories/{categoryId} {
-      allow get: if true;
-      allow list: if true;
-
-      allow create: if isSignedIn() && isAdminKafeForTenant(tenantId);
-
-      allow update: if isSignedIn() && isAdminKafeForTenant(tenantId);
-
-      allow delete: if isSignedIn() && isAdminKafeForTenant(tenantId);
-    }
-
-    /**
-     * @description Manages Order documents within a tenant. Cafe admins can manage orders, and anonymous users can create orders with a valid verification token.
-     * @path /tenants/{tenantId}/orders/{orderId}
-     * @allow (create) Anonymous user can create an order if the verification token matches the tenant's tokenHarian.
-     * @allow (update) User with admin_kafe role can update an order within their tenant.
-     * @deny (create) Anonymous user cannot create an order with an invalid verification token.
-     * @deny (update) User with admin_kafe role cannot update an order for another tenant.
-     * @principle Allows order creation with token verification and restricts order management to the owning cafe admin.
-     */
-    match /tenants/{tenantId}/orders/{orderId} {
-      allow get: if true;
-      allow list: if true;
-
-      allow create: if tenantExists(tenantId) && request.resource.data.verificationToken == get(/databases/$(database)/documents/tenants/$(tenantId)).data.tokenHarian;
-
-      allow update: if isSignedIn() && isAdminKafeForTenant(tenantId);
-
-      allow delete: if isSignedIn() && isAdminKafeForTenant(tenantId);
-    }
-
-    /**
-     * @description Manages Table documents within a tenant. Cafe admins can read and update tables within their tenant.
-     * @path /tenants/{tenantId}/tables/{tableId}
-     * @allow (get) Any signed in user can get a table within the tenant.
-     * @allow (update) User with admin_kafe role can update a table within their tenant.
-     * @deny (create) No one can create a table using client-side rules. Tables must be created through trusted backend environments
-     * @deny (update) User with admin_kafe role cannot update a table for another tenant.
-     * @principle Restricts table management to the owning cafe admin.
-     */
-    match /tenants/{tenantId}/tables/{tableId} {
-      allow get: if true;
-      allow list: if true;
-
-      allow create: if false;
-
-      allow update: if isSignedIn() && isAdminKafeForTenant(tenantId);
-
-      allow delete: if false;
-    }
-
-    /**
-     * @description Manages Superadmin Role documents. Only backend services can write to this collection.
-     * @path /roles_superadmin/{userId}
-     * @allow (get) Any signed in user can read a document.
-     * @deny (create) No one can create a document using client-side rules.
-     * @deny (update) No one can update a document using client-side rules.
-     * @deny (delete) No one can delete a document using client-side rules.
-     * @principle Restricts superadmin role management to backend services.
-     */
-    match /roles_superadmin/{userId} {
-      allow get: if isSignedIn();
-      allow list: if false;
-
-      allow create: if false;
-
-      allow update: if false;
-
-      allow delete: if false;
+        // Admin Kafe bisa melakukan apa saja di dalam tenant mereka
+        allow read, write: if isCafeAdmin() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.tenantId == tenantId;
     }
   }
 }
