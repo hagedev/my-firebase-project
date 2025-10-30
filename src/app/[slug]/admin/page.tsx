@@ -83,7 +83,10 @@ export default function CafeAdminDashboardPage() {
         const tenantData = { id: tenantDocSnap.id, ...tenantDocSnap.data() } as Tenant;
 
         if (tenantData.slug !== slug) {
-          throw new Error('Anda tidak berwenang mengakses dasbor kafe ini.');
+          // If slug is mismatched, redirect to the correct one.
+          router.replace(`/${tenantData.slug}/admin`);
+          // Don't continue rendering on the wrong slug page
+          return;
         }
 
         setTenant(tenantData);
@@ -156,6 +159,14 @@ export default function CafeAdminDashboardPage() {
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
+            <SidebarMenuItem>
+                 <SidebarMenuButton asChild isActive>
+                    <Link href={`/${slug}/admin`}>
+                        <Settings />
+                        Dashboard
+                    </Link>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild>
                 <Link href={`/${slug}/admin/settings`}>

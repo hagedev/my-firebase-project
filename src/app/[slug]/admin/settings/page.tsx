@@ -1,0 +1,339 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { useUser, useFirestore, useAuth } from '@/firebase';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import type { Tenant, User as AppUser } from '@/lib/types';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+import {
+  Loader2,
+  LogOut,
+  Settings,
+  Store,
+  Save,
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  SidebarProvider,
+  Sidebar,
+  SidebarHeader,
+  SidebarContent,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarInset,
+  SidebarTrigger,
+  SidebarFooter,
+} from '@/components/ui/sidebar';
+import { Button } from '@/components/ui/button';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  FormDescription,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { signOut } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
+
+const settingsSchema = z.object({
+  name: z.string().min(3, 'Nama kafe minimal 3 karakter.'),
+  logoUrl: z.string().url('URL logo tidak valid.').or(z.literal('')),
+  qrisImageUrl: z.string().url('URL gambar QRIS tidak valid.').or(z.literal('')),
+});
+
+type SettingsFormValues = z.infer<typeof settingsSchema>;
+
+// Function to generate a URL-friendly slug
+const createSlug = (name: string) => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9 -]/g, '') // remove invalid chars
+      .replace(/\s+/g, '-') // collapse whitespace and replace by -
+      .replace(/-+/g, '-'); // collapse dashes
+};
+
+export default function CafeSettingsPage() {
+  const router = useRouter();
+  const params = useParams();
+  const slug = params.slug as string;
+
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
+  const auth = useAuth();
+  const { toast } = useToast();
+
+  const [tenant, setTenant] = useState<Tenant | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  const form = useForm<SettingsFormValues>({
+    resolver: zodResolver(settingsSchema),
+    defaultValues: {
+      name: '',
+      logoUrl: '',
+      qrisImageUrl: '',
+    },
+  });
+
+  useEffect(() => {
+    if (isUserLoading || !firestore) {
+      return;
+    }
+
+    if (!user) {
+      router.replace('/admin/cafe/login');
+      return;
+    }
+    
+    const verifyUserAndTenant = async () => {
+      try {
+        const userDocRef = doc(firestore, 'users', user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+
+        if (!userDocSnap.exists()) throw new Error('Profil user tidak ditemukan.');
+        
+        const appUser = userDocSnap.data() as AppUser;
+        if (appUser.role !== 'admin_kafe' || !appUser.tenantId) {
+          throw new Error('Anda tidak memiliki hak akses sebagai admin kafe.');
+        }
+        
+        const tenantDocRef = doc(firestore, 'tenants', appUser.tenantId);
+        const tenantDocSnap = await getDoc(tenantDocRef);
+
+        if (!tenantDocSnap.exists()) throw new Error('Kafe yang Anda kelola tidak ditemukan.');
+        
+        const tenantData = { id: tenantDocSnap.id, ...tenantDocSnap.data() } as Tenant;
+        if (tenantData.slug !== slug) {
+          throw new Error('Anda tidak berwenang mengakses halaman ini.');
+        }
+
+        setTenant(tenantData);
+        // Populate form with fetched data
+        form.reset({
+          name: tenantData.name,
+          logoUrl: tenantData.logoUrl || '',
+          qrisImageUrl: tenantData.qrisImageUrl || '',
+        });
+
+      } catch (e: any) {
+        console.error("Verification error:", e);
+        setError(e.message || 'Terjadi kesalahan saat verifikasi.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    verifyUserAndTenant();
+
+  }, [user, isUserLoading, firestore, slug, router, form]);
+
+  const onSubmit = async (data: SettingsFormValues) => {
+    if (!firestore || !tenant) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Gagal menyimpan data.' });
+      return;
+    }
+
+    const tenantDocRef = doc(firestore, 'tenants', tenant.id);
+    const newSlug = createSlug(data.name);
+
+    try {
+      await updateDoc(tenantDocRef, {
+        ...data,
+        slug: newSlug,
+      });
+
+      toast({
+        title: 'Berhasil!',
+        description: 'Profil kafe Anda telah diperbarui.',
+      });
+
+      // If slug changes, redirect to the new admin URL
+      if (newSlug !== slug) {
+        router.replace(`/${newSlug}/admin/settings`);
+      }
+    } catch (error: any) {
+      console.error("Update error:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Gagal Menyimpan',
+        description: error.message || 'Terjadi kesalahan pada server.',
+      });
+    }
+  };
+
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast({ title: 'Logout Berhasil' });
+      router.replace('/admin/cafe/login');
+    } catch (error) {
+      console.error("Logout error:", error)
+      toast({ variant: 'destructive', title: 'Logout Gagal' });
+    }
+  };
+
+  const pageContent = () => {
+    if (isLoading || isUserLoading) {
+      return (
+        <div className="flex h-screen w-full items-center justify-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="ml-4 text-lg text-muted-foreground">Memuat data...</p>
+        </div>
+      );
+    }
+  
+    if (error) {
+       return (
+        <div className="flex h-screen w-full items-center justify-center p-4">
+          <Card className="max-w-md w-full border-destructive">
+            <CardHeader><CardTitle className="text-destructive text-center">Akses Ditolak</CardTitle></CardHeader>
+            <CardContent>
+              <p className="text-center text-destructive">{error}</p>
+              <Button onClick={() => router.push('/admin/cafe/login')} className="mt-4 w-full" variant="destructive">
+                Kembali ke Halaman Login
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    return (
+        <main className="flex-1 p-4 md:p-6 lg:p-8">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Setting Profil Kafe</CardTitle>
+                    <CardDescription>
+                        Perbarui informasi umum tentang kafe Anda. Perubahan nama akan otomatis mengubah URL kafe Anda.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                            <FormField
+                                control={form.control}
+                                name="name"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Nama Kafe</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Contoh: Kopi Kenangan" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={form.control}
+                                name="logoUrl"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>URL Logo</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="https://example.com/logo.png" {...field} />
+                                        </FormControl>
+                                        <FormDescription>URL publik untuk file gambar logo Anda.</FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={form.control}
+                                name="qrisImageUrl"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>URL Gambar QRIS</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="https://example.com/qris.jpg" {...field} />
+                                        </FormControl>
+                                         <FormDescription>URL publik untuk gambar kode QRIS Anda.</FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <Button type="submit" disabled={form.formState.isSubmitting}>
+                                {form.formState.isSubmitting ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Menyimpan...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Save className="mr-2 h-4 w-4" />
+                                        Simpan Perubahan
+                                    </>
+                                )}
+                            </Button>
+                        </form>
+                    </Form>
+                </CardContent>
+            </Card>
+        </main>
+    )
+  }
+  
+  return (
+    <SidebarProvider>
+      <Sidebar>
+        <SidebarHeader>
+          <div className="flex items-center gap-2">
+            <Store className="size-6 text-primary" />
+            <h2 className="font-headline text-lg">{tenant?.name || 'Admin Kafe'}</h2>
+          </div>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarMenu>
+            <SidebarMenuItem>
+               <SidebarMenuButton asChild>
+                    <Link href={`/${slug}/admin`}>
+                        <Settings />
+                        Dashboard
+                    </Link>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive>
+                <Link href={`/${slug}/admin/settings`}>
+                  <Settings />
+                  Setting Profil Kafe
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarContent>
+        <SidebarFooter>
+          <Button variant="ghost" onClick={handleLogout} className="w-full justify-start gap-2">
+            <LogOut />
+            <span>Logout</span>
+          </Button>
+        </SidebarFooter>
+      </Sidebar>
+      <SidebarInset>
+        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-card px-4 md:px-6">
+          <div className="flex items-center gap-2">
+            <SidebarTrigger className="md:hidden" />
+            <h1 className="font-headline text-xl font-semibold">
+              Settings
+            </h1>
+          </div>
+           <div className="flex items-center gap-2">
+            <p className="text-sm text-muted-foreground hidden md:block">
+              Login sebagai <span className="font-semibold text-foreground">{user?.email}</span>
+            </p>
+          </div>
+        </header>
+        {pageContent()}
+      </SidebarInset>
+    </SidebarProvider>
+  );
+}
