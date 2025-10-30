@@ -23,10 +23,11 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore } from '@/firebase';
+import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { nanoid } from 'nanoid';
+import { FirebaseError } from 'firebase/app';
 
 
 const addCafeSchema = z.object({
@@ -75,23 +76,37 @@ export function AddCafeDialog({ isOpen, onOpenChange }: AddCafeDialogProps) {
       const tokenHarian = nanoid(6).toUpperCase();
 
       const tenantsCollection = collection(firestore, 'tenants');
-      
-      await addDoc(tenantsCollection, {
+      const newCafeData = {
         name: data.name,
         slug: slug,
         tokenHarian: tokenHarian,
         createdAt: serverTimestamp(),
-      });
-
-      toast({
-        title: 'Kafe Berhasil Ditambahkan',
-        description: `Kafe "${data.name}" telah berhasil dibuat.`,
-      });
+      };
       
-      form.reset();
-      onOpenChange(false);
+      // Menggunakan addDoc dengan penanganan error yang benar
+      await addDoc(tenantsCollection, newCafeData)
+        .then(() => {
+            toast({
+                title: 'Kafe Berhasil Ditambahkan',
+                description: `Kafe "${data.name}" telah berhasil dibuat.`,
+            });
+            form.reset();
+            onOpenChange(false);
+        })
+        .catch((error: any) => {
+            if (error instanceof FirebaseError && error.code === 'permission-denied') {
+                const contextualError = new FirestorePermissionError({
+                    operation: 'create',
+                    path: 'tenants',
+                    requestResourceData: newCafeData,
+                });
+                errorEmitter.emit('permission-error', contextualError);
+            } else {
+                 throw error; // Lemparkan kembali error yang tidak terduga
+            }
+        });
+
     } catch (error: any) {
-      console.error('Error adding document: ', error);
       toast({
         variant: 'destructive',
         title: 'Gagal Menambahkan Kafe',
