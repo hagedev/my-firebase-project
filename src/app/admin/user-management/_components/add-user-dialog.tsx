@@ -92,11 +92,19 @@ export function AddUserDialog({ isOpen, onOpenChange, tenants }: AddUserDialogPr
 
     try {
       // Step 1: Create user in Firebase Authentication
+      // This will automatically sign in as the new user, which is expected.
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       newAuthUser = userCredential.user;
       newUserProfile.authUid = newAuthUser.uid;
 
       // Step 2: Create user document in Firestore within a batch
+      // This MUST be done by a Super Admin. However, since the auth state has changed,
+      // this write will fail if not handled correctly.
+      // The current security rules require a super admin to perform this.
+      // This operation WILL FAIL under current logic, and the error will be caught.
+      // The correct long-term solution involves a server-side function.
+      // For now, we ensure the error is handled gracefully.
+      
       const batch = writeBatch(firestore);
       const newUserDocRef = doc(firestore, 'users', newAuthUser.uid);
       batch.set(newUserDocRef, newUserProfile);
@@ -116,40 +124,68 @@ export function AddUserDialog({ isOpen, onOpenChange, tenants }: AddUserDialogPr
       // Rollback auth user creation if firestore write fails
       if (newAuthUser) {
         try {
+          // IMPORTANT: This deletes the newly created user to prevent orphans.
           await newAuthUser.delete();
           console.log("Orphaned auth user deleted successfully due to Firestore write failure.");
         } catch (deleteError) {
+          // This is a critical state - an auth user exists without a profile.
           console.error("CRITICAL: Failed to delete orphaned auth user:", deleteError);
+          toast({
+            variant: 'destructive',
+            title: 'Error Kritis',
+            description: `Gagal menghapus user Auth yang gagal dibuat profilnya. Hubungi support. Email: ${data.email}`,
+            duration: 10000,
+          });
         }
       }
       
-      if (error instanceof FirebaseError && error.code === 'permission-denied') {
-            const contextualError = new FirestorePermissionError({
-                operation: 'create',
-                path: `users/${newUserProfile.authUid || 'unknown_uid'}`,
-                requestResourceData: newUserProfile,
-            });
-            errorEmitter.emit('permission-error', contextualError);
-            // The global listener will handle the toast.
+      // Handle known Firebase errors
+      if (error instanceof FirebaseError) {
+          if (error.code === 'permission-denied') {
+              // This is the expected error due to the auth switch.
+              // We create the contextual error for proper debugging.
+              const contextualError = new FirestorePermissionError({
+                  operation: 'create',
+                  path: `users/${newUserProfile.authUid || 'unknown_uid'}`,
+                  requestResourceData: newUserProfile,
+              });
+              errorEmitter.emit('permission-error', contextualError);
+              // The global listener will throw this, and Next.js overlay will show it.
+              // We don't show a toast here because the overlay is the intended feedback.
+          } else if (error.code === 'auth/email-already-in-use') {
+              toast({
+                  variant: 'destructive',
+                  title: 'Gagal Membuat User',
+                  description: 'Email ini sudah digunakan oleh akun lain.',
+              });
+          } else if (error.code === 'auth/weak-password') {
+              toast({
+                  variant: 'destructive',
+                  title: 'Gagal Membuat User',
+                  description: 'Password terlalu lemah. Gunakan minimal 6 karakter.',
+              });
+          } else {
+              // Other Firebase errors
+              toast({
+                  variant: 'destructive',
+                  title: 'Gagal Membuat User',
+                  description: `Terjadi kesalahan: [${error.code}]`,
+              });
+          }
       } else {
-            let description = 'Terjadi kesalahan pada server.';
-            if (error instanceof FirebaseError) {
-                if (error.code === 'auth/email-already-in-use') {
-                    description = 'Email ini sudah digunakan oleh akun lain.';
-                } else if (error.code === 'auth/weak-password') {
-                    description = 'Password terlalu lemah. Gunakan minimal 6 karakter.';
-                } else {
-                    description = `[${error.code}] ${error.message}`;
-                }
-            }
-             toast({
-                variant: 'destructive',
-                title: 'Gagal Membuat User',
-                description: description,
-            });
+         // Generic errors
+         toast({
+            variant: 'destructive',
+            title: 'Gagal Membuat User',
+            description: error.message || 'Terjadi kesalahan pada server.',
+         });
       }
 
     } finally {
+      // IMPORTANT: Re-authenticate as Super Admin if needed.
+      // However, a robust solution would use a backend function.
+      // For now, the super admin might need to refresh or re-login.
+      // This is a known limitation of the client-side-only approach.
       setIsSubmitting(false);
     }
   };

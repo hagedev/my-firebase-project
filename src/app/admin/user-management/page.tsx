@@ -59,24 +59,44 @@ export default function UserManagementPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
 
+  // This effect ensures that only the super admin can view this page.
+  // It redirects non-super-admins or unauthenticated users to the login page.
+  useEffect(() => {
+    if (isUserLoading) return; // Wait until user status is resolved
+
+    if (!user) {
+      router.replace('/admin/login?error=unauthorized');
+      return;
+    }
+
+    if (user.uid !== SUPER_ADMIN_UID) {
+      // If a non-super-admin user is logged in, show an error and redirect.
+      toast({
+        variant: 'destructive',
+        title: 'Akses Ditolak',
+        description: 'Hanya Super Admin yang dapat mengakses halaman ini.',
+      });
+      router.replace('/admin/cafe/login'); // Redirect to cafe admin login
+    }
+  }, [user, isUserLoading, router, toast]);
+
+
   const usersQuery = useMemoFirebase(
     () => {
-      // Hanya Super Admin yang boleh melakukan query ini.
       if (firestore && user?.uid === SUPER_ADMIN_UID) {
         return query(collection(firestore, 'users'), where('role', '==', 'admin_kafe'));
       }
-      return null;
+      return null; // Return null if not super admin, preventing the query
     },
     [firestore, user]
   );
   
   const tenantsCollectionRef = useMemoFirebase(
     () => {
-      // Hanya Super Admin yang perlu memuat semua tenant.
       if (firestore && user?.uid === SUPER_ADMIN_UID) {
         return collection(firestore, 'tenants');
       }
-      return null;
+      return null; // Return null if not super admin
     },
     [firestore, user]
   );
@@ -84,17 +104,6 @@ export default function UserManagementPage() {
   const { data: adminUsers, isLoading: isUsersLoading } = useCollection<AppUser>(usersQuery);
   const { data: tenants, isLoading: isTenantsLoading } = useCollection<Tenant>(tenantsCollectionRef);
 
-  useEffect(() => {
-    if (isUserLoading) return;
-    // Redirect if not logged in at all
-    if (!user) {
-      router.replace('/admin/login?error=unauthorized');
-    }
-    // DO NOT redirect if the user is logged in but is not the super admin.
-    // This prevents the page from redirecting away after creating a new user,
-    // which briefly changes the auth state. The UI will handle showing a loading
-    // or access denied state instead.
-  }, [user, isUserLoading, router]);
 
   const handleLogout = async () => {
     try {
@@ -103,6 +112,7 @@ export default function UserManagementPage() {
             title: 'Logout Berhasil',
             description: 'Anda telah keluar dari sesi super admin.',
         });
+        // The useEffect above will handle the redirect after state change.
     } catch (error) {
         console.error("Logout error:", error)
         toast({
@@ -123,6 +133,7 @@ export default function UserManagementPage() {
     setIsDeleteDialogOpen(true);
   };
 
+  // Show a loading screen while user status is being determined or if they are not the super admin yet.
   if (isUserLoading || !user || user.uid !== SUPER_ADMIN_UID) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
