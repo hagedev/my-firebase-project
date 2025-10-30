@@ -41,3 +41,11 @@ export interface Category {
     name: string;
     tenantId: string;
 }
+
+// Merepresentasikan struktur data dari sebuah dokumen Table di Firestore.
+export interface Table {
+    id: string;
+    tenantId: string;
+    tableNumber: number;
+    status: 'available' | 'occupied';
+}

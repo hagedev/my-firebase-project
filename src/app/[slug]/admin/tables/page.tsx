@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useUser, useFirestore, useAuth } from '@/firebase';
-import { doc, getDoc } from 'firebase/firestore';
-import type { Tenant, User as AppUser } from '@/lib/types';
+import { useUser, useFirestore, useAuth, useCollection, useMemoFirebase } from '@/firebase';
+import { doc, getDoc, collection, query } from 'firebase/firestore';
+import type { Tenant, User as AppUser, Table as TableType } from '@/lib/types';
 import {
   Loader2,
   LogOut,
@@ -12,7 +12,9 @@ import {
   Store,
   Utensils,
   Armchair,
-  PlusCircle
+  PlusCircle,
+  MoreHorizontal,
+  QrCode
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
@@ -35,10 +37,21 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { AddTableDialog } from './_components/add-table-dialog';
+import { DeleteTableDialog } from './_components/delete-table-dialog';
 
 export default function CafeTableManagementPage() {
   const router = useRouter();
@@ -54,6 +67,18 @@ export default function CafeTableManagementPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [isAddTableDialogOpen, setIsAddTableDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedTable, setSelectedTable] = useState<TableType | null>(null);
+
+  // --- Data Fetching ---
+  const tablesCollectionRef = useMemoFirebase(
+    () => (firestore && tenant ? collection(firestore, `tenants/${tenant.id}/tables`) : null),
+    [firestore, tenant]
+  );
+  
+  const { data: tables, isLoading: isTablesLoading } = useCollection<TableType>(tablesCollectionRef);
+  
   // --- User and Tenant Verification ---
   useEffect(() => {
     if (isUserLoading || !firestore) return;
@@ -108,6 +133,21 @@ export default function CafeTableManagementPage() {
     }
   };
 
+  const handleDeleteClick = (table: TableType) => {
+    setSelectedTable(table);
+    setIsDeleteDialogOpen(true);
+  };
+  
+  const handleGenerateQR = (table: TableType) => {
+    const orderUrl = `${window.location.origin}/${slug}/order/${table.id}`;
+    // For now, just log it. Later we can show a QR code modal.
+    console.log(`QR Code URL for Table ${table.tableNumber}: ${orderUrl}`);
+    toast({
+      title: `URL QR Code untuk Meja ${table.tableNumber}`,
+      description: orderUrl,
+    });
+  };
+
   // --- Page Content Rendering ---
   const pageContent = () => {
     if (isLoading || isUserLoading) {
@@ -135,44 +175,106 @@ export default function CafeTableManagementPage() {
     }
 
     return (
-      <main className="flex-1 p-4 md:p-6 lg:p-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="font-headline text-2xl md:text-3xl font-bold">Manajemen Meja</h1>
-            <p className="text-muted-foreground">Tambah, edit, atau hapus data meja di kafe Anda.</p>
+      <>
+        <main className="flex-1 p-4 md:p-6 lg:p-8">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="font-headline text-2xl md:text-3xl font-bold">Manajemen Meja</h1>
+              <p className="text-muted-foreground">Tambah, hapus, dan generate QR Code untuk meja di kafe Anda.</p>
+            </div>
+            <Button onClick={() => setIsAddTableDialogOpen(true)}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Tambah Meja
+            </Button>
           </div>
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Tambah Meja
-          </Button>
-        </div>
-        <Card>
-            <CardHeader>
-                <CardTitle>Daftar Meja</CardTitle>
-                <CardDescription>Berikut adalah daftar meja yang tersedia di kafe Anda.</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="border rounded-md">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nomor Meja</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Aksi</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                        <TableCell colSpan={3} className="text-center h-24">
-                          Belum ada meja yang ditambahkan.
+          <Card>
+              <CardHeader>
+                  <CardTitle>Daftar Meja</CardTitle>
+                  <CardDescription>Berikut adalah daftar meja yang tersedia di kafe Anda.</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="border rounded-md">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nomor Meja</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>URL Pesan</TableHead>
+                        <TableHead className="text-right">Aksi</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                    {isTablesLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center h-24">
+                          <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
                         </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-        </Card>
-      </main>
+                      </TableRow>
+                    ) : tables && tables.length > 0 ? (
+                       tables.sort((a, b) => a.tableNumber - b.tableNumber).map((table) => (
+                        <TableRow key={table.id}>
+                            <TableCell className="font-medium">{table.tableNumber}</TableCell>
+                            <TableCell>
+                                <Badge variant={table.status === 'available' ? 'secondary' : 'default'}>
+                                {table.status === 'available' ? 'Tersedia' : 'Terisi'}
+                                </Badge>
+                            </TableCell>
+                            <TableCell className='text-xs text-muted-foreground'>
+                              {`/${slug}/order/${table.id}`}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <span className="sr-only">Buka menu</span>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuLabel>Aksi</DropdownMenuLabel>
+                                  <DropdownMenuItem onClick={() => handleGenerateQR(table)}>
+                                    <QrCode className="mr-2 h-4 w-4" />
+                                    <span>Generate QR Code</span>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem 
+                                    className="text-destructive"
+                                    onClick={() => handleDeleteClick(table)}
+                                  >
+                                    Hapus
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                        </TableRow>
+                       ))
+                    ) : (
+                      <TableRow>
+                          <TableCell colSpan={4} className="text-center h-24">
+                            Belum ada meja yang ditambahkan.
+                          </TableCell>
+                      </TableRow>
+                    )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+          </Card>
+        </main>
+        
+        <AddTableDialog 
+            isOpen={isAddTableDialogOpen}
+            onOpenChange={setIsAddTableDialogOpen}
+            tenantId={tenant?.id || ''}
+        />
+        {selectedTable && (
+            <DeleteTableDialog
+                isOpen={isDeleteDialogOpen}
+                onOpenChange={setIsDeleteDialogOpen}
+                table={selectedTable}
+            />
+        )}
+      </>
     );
   };
   
