@@ -45,6 +45,8 @@ import { AddUserDialog } from './_components/add-user-dialog';
 import { EditUserDialog } from './_components/edit-user-dialog';
 import { DeleteUserDialog } from './_components/delete-user-dialog';
 
+const SUPER_ADMIN_UID = 'ttFbsVWt14cdTwVlKs1AbgBLUtx1';
+
 export default function UserManagementPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
@@ -58,12 +60,25 @@ export default function UserManagementPage() {
   const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
 
   const usersQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, 'users'), where('role', '==', 'admin_kafe')) : null),
-    [firestore]
+    () => {
+      // Hanya Super Admin yang boleh melakukan query ini.
+      if (firestore && user?.uid === SUPER_ADMIN_UID) {
+        return query(collection(firestore, 'users'), where('role', '==', 'admin_kafe'));
+      }
+      return null;
+    },
+    [firestore, user]
   );
+  
   const tenantsCollectionRef = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'tenants') : null),
-    [firestore]
+    () => {
+      // Hanya Super Admin yang perlu memuat semua tenant.
+      if (firestore && user?.uid === SUPER_ADMIN_UID) {
+        return collection(firestore, 'tenants');
+      }
+      return null;
+    },
+    [firestore, user]
   );
   
   const { data: adminUsers, isLoading: isUsersLoading } = useCollection<AppUser>(usersQuery);
@@ -73,8 +88,16 @@ export default function UserManagementPage() {
     if (isUserLoading) return;
     if (!user) {
       router.replace('/admin/login?error=unauthorized');
+    } else if (user.uid !== SUPER_ADMIN_UID) {
+      // Jika user bukan super admin, tendang dari halaman ini.
+      toast({
+        variant: 'destructive',
+        title: 'Akses Ditolak',
+        description: 'Anda tidak memiliki izin untuk mengakses halaman manajemen user.'
+      })
+      router.replace('/admin/cafe/login');
     }
-  }, [user, isUserLoading, router]);
+  }, [user, isUserLoading, router, toast]);
 
   const handleLogout = async () => {
     try {
@@ -103,7 +126,7 @@ export default function UserManagementPage() {
     setIsDeleteDialogOpen(true);
   };
 
-  if (isUserLoading || !user) {
+  if (isUserLoading || !user || user.uid !== SUPER_ADMIN_UID) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary"></div>
