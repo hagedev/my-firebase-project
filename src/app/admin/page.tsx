@@ -6,8 +6,20 @@ import { Button } from '@/components/ui/button';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogOut } from 'lucide-react';
+import { LogOut, Shield, Store } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import {
+  SidebarProvider,
+  Sidebar,
+  SidebarHeader,
+  SidebarContent,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarInset,
+  SidebarTrigger,
+  SidebarFooter,
+} from '@/components/ui/sidebar';
 
 export default function AdminDashboardPage() {
   const { user, isUserLoading } = useUser();
@@ -16,19 +28,12 @@ export default function AdminDashboardPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // 1. Jangan lakukan apa-apa selagi status autentikasi masih loading.
     if (isUserLoading) {
       return; 
     }
-
-    // 2. Setelah loading selesai, jika TIDAK ADA user, redirect paksa ke login.
-    // Ini akan menangani kasus akses langsung ke URL atau sesi yang sudah berakhir.
     if (!user) {
       router.replace('/admin/login?error=unauthorized');
     }
-
-    // Jika user ada, biarkan halaman dirender. Pengecekan peran super admin
-    // sudah dilakukan secara tuntas di halaman login.
   }, [user, isUserLoading, router]);
 
   const handleLogout = async () => {
@@ -38,8 +43,6 @@ export default function AdminDashboardPage() {
             title: 'Logout Berhasil',
             description: 'Anda telah keluar dari sesi super admin.',
         });
-        // `useEffect` di atas akan otomatis mendeteksi perubahan `user` menjadi `null`
-        // dan mengalihkan ke halaman login.
     } catch (error) {
         console.error("Logout error:", error)
         toast({
@@ -50,9 +53,7 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // Tampilkan layar loading untuk menunggu hasil pengecekan `useEffect`.
-  // Ini adalah bagian krusial untuk mencegah "kedipan" konten atau redirect prematur.
-  if (isUserLoading) {
+  if (isUserLoading || !user) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary"></div>
@@ -60,35 +61,54 @@ export default function AdminDashboardPage() {
     );
   }
 
-  // Jika setelah loading selesai ternyata tidak ada user, useEffect sudah
-  // memulai proses redirect. Return null untuk memastikan tidak ada
-  // konten dashboard yang ter-render sebelum redirect selesai.
-  if (!user) {
-    return null;
-  }
-
-  // Jika semua pengecekan lolos, tampilkan dashboard.
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-       <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-card px-4 md:px-6">
-        <h1 className="font-headline text-xl font-semibold">
-          AirCafe Super Admin
-        </h1>
-        <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout">
-          <LogOut className="h-5 w-5" />
-        </Button>
-      </header>
-      <main className="flex-1 p-4 md:p-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Dashboard</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>Anda telah berhasil login sebagai super admin!</p>
-            <p className="text-sm text-muted-foreground mt-2">Email: {user.email}</p>
-          </CardContent>
-        </Card>
-      </main>
-    </div>
+    <SidebarProvider>
+      <Sidebar>
+        <SidebarHeader>
+          <div className="flex items-center gap-2">
+            <Shield className="size-6 text-primary" />
+            <h2 className="font-headline text-lg">Super Admin</h2>
+          </div>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton href="/admin/cafe-management" isActive>
+                <Store />
+                Manajemen Kafe
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarContent>
+        <SidebarFooter>
+           <Button variant="ghost" onClick={handleLogout} className="w-full justify-start gap-2">
+            <LogOut />
+            <span>Logout</span>
+          </Button>
+        </SidebarFooter>
+      </Sidebar>
+      <SidebarInset>
+        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-card px-4 md:px-6">
+          <div className="flex items-center gap-2">
+             <SidebarTrigger className="md:hidden" />
+             <h1 className="font-headline text-xl font-semibold">
+              Dashboard
+            </h1>
+          </div>
+          <p className="hidden md:block text-sm text-muted-foreground">{user.email}</p>
+        </header>
+        <main className="flex-1 p-4 md:p-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Selamat Datang!</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p>Anda telah berhasil login sebagai super admin!</p>
+              <p className="text-sm text-muted-foreground mt-2">Gunakan menu di sidebar untuk mulai mengelola kafe.</p>
+            </CardContent>
+          </Card>
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
