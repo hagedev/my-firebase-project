@@ -118,37 +118,35 @@ export function CheckoutDialog({
       createdAt: serverTimestamp(),
     };
 
-    try {
-        const ordersCollectionRef = collection(firestore, `tenants/${tenant.id}/orders`);
-        const newOrderRef = await addDoc(ordersCollectionRef, orderData);
-        
+    const ordersCollectionRef = collection(firestore, `tenants/${tenant.id}/orders`);
+    addDoc(ordersCollectionRef, orderData)
+      .then((newOrderRef) => {
         toast({
-            title: 'Pesanan Berhasil Dibuat!',
-            description: 'Anda akan diarahkan ke halaman status pesanan.',
+          title: 'Pesanan Berhasil Dibuat!',
+          description: 'Anda akan diarahkan ke halaman status pesanan.',
         });
-
-        // Redirect to status/payment page
         router.replace(`/${tenant.slug}/order/${table.id}/status/${newOrderRef.id}`);
-
-    } catch (error: any) {
+      })
+      .catch((error: any) => {
         console.error('Order submission error:', error);
-         if (error instanceof FirebaseError && error.code === 'permission-denied') {
-            const contextualError = new FirestorePermissionError({
-                operation: 'create',
-                path: `tenants/${tenant.id}/orders`,
-                requestResourceData: orderData,
-            });
-            errorEmitter.emit('permission-error', contextualError);
+        if (error instanceof FirebaseError && error.code === 'permission-denied') {
+          const contextualError = new FirestorePermissionError({
+            operation: 'create',
+            path: `tenants/${tenant.id}/orders`,
+            requestResourceData: orderData,
+          });
+          errorEmitter.emit('permission-error', contextualError);
         } else {
-             toast({
-                variant: 'destructive',
-                title: 'Gagal Membuat Pesanan',
-                description: error.message || 'Terjadi kesalahan pada server.',
-            });
+          toast({
+            variant: 'destructive',
+            title: 'Gagal Membuat Pesanan',
+            description: error.message || 'Terjadi kesalahan pada server.',
+          });
         }
-    } finally {
+      })
+      .finally(() => {
         setIsSubmitting(false);
-    }
+      });
   };
 
   return (
