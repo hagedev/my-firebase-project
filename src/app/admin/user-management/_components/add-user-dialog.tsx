@@ -98,7 +98,6 @@ export function AddUserDialog({ isOpen, onOpenChange, tenants }: AddUserDialogPr
         role: 'admin_kafe',
         tenantId: data.tenantId,
         tenantName: selectedTenant.name, // Denormalize tenant name for easy display
-        createdAt: serverTimestamp(),
       };
 
       // Use batch.set() to create the document with the specified ID
