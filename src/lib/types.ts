@@ -34,3 +34,10 @@ export interface Menu {
     categoryId: string;
     available: boolean;
 }
+
+// Merepresentasikan struktur data dari sebuah dokumen Category di Firestore.
+export interface Category {
+    id: string;
+    name: string;
+    tenantId: string;
+}

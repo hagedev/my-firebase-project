@@ -3,8 +3,8 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser, useFirestore, useAuth, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, getDoc, collection, query, updateDoc } from 'firebase/firestore';
-import type { Tenant, User as AppUser, Menu as MenuType, Category } from '@/lib/types';
+import { doc, getDoc, collection, writeBatch } from 'firebase/firestore';
+import type { Tenant, User as AppUser, Category } from '@/lib/types';
 import {
   Loader2,
   LogOut,
@@ -37,8 +37,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,10 +48,10 @@ import {
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { formatRupiah } from '@/lib/utils';
-import { AddMenuDialog } from './_components/add-menu-dialog';
 
-export default function CafeMenuManagementPage() {
+const DEFAULT_CATEGORIES = ["Makanan", "Snack", "Minuman Kopi", "Minuman Non Kopi"];
+
+export default function CafeCategoryManagementPage() {
   const router = useRouter();
   const params = useParams();
   const slug = params.slug as string;
@@ -66,27 +64,16 @@ export default function CafeMenuManagementPage() {
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isAddMenuDialogOpen, setIsAddMenuDialogOpen] = useState(false);
 
   // --- Data Fetching ---
-  const menusCollectionRef = useMemoFirebase(
-    () => (firestore && tenant ? collection(firestore, `tenants/${tenant.id}/menus`) : null),
-    [firestore, tenant]
-  );
   const categoriesCollectionRef = useMemoFirebase(
     () => (firestore && tenant ? collection(firestore, `tenants/${tenant.id}/categories`) : null),
     [firestore, tenant]
   );
   
-  const { data: menuItems, isLoading: isMenuLoading } = useCollection<MenuType>(menusCollectionRef);
   const { data: categories, isLoading: isCategoriesLoading } = useCollection<Category>(categoriesCollectionRef);
 
-  const categoryMap = useMemo(() => {
-    if (!categories) return new Map();
-    return new Map(categories.map(cat => [cat.id, cat.name]));
-  }, [categories]);
-
-  // --- User and Tenant Verification ---
+  // --- User and Tenant Verification & Default Categories Seeding ---
   useEffect(() => {
     if (isUserLoading || !firestore) return;
     if (!user) {
@@ -94,11 +81,11 @@ export default function CafeMenuManagementPage() {
       return;
     }
     
-    const verifyUserAndTenant = async () => {
+    const initializePage = async () => {
       try {
+        // Step 1: Verify User and Tenant
         const userDocRef = doc(firestore, 'users', user.uid);
         const userDocSnap = await getDoc(userDocRef);
-
         if (!userDocSnap.exists()) throw new Error('Profil user tidak ditemukan.');
         
         const appUser = userDocSnap.data() as AppUser;
@@ -108,25 +95,51 @@ export default function CafeMenuManagementPage() {
         
         const tenantDocRef = doc(firestore, 'tenants', appUser.tenantId);
         const tenantDocSnap = await getDoc(tenantDocRef);
-
         if (!tenantDocSnap.exists()) throw new Error('Kafe yang Anda kelola tidak ditemukan.');
         
         const tenantData = { id: tenantDocSnap.id, ...tenantDocSnap.data() } as Tenant;
         if (tenantData.slug !== slug) {
           throw new Error('Anda tidak berwenang mengakses halaman ini.');
         }
-
         setTenant(tenantData);
+
+        // Step 2: Seed Default Categories if none exist
+        // This runs AFTER the collection listener has had a chance to load.
+        if (categories !== null && categories.length === 0) {
+            const categoriesRef = collection(firestore, `tenants/${tenantData.id}/categories`);
+            const batch = writeBatch(firestore);
+            
+            DEFAULT_CATEGORIES.forEach(categoryName => {
+                const newCategoryRef = doc(categoriesRef); // Create a new doc with a random ID
+                batch.set(newCategoryRef, { 
+                    name: categoryName,
+                    tenantId: tenantData.id,
+                });
+            });
+
+            await batch.commit();
+            toast({
+                title: "Kategori Default Dibuat",
+                description: "Beberapa kategori awal telah ditambahkan untuk Anda."
+            });
+            // The `useCollection` hook will automatically update the UI with the new data.
+        }
+
       } catch (e: any) {
-        console.error("Verification error:", e);
-        setError(e.message || 'Terjadi kesalahan saat verifikasi.');
+        console.error("Initialization error:", e);
+        setError(e.message || 'Terjadi kesalahan saat inisialisasi halaman.');
       } finally {
         setIsLoading(false);
       }
     };
 
-    verifyUserAndTenant();
-  }, [user, isUserLoading, firestore, slug, router]);
+    // We delay the initialization slightly if categories are still loading to prevent race conditions.
+    if (!isCategoriesLoading) {
+      initializePage();
+    }
+
+  }, [user, isUserLoading, firestore, slug, router, categories, isCategoriesLoading]);
+
 
   // --- Handlers ---
   const handleLogout = async () => {
@@ -140,23 +153,6 @@ export default function CafeMenuManagementPage() {
     }
   };
 
-  const handleAvailabilityChange = async (menuId: string, available: boolean) => {
-    if (!firestore || !tenant) return;
-    try {
-        const menuDocRef = doc(firestore, `tenants/${tenant.id}/menus`, menuId);
-        await updateDoc(menuDocRef, { available });
-        toast({
-            title: 'Ketersediaan Diperbarui',
-            description: `Menu sekarang ${available ? 'tersedia' : 'tidak tersedia'}.`,
-        });
-    } catch (error: any) {
-        toast({
-            variant: 'destructive',
-            title: 'Gagal Memperbarui',
-            description: error.message,
-        });
-    }
-  };
 
   // --- Page Content Rendering ---
   const pageContent = () => {
@@ -189,12 +185,12 @@ export default function CafeMenuManagementPage() {
         <main className="flex-1 p-4 md:p-6 lg:p-8">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="font-headline text-2xl md:text-3xl font-bold">Manajemen Menu</h1>
-              <p className="text-muted-foreground">Tambah, edit, atau hapus item menu untuk kafe Anda.</p>
+              <h1 className="font-headline text-2xl md:text-3xl font-bold">Manajemen Kategori</h1>
+              <p className="text-muted-foreground">Atur kategori untuk item menu Anda.</p>
             </div>
-            <Button onClick={() => setIsAddMenuDialogOpen(true)}>
+            <Button>
               <PlusCircle className="mr-2 h-4 w-4" />
-              Tambah Menu
+              Tambah Kategori
             </Button>
           </div>
           <Card>
@@ -203,32 +199,21 @@ export default function CafeMenuManagementPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Nama Menu</TableHead>
-                      <TableHead>Kategori</TableHead>
-                      <TableHead>Harga</TableHead>
-                      <TableHead>Ketersediaan</TableHead>
+                      <TableHead>Nama Kategori</TableHead>
                       <TableHead className="text-right">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {isMenuLoading ? (
+                    {isCategoriesLoading ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center h-24">
+                        <TableCell colSpan={2} className="text-center h-24">
                           <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
                         </TableCell>
                       </TableRow>
-                    ) : menuItems && menuItems.length > 0 ? (
-                      menuItems.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.name}</TableCell>
-                          <TableCell><Badge variant="secondary">{categoryMap.get(item.categoryId) || 'N/A'}</Badge></TableCell>
-                          <TableCell>{formatRupiah(item.price)}</TableCell>
-                          <TableCell>
-                            <Switch
-                              checked={item.available}
-                              onCheckedChange={(checked) => handleAvailabilityChange(item.id, checked)}
-                            />
-                          </TableCell>
+                    ) : categories && categories.length > 0 ? (
+                      categories.map((cat) => (
+                        <TableRow key={cat.id}>
+                          <TableCell className="font-medium">{cat.name}</TableCell>
                           <TableCell className="text-right">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -249,8 +234,8 @@ export default function CafeMenuManagementPage() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center h-24">
-                          Belum ada menu yang ditambahkan.
+                        <TableCell colSpan={2} className="text-center h-24">
+                          Belum ada kategori yang ditambahkan.
                         </TableCell>
                       </TableRow>
                     )}
@@ -260,13 +245,6 @@ export default function CafeMenuManagementPage() {
             </CardContent>
           </Card>
         </main>
-        
-        <AddMenuDialog
-            isOpen={isAddMenuDialogOpen}
-            onOpenChange={setIsAddMenuDialogOpen}
-            tenantId={tenant?.id || ''}
-            categories={categories || []}
-        />
       </>
     );
   };
@@ -291,15 +269,15 @@ export default function CafeMenuManagementPage() {
                 </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive>
+              <SidebarMenuButton asChild>
                 <Link href={`/${slug}/admin/menu`}>
                   <Utensils />
                   Manajemen Menu
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-             <SidebarMenuItem>
-              <SidebarMenuButton asChild>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive>
                 <Link href={`/${slug}/admin/categories`}>
                   <LayoutGrid />
                   Manajemen Kategori
@@ -328,7 +306,7 @@ export default function CafeMenuManagementPage() {
           <div className="flex items-center gap-2">
             <SidebarTrigger className="md:hidden" />
             <h1 className="font-headline text-xl font-semibold">
-              Manajemen Menu
+              Manajemen Kategori
             </h1>
           </div>
            <div className="flex items-center gap-2">
