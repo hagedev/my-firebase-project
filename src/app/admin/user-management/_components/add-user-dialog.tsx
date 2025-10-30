@@ -91,15 +91,18 @@ export function AddUserDialog({ isOpen, onOpenChange, tenants }: AddUserDialogPr
       // IMPORTANT: Use the user's UID as the document ID
       const newUserDocRef = doc(firestore, 'users', newAuthUser.uid);
 
-      // Use batch.set() to create the document with the specified ID
-      batch.set(newUserDocRef, {
+      // Minimal user data
+      const newUserProfile = {
         authUid: newAuthUser.uid,
         email: data.email,
         role: 'admin_kafe',
         tenantId: data.tenantId,
-        tenantName: selectedTenant.name, // Denormalize tenant name
+        tenantName: selectedTenant.name, // Denormalize tenant name for easy display
         createdAt: serverTimestamp(),
-      });
+      };
+
+      // Use batch.set() to create the document with the specified ID
+      batch.set(newUserDocRef, newUserProfile);
 
       // Commit the batch
       await batch.commit();

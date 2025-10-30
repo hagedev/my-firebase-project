@@ -6,11 +6,6 @@
       "type": "object",
       "description": "Represents a cafe (tenant) in the AirCafe application.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the tenant.",
-          "format": "uuid"
-        },
         "name": {
           "type": "string",
           "description": "The name of the cafe."
@@ -21,12 +16,12 @@
         },
         "logoUrl": {
           "type": "string",
-          "description": "URL of the cafe's logo.",
+          "description": "URL of the cafe's logo. Can be completed by the cafe admin later.",
           "format": "uri"
         },
         "qrisImageUrl": {
           "type": "string",
-          "description": "URL of the cafe's QRIS image for payments.",
+          "description": "URL of the cafe's QRIS image for payments. Can be completed by the cafe admin later.",
           "format": "uri"
         },
         "tokenHarian": {
@@ -35,7 +30,6 @@
         }
       },
       "required": [
-        "id",
         "name",
         "slug",
         "tokenHarian"
@@ -47,18 +41,18 @@
       "type": "object",
       "description": "Represents a user of the AirCafe application (admin or superadmin). The document ID for this entity is the same as the Firebase Auth UID.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the user, which is the Firebase Auth UID.",
-          "format": "uuid"
-        },
         "authUid": {
           "type": "string",
-          "description": "Firebase Auth UID for the user."
+          "description": "Firebase Auth UID for the user. This is the same as the document ID."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address.",
+          "format": "email"
         },
         "tenantId": {
           "type": "string",
-          "description": "Reference to Tenant. (Relationship: Tenant 1:N User). The ID of the tenant this user belongs to (if applicable).  Null for superadmin."
+          "description": "Reference to Tenant. (Relationship: Tenant 1:N User). The ID of the tenant this user belongs to (if applicable). Null for superadmin."
         },
         "role": {
           "type": "string",
@@ -66,8 +60,8 @@
         }
       },
       "required": [
-        "id",
         "authUid",
+        "email",
         "role"
       ]
     },

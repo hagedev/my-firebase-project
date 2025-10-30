@@ -71,47 +71,45 @@ export function AddCafeDialog({ isOpen, onOpenChange }: AddCafeDialogProps) {
     }
     setIsSubmitting(true);
 
-    try {
-      const slug = createSlug(data.name);
-      const tokenHarian = nanoid(6).toUpperCase();
+    const tenantsCollection = collection(firestore, 'tenants');
+    const slug = createSlug(data.name);
+    const tokenHarian = nanoid(6).toUpperCase();
 
-      const tenantsCollection = collection(firestore, 'tenants');
-      const newCafeData = {
-        name: data.name,
-        slug: slug,
-        tokenHarian: tokenHarian,
-        createdAt: serverTimestamp(),
-      };
+    // Data minimal yang dibuat oleh Super Admin
+    const newCafeData = {
+      name: data.name,
+      slug: slug,
+      tokenHarian: tokenHarian,
+      createdAt: serverTimestamp(),
+      logoUrl: '', // Dikosongkan, diisi oleh admin kafe nanti
+      qrisImageUrl: '', // Dikosongkan, diisi oleh admin kafe nanti
+    };
+
+    try {
+      await addDoc(tenantsCollection, newCafeData);
       
-      // Menggunakan addDoc dengan penanganan error yang benar
-      await addDoc(tenantsCollection, newCafeData)
-        .then(() => {
-            toast({
-                title: 'Kafe Berhasil Ditambahkan',
-                description: `Kafe "${data.name}" telah berhasil dibuat.`,
-            });
-            form.reset();
-            onOpenChange(false);
-        })
-        .catch((error: any) => {
-            if (error instanceof FirebaseError && error.code === 'permission-denied') {
-                const contextualError = new FirestorePermissionError({
-                    operation: 'create',
-                    path: 'tenants',
-                    requestResourceData: newCafeData,
-                });
-                errorEmitter.emit('permission-error', contextualError);
-            } else {
-                 throw error; // Lemparkan kembali error yang tidak terduga
-            }
-        });
+      toast({
+          title: 'Kafe Berhasil Ditambahkan',
+          description: `Kafe "${data.name}" telah berhasil dibuat.`,
+      });
+      form.reset();
+      onOpenChange(false);
 
     } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Gagal Menambahkan Kafe',
-        description: error.message || 'Terjadi kesalahan pada server.',
-      });
+        if (error instanceof FirebaseError && error.code === 'permission-denied') {
+            const contextualError = new FirestorePermissionError({
+                operation: 'create',
+                path: 'tenants',
+                requestResourceData: newCafeData,
+            });
+            errorEmitter.emit('permission-error', contextualError);
+        } else {
+             toast({
+                variant: 'destructive',
+                title: 'Gagal Menambahkan Kafe',
+                description: error.message || 'Terjadi kesalahan pada server.',
+            });
+        }
     } finally {
       setIsSubmitting(false);
     }
@@ -123,7 +121,7 @@ export function AddCafeDialog({ isOpen, onOpenChange }: AddCafeDialogProps) {
         <DialogHeader>
           <DialogTitle>Tambah Kafe Baru</DialogTitle>
           <DialogDescription>
-            Masukkan nama kafe baru. Slug dan Token Harian akan dibuat secara otomatis.
+            Masukkan nama kafe baru. Data lain dapat dilengkapi oleh Admin Kafe.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
