@@ -19,9 +19,7 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetFooter,
   SheetTrigger,
-  SheetClose,
 } from "@/components/ui/sheet"
 
 export default function OrderPage() {
@@ -165,21 +163,19 @@ export default function OrderPage() {
       )}
       </div>
        {cart.length > 0 && (
-        <>
+        <div className="flex-shrink-0 pt-4 space-y-4">
           <Separator />
-          <div className="flex-shrink-0 pt-4 space-y-4">
-            <div className="flex justify-between font-bold text-lg">
-                <p>Total</p>
-                <p>{formatRupiah(totalAmount)}</p>
-            </div>
-            <Button onClick={handleCheckout} className="w-full" disabled={cart.length === 0}>
-                Pesan Sekarang ({totalItems} item)
-            </Button>
-            <Button onClick={clearCart} className="w-full" variant="outline">
-                <Trash2 className="mr-2 h-4 w-4" /> Kosongkan Keranjang
-            </Button>
+          <div className="flex justify-between font-bold text-lg">
+              <p>Total</p>
+              <p>{formatRupiah(totalAmount)}</p>
           </div>
-        </>
+          <Button onClick={handleCheckout} className="w-full" disabled={cart.length === 0}>
+              Pesan Sekarang ({totalItems} item)
+          </Button>
+          <Button onClick={clearCart} className="w-full" variant="outline">
+              <Trash2 className="mr-2 h-4 w-4" /> Kosongkan Keranjang
+          </Button>
+        </div>
       )}
     </>
   );
@@ -243,33 +239,31 @@ export default function OrderPage() {
       </main>
 
       {/* Mobile Floating Cart Button & Sheet */}
-        <div>
-            <Sheet open={isCartSheetOpen} onOpenChange={setIsCartSheetOpen}>
-                <SheetTrigger asChild>
-                    <Button 
-                        className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-2xl z-30 lg:hidden" 
-                        size="icon"
-                        disabled={cart.length === 0}
-                    >
-                        <ShoppingCart className="h-7 w-7" />
-                        <span className="sr-only">Buka Keranjang</span>
-                        {totalItems > 0 && (
-                            <Badge className="absolute -top-1 -right-1 h-6 w-6 flex items-center justify-center rounded-full">
-                                {totalItems}
-                            </Badge>
-                        )}
-                    </Button>
-                </SheetTrigger>
-                <SheetContent side="bottom" className="h-4/5 flex flex-col">
-                    <SheetHeader>
-                        <SheetTitle>Keranjang Anda</SheetTitle>
-                    </SheetHeader>
-                    <div className="flex-grow overflow-y-auto py-4 flex flex-col">
-                       <CartContent />
-                    </div>
-                </SheetContent>
-            </Sheet>
-        </div>
+        <Sheet open={isCartSheetOpen} onOpenChange={setIsCartSheetOpen}>
+            <SheetTrigger asChild>
+                <Button 
+                    className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-2xl z-30" 
+                    size="icon"
+                    disabled={cart.length === 0}
+                >
+                    <ShoppingCart className="h-7 w-7" />
+                    <span className="sr-only">Buka Keranjang</span>
+                    {totalItems > 0 && (
+                        <Badge className="absolute -top-1 -right-1 h-6 w-6 flex items-center justify-center rounded-full">
+                            {totalItems}
+                        </Badge>
+                    )}
+                </Button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="h-4/5 flex flex-col">
+                <SheetHeader>
+                    <SheetTitle>Keranjang Anda</SheetTitle>
+                </SheetHeader>
+                <div className="flex-grow overflow-y-auto py-4 flex flex-col">
+                   <CartContent />
+                </div>
+            </SheetContent>
+        </Sheet>
     </div>
     <CheckoutDialog 
         isOpen={isCheckoutOpen}
