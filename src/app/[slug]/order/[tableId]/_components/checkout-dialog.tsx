@@ -128,7 +128,7 @@ export function CheckoutDialog({
         });
 
         // Redirect to status/payment page
-        router.push(`/${tenant.slug}/order/${table.id}/status/${newOrderRef.id}`);
+        router.replace(`/${tenant.slug}/order/${table.id}/status/${newOrderRef.id}`);
 
     } catch (error: any) {
         console.error('Order submission error:', error);
