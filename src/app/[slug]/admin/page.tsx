@@ -5,8 +5,18 @@ import { useParams, useRouter } from 'next/navigation';
 import { useUser, useFirestore, useAuth } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import type { Tenant, User as AppUser } from '@/lib/types';
-import { Loader2, LogOut, Settings, Store } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Loader2,
+  LogOut,
+  Settings,
+  Store,
+  DollarSign,
+  ClipboardList,
+  PlusCircle,
+  BookOpen,
+  ArrowRight,
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   SidebarProvider,
   Sidebar,
@@ -126,9 +136,9 @@ export default function CafeAdminDashboardPage() {
           </CardHeader>
           <CardContent>
             <p className="text-center text-destructive">{error}</p>
-            <button onClick={() => router.push('/admin/cafe/login')} className="mt-4 w-full bg-destructive text-destructive-foreground hover:bg-destructive/90 py-2 px-4 rounded-md">
+            <Button onClick={() => router.push('/admin/cafe/login')} className="mt-4 w-full" variant="destructive">
               Kembali ke Halaman Login
-            </button>
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -171,16 +181,82 @@ export default function CafeAdminDashboardPage() {
               Dashboard
             </h1>
           </div>
-        </header>
-        <main className="flex-1 flex flex-col items-center justify-center p-4">
-          <div className="text-center">
-              <h1 className="font-headline text-4xl md:text-5xl font-bold">
-                  Selamat Datang!
-              </h1>
-              <p className="mt-2 text-xl md:text-2xl text-muted-foreground">
-                  Anda login sebagai admin untuk <span className="font-semibold text-primary">{tenant?.name}</span>.
-              </p>
+           <div className="flex items-center gap-2">
+            <p className="text-sm text-muted-foreground hidden md:block">
+              Login sebagai <span className="font-semibold text-foreground">{user?.email}</span>
+            </p>
           </div>
+        </header>
+        <main className="flex-1 p-4 md:p-6 lg:p-8">
+            <div className="mb-8">
+                <h1 className="font-headline text-3xl md:text-4xl font-bold">
+                    Selamat Datang, Admin!
+                </h1>
+                <p className="mt-1 text-lg text-muted-foreground">
+                    Ini adalah ringkasan untuk <span className="font-semibold text-primary">{tenant?.name}</span>.
+                </p>
+            </div>
+            
+            {/* Stat Cards */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Pesanan (Hari Ini)</CardTitle>
+                  <ClipboardList className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">12</div>
+                  <p className="text-xs text-muted-foreground">+5 dari kemarin</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Pendapatan (Hari Ini)</CardTitle>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">Rp 1.250.000</div>
+                  <p className="text-xs text-muted-foreground">+15% dari kemarin</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Menu Tersedia</CardTitle>
+                  <BookOpen className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">34</div>
+                  <p className="text-xs text-muted-foreground">2 menu tidak tersedia</p>
+                </CardContent>
+              </Card>
+            </div>
+
+             {/* Quick Actions */}
+            <div className="mt-8">
+              <h2 className="text-xl font-semibold tracking-tight">Aksi Cepat</h2>
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <Button variant="outline" size="lg" className="justify-between h-auto py-4">
+                      <div className='flex items-center gap-3'>
+                        <PlusCircle className='text-primary'/>
+                        <div className='text-left'>
+                            <p className='font-semibold'>Tambah Menu Baru</p>
+                            <p className='text-xs text-muted-foreground'>Buat item baru di daftar menu Anda.</p>
+                        </div>
+                      </div>
+                      <ArrowRight />
+                  </Button>
+                   <Button variant="outline" size="lg" className="justify-between h-auto py-4">
+                      <div className='flex items-center gap-3'>
+                        <ClipboardList className='text-primary'/>
+                        <div className='text-left'>
+                            <p className='font-semibold'>Lihat Pesanan Masuk</p>
+                            <p className='text-xs text-muted-foreground'>Kelola pesanan yang sedang berjalan.</p>
+                        </div>
+                      </div>
+                      <ArrowRight />
+                  </Button>
+              </div>
+            </div>
         </main>
       </SidebarInset>
     </SidebarProvider>
