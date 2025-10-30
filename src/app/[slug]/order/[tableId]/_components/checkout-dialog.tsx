@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -58,6 +58,7 @@ export function CheckoutDialog({
   table,
 }: CheckoutDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uniqueCode, setUniqueCode] = useState<number | null>(null);
   const firestore = useFirestore();
   const { toast } = useToast();
   const router = useRouter();
@@ -69,6 +70,18 @@ export function CheckoutDialog({
         paymentMethod: 'qris',
     },
   });
+  
+  const paymentMethod = form.watch('paymentMethod');
+  const finalTotalAmount = paymentMethod === 'qris' && uniqueCode ? totalAmount + uniqueCode : totalAmount;
+
+  useEffect(() => {
+    if (isOpen) {
+      // Generate a random 3-digit number between 100 and 999
+      setUniqueCode(Math.floor(Math.random() * 900) + 100);
+    } else {
+      setUniqueCode(null);
+    }
+  }, [isOpen]);
 
   const handleOrderSubmit = async (data: CheckoutFormValues) => {
     if (!firestore || !tenant || !table) {
@@ -96,7 +109,8 @@ export function CheckoutDialog({
           price: item.price, 
           quantity: item.quantity 
       })),
-      totalAmount: totalAmount,
+      totalAmount: finalTotalAmount,
+      uniqueCode: data.paymentMethod === 'qris' ? uniqueCode : null,
       status: 'received' as const,
       paymentMethod: data.paymentMethod,
       paymentVerified: false,
@@ -155,9 +169,23 @@ export function CheckoutDialog({
                 </div>
             ))}
         </div>
+
+        {paymentMethod === 'qris' && uniqueCode && (
+          <>
+            <div className="flex justify-between text-sm">
+                <p>Subtotal</p>
+                <p>{formatRupiah(totalAmount)}</p>
+            </div>
+             <div className="flex justify-between text-sm">
+                <p>Kode Unik Pembayaran</p>
+                <p>{formatRupiah(uniqueCode)}</p>
+            </div>
+          </>
+        )}
+
         <div className="flex justify-between font-bold text-lg border-t pt-4">
             <p>Total</p>
-            <p>{formatRupiah(totalAmount)}</p>
+            <p>{formatRupiah(finalTotalAmount)}</p>
         </div>
         
         <Form {...form}>

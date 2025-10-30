@@ -187,6 +187,10 @@
           "type": "number",
           "description": "The total amount of the order."
         },
+        "uniqueCode": {
+          "type": "number",
+          "description": "A 3-digit unique code added to the total for QRIS payments."
+        },
         "paymentMethod": {
           "type": "string",
           "description": "The payment method used for the order (e.g., 'cash', 'qris')."
