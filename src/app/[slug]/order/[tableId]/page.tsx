@@ -6,7 +6,7 @@ import { useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase
 import { doc, collection } from 'firebase/firestore';
 import type { Tenant, Table as TableType, Menu as MenuType, CartItem } from '@/lib/types';
 
-import { Loader2, ShoppingCart, Trash2, MinusCircle, PlusCircle } from 'lucide-react';
+import { Loader2, ShoppingCart, Trash2, MinusCircle, PlusCircle, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -14,6 +14,15 @@ import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import { formatRupiah } from '@/lib/utils';
 import { CheckoutDialog } from './_components/checkout-dialog';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+  SheetTrigger,
+  SheetClose,
+} from "@/components/ui/sheet"
 
 export default function OrderPage() {
   const params = useParams();
@@ -24,6 +33,7 @@ export default function OrderPage() {
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCheckoutOpen, setCheckoutOpen] = useState(false);
+  const [isCartSheetOpen, setIsCartSheetOpen] = useState(false);
 
   // --- Data Fetching ---
   const tenantQuery = useMemoFirebase(
@@ -31,8 +41,6 @@ export default function OrderPage() {
       [firestore, slug]
   );
   
-  // This is not efficient, but for a small number of tenants it's okay.
-  // A better approach would be a direct query on a slug field if we had one indexed.
   const { data: tenants, isLoading: isTenantsLoading } = useCollection<Tenant>(tenantQuery);
 
   useEffect(() => {
@@ -95,12 +103,17 @@ export default function OrderPage() {
   const groupedMenu = useMemo(() => {
     if (!menuItems) return {};
     return menuItems.reduce((acc, item) => {
-        if (item.available) { // Only include available items
+        if (item.available) { 
             (acc[item.category] = acc[item.category] || []).push(item);
         }
         return acc;
     }, {} as Record<string, MenuType[]>);
   }, [menuItems]);
+  
+  const handleCheckout = () => {
+    setIsCartSheetOpen(false);
+    setCheckoutOpen(true);
+  }
 
   const isLoading = isTenantsLoading || isTableLoading || isMenuLoading;
 
@@ -123,10 +136,57 @@ export default function OrderPage() {
       </div>
     );
   }
+  
+  const CartContent = () => (
+    <>
+      <div className="flex-grow overflow-y-auto pr-2">
+      {cart.length > 0 ? (
+        <div className="space-y-4">
+          {cart.map((item) => (
+            <div key={item.id} className="flex justify-between items-center">
+              <div>
+                <p className="font-semibold">{item.name}</p>
+                <p className="text-sm text-muted-foreground">{formatRupiah(item.price)}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeFromCart(item.id)}>
+                    <MinusCircle className="h-4 w-4" />
+                </Button>
+                <span className="font-bold w-4 text-center">{item.quantity}</span>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => addToCart(item)}>
+                    <PlusCircle className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground text-center py-8">Keranjang masih kosong.</p>
+      )}
+      </div>
+       {cart.length > 0 && (
+        <>
+          <Separator />
+          <div className="flex-shrink-0 pt-4 space-y-4">
+            <div className="flex justify-between font-bold text-lg">
+                <p>Total</p>
+                <p>{formatRupiah(totalAmount)}</p>
+            </div>
+            <Button onClick={handleCheckout} className="w-full" disabled={cart.length === 0}>
+                Pesan Sekarang ({totalItems} item)
+            </Button>
+            <Button onClick={clearCart} className="w-full" variant="outline">
+                <Trash2 className="mr-2 h-4 w-4" /> Kosongkan Keranjang
+            </Button>
+          </div>
+        </>
+      )}
+    </>
+  );
 
   return (
     <>
-    <div className="min-h-screen bg-background font-body">
+    <div className="min-h-screen bg-background font-body pb-28 md:pb-0">
       <header className="sticky top-0 z-20 bg-card/80 backdrop-blur-sm shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
             <div className="flex items-center gap-3">
@@ -157,7 +217,7 @@ export default function OrderPage() {
                     <Card key={item.id} className="flex flex-col">
                         {item.imageUrl && (
                             <div className="relative w-full h-40">
-                                <Image src={item.imageUrl} alt={item.name} layout="fill" objectFit="cover" className="rounded-t-lg"/>
+                                <Image src={item.imageUrl} alt={item.name} fill objectFit="cover" className="rounded-t-lg"/>
                             </div>
                         )}
                       <CardHeader>
@@ -183,8 +243,8 @@ export default function OrderPage() {
             )}
           </div>
 
-          {/* Cart Section */}
-          <div className="lg:col-span-1">
+          {/* Desktop Cart Section */}
+          <div className="lg:col-span-1 hidden lg:block">
             <div className="sticky top-24">
               <Card className="shadow-lg">
                 <CardHeader>
@@ -193,53 +253,43 @@ export default function OrderPage() {
                     Keranjang Anda
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  {cart.length > 0 ? (
-                    <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2">
-                      {cart.map((item) => (
-                        <div key={item.id} className="flex justify-between items-center">
-                          <div>
-                            <p className="font-semibold">{item.name}</p>
-                            <p className="text-sm text-muted-foreground">{formatRupiah(item.price)}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeFromCart(item.id)}>
-                               <MinusCircle className="h-4 w-4" />
-                            </Button>
-                            <span className="font-bold w-4 text-center">{item.quantity}</span>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => addToCart(item)}>
-                               <PlusCircle className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground text-center py-8">Keranjang masih kosong.</p>
-                  )}
+                <CardContent className='flex flex-col h-[calc(100vh-12rem)]'>
+                   <CartContent />
                 </CardContent>
-                {cart.length > 0 && (
-                  <>
-                    <Separator />
-                    <CardFooter className="flex-col items-stretch gap-4 pt-6">
-                        <div className="flex justify-between font-bold text-lg">
-                            <p>Total</p>
-                            <p>{formatRupiah(totalAmount)}</p>
-                        </div>
-                      <Button onClick={() => setCheckoutOpen(true)} className="w-full" disabled={cart.length === 0}>
-                        Pesan Sekarang ({totalItems} item)
-                      </Button>
-                      <Button onClick={clearCart} className="w-full" variant="outline">
-                        <Trash2 className="mr-2 h-4 w-4" /> Kosongkan Keranjang
-                      </Button>
-                    </CardFooter>
-                  </>
-                )}
               </Card>
             </div>
           </div>
         </div>
       </main>
+
+      {/* Mobile Floating Cart Button & Sheet */}
+       <div className="lg:hidden">
+            <Sheet open={isCartSheetOpen} onOpenChange={setIsCartSheetOpen}>
+                <SheetTrigger asChild>
+                    <Button 
+                        className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-2xl z-30" 
+                        size="icon"
+                        disabled={cart.length === 0}
+                    >
+                        <ShoppingCart className="h-7 w-7" />
+                        <span className="sr-only">Buka Keranjang</span>
+                        {totalItems > 0 && (
+                            <Badge className="absolute -top-1 -right-1 h-6 w-6 flex items-center justify-center rounded-full">
+                                {totalItems}
+                            </Badge>
+                        )}
+                    </Button>
+                </SheetTrigger>
+                <SheetContent side="bottom" className="h-4/5 flex flex-col">
+                    <SheetHeader>
+                        <SheetTitle>Keranjang Anda</SheetTitle>
+                    </SheetHeader>
+                    <div className="flex-grow overflow-y-auto py-4 flex flex-col">
+                       <CartContent />
+                    </div>
+                </SheetContent>
+            </Sheet>
+        </div>
     </div>
     <CheckoutDialog 
         isOpen={isCheckoutOpen}
