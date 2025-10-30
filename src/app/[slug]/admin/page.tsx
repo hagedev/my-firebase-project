@@ -188,6 +188,14 @@ export default function CafeAdminDashboardPage() {
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild>
+                <Link href={`/${slug}/admin/orders`}>
+                  <ClipboardList />
+                  Manajemen Pesanan
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
                 <Link href={`/${slug}/admin/settings`}>
                   <Settings />
                   Setting Profil Kafe
@@ -265,26 +273,30 @@ export default function CafeAdminDashboardPage() {
             <div className="mt-8">
               <h2 className="text-xl font-semibold tracking-tight">Aksi Cepat</h2>
               <div className="mt-4 grid gap-4 md:grid-cols-2">
-                  <Button variant="outline" size="lg" className="justify-between h-auto py-4">
-                      <div className='flex items-center gap-3'>
-                        <PlusCircle className='text-primary'/>
-                        <div className='text-left'>
-                            <p className='font-semibold'>Tambah Menu Baru</p>
-                            <p className='text-xs text-muted-foreground'>Buat item baru di daftar menu Anda.</p>
+                  <Link href={`/${slug}/admin/menu`} passHref>
+                    <Button variant="outline" size="lg" className="w-full justify-between h-auto py-4">
+                        <div className='flex items-center gap-3'>
+                            <PlusCircle className='text-primary'/>
+                            <div className='text-left'>
+                                <p className='font-semibold'>Tambah Menu Baru</p>
+                                <p className='text-xs text-muted-foreground'>Buat item baru di daftar menu Anda.</p>
+                            </div>
                         </div>
-                      </div>
-                      <ArrowRight />
-                  </Button>
-                   <Button variant="outline" size="lg" className="justify-between h-auto py-4">
-                      <div className='flex items-center gap-3'>
-                        <ClipboardList className='text-primary'/>
-                        <div className='text-left'>
-                            <p className='font-semibold'>Lihat Pesanan Masuk</p>
-                            <p className='text-xs text-muted-foreground'>Kelola pesanan yang sedang berjalan.</p>
+                        <ArrowRight />
+                    </Button>
+                  </Link>
+                  <Link href={`/${slug}/admin/orders`} passHref>
+                    <Button variant="outline" size="lg" className="w-full justify-between h-auto py-4">
+                        <div className='flex items-center gap-3'>
+                            <ClipboardList className='text-primary'/>
+                            <div className='text-left'>
+                                <p className='font-semibold'>Lihat Pesanan Masuk</p>
+                                <p className='text-xs text-muted-foreground'>Kelola pesanan yang sedang berjalan.</p>
+                            </div>
                         </div>
-                      </div>
-                      <ArrowRight />
-                  </Button>
+                        <ArrowRight />
+                    </Button>
+                  </Link>
               </div>
             </div>
         </main>

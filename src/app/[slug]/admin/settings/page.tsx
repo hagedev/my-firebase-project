@@ -18,6 +18,7 @@ import {
   Utensils,
   Armchair,
   Info,
+  ClipboardList,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
@@ -403,6 +404,14 @@ export default function CafeSettingsPage() {
                         Manajemen Meja
                     </Link>
                 </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <Link href={`/${slug}/admin/orders`}>
+                  <ClipboardList />
+                  Manajemen Pesanan
+                </Link>
+              </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive>

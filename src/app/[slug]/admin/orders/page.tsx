@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser, useFirestore, useAuth, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, getDoc, collection, updateDoc } from 'firebase/firestore';
-import type { Tenant, User as AppUser, Table as TableType } from '@/lib/types';
+import type { Tenant, User as AppUser, Order } from '@/lib/types';
 import {
   Loader2,
   LogOut,
@@ -12,23 +12,11 @@ import {
   Store,
   Utensils,
   Armchair,
-  PlusCircle,
-  MoreHorizontal,
-  QrCode,
-  Copy,
   Info,
   ClipboardList,
+  CheckCircle,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import {
   SidebarProvider,
   Sidebar,
@@ -54,20 +42,23 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { AddTableDialog } from './_components/add-table-dialog';
-import { DeleteTableDialog } from './_components/delete-table-dialog';
+import { formatRupiah } from '@/lib/utils';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
-export default function CafeTableManagementPage() {
+export default function CafeOrdersManagementPage() {
   const router = useRouter();
   const params = useParams();
   const slug = params.slug as string;
@@ -81,22 +72,14 @@ export default function CafeTableManagementPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [isAddTableDialogOpen, setIsAddTableDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedTable, setSelectedTable] = useState<TableType | null>(null);
-
-  const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
-  const [qrCodeUrl, setQrCodeUrl] = useState('');
-
-
   // --- Data Fetching ---
-  const tablesCollectionRef = useMemoFirebase(
-    () => (firestore && tenant ? collection(firestore, `tenants/${tenant.id}/tables`) : null),
+  const ordersCollectionRef = useMemoFirebase(
+    () => (firestore && tenant ? collection(firestore, `tenants/${tenant.id}/orders`) : null),
     [firestore, tenant]
   );
   
-  const { data: tables, isLoading: isTablesLoading } = useCollection<TableType>(tablesCollectionRef);
-  
+  const { data: orders, isLoading: isOrdersLoading } = useCollection<Order>(ordersCollectionRef);
+
   // --- User and Tenant Verification ---
   useEffect(() => {
     if (isUserLoading || !firestore) return;
@@ -151,42 +134,39 @@ export default function CafeTableManagementPage() {
     }
   };
 
-  const handleStatusChange = async (tableId: string, newStatus: 'available' | 'occupied') => {
+  const handleStatusChange = async (orderId: string, newStatus: Order['status']) => {
     if (!firestore || !tenant) return;
     try {
-        const tableDocRef = doc(firestore, `tenants/${tenant.id}/tables`, tableId);
-        await updateDoc(tableDocRef, { status: newStatus });
+        const orderDocRef = doc(firestore, `tenants/${tenant.id}/orders`, orderId);
+        await updateDoc(orderDocRef, { status: newStatus });
         toast({
-            title: 'Status Meja Diperbarui',
-            description: `Status meja telah diubah menjadi ${newStatus === 'occupied' ? 'Ditempati' : 'Tersedia'}.`,
+            title: 'Status Pesanan Diperbarui',
         });
     } catch (error: any) {
         toast({
             variant: 'destructive',
-            title: 'Gagal Memperbarui',
+            title: 'Gagal Memperbarui Status',
             description: error.message,
         });
     }
   };
-
-  const handleDeleteClick = (table: TableType) => {
-    setSelectedTable(table);
-    setIsDeleteDialogOpen(true);
-  };
   
-  const handleGenerateQR = (table: TableType) => {
-    const orderUrl = `${window.location.origin}/${slug}/order/${table.id}`;
-    setQrCodeUrl(orderUrl);
-    setSelectedTable(table);
-    setIsQrDialogOpen(true);
-  };
-
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(qrCodeUrl);
-    toast({
-      title: "URL disalin!",
-      description: "URL pemesanan untuk meja ini telah disalin ke clipboard.",
-    });
+  const handlePaymentVerification = async (orderId: string) => {
+    if (!firestore || !tenant) return;
+    try {
+        const orderDocRef = doc(firestore, `tenants/${tenant.id}/orders`, orderId);
+        await updateDoc(orderDocRef, { paymentVerified: true });
+        toast({
+            title: 'Pembayaran Diverifikasi',
+            description: 'Pembayaran untuk pesanan ini telah dikonfirmasi.',
+        });
+    } catch (error: any) {
+        toast({
+            variant: 'destructive',
+            title: 'Gagal Memverifikasi',
+            description: error.message,
+        });
+    }
   };
 
   // --- Page Content Rendering ---
@@ -220,126 +200,84 @@ export default function CafeTableManagementPage() {
         <main className="flex-1 p-4 md:p-6 lg:p-8">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="font-headline text-2xl md:text-3xl font-bold">Manajemen Meja</h1>
-              <p className="text-muted-foreground">Tambah, hapus, dan generate QR Code untuk meja di kafe Anda.</p>
+              <h1 className="font-headline text-2xl md:text-3xl font-bold">Manajemen Pesanan</h1>
+              <p className="text-muted-foreground">Pantau dan kelola semua pesanan yang masuk.</p>
             </div>
-            <Button onClick={() => setIsAddTableDialogOpen(true)}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Tambah Meja
-            </Button>
           </div>
           <Card>
-              <CardHeader>
-                  <CardTitle>Daftar Meja</CardTitle>
-                  <CardDescription>Berikut adalah daftar meja yang tersedia di kafe Anda.</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <div className="border rounded-md">
-                  <Table>
-                    <TableHeader>
+            <CardHeader>
+                <CardTitle>Daftar Pesanan</CardTitle>
+                <CardDescription>Berikut adalah daftar pesanan yang sedang berjalan dan yang sudah selesai.</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="border rounded-md">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Meja</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead>Pembayaran</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isOrdersLoading ? (
                       <TableRow>
-                        <TableHead>Nomor Meja</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Ubah Status (Ditempati)</TableHead>
-                        <TableHead className="text-right">Aksi</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                    {isTablesLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center h-24">
+                        <TableCell colSpan={5} className="text-center h-24">
                           <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
                         </TableCell>
                       </TableRow>
-                    ) : tables && tables.length > 0 ? (
-                       tables.sort((a, b) => a.tableNumber - b.tableNumber).map((table) => (
-                        <TableRow key={table.id}>
-                            <TableCell className="font-medium">{table.tableNumber}</TableCell>
-                            <TableCell>
-                                <Badge variant={table.status === 'available' ? 'secondary' : 'default'}>
-                                {table.status === 'available' ? 'Tersedia' : 'Terisi'}
-                                </Badge>
-                            </TableCell>
-                            <TableCell>
-                               <Switch
-                                  checked={table.status === 'occupied'}
-                                  onCheckedChange={(checked) => 
-                                    handleStatusChange(table.id, checked ? 'occupied' : 'available')
-                                  }
-                                />
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" className="h-8 w-8 p-0">
-                                    <span className="sr-only">Buka menu</span>
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuLabel>Aksi</DropdownMenuLabel>
-                                  <DropdownMenuItem onClick={() => handleGenerateQR(table)}>
-                                    <QrCode className="mr-2 h-4 w-4" />
-                                    <span>Generate QR Code</span>
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem 
-                                    className="text-destructive"
-                                    onClick={() => handleDeleteClick(table)}
-                                  >
-                                    Hapus
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableCell>
+                    ) : orders && orders.length > 0 ? (
+                      orders.sort((a, b) => b.createdAt?.toMillis() - a.createdAt?.toMillis()).map((order) => (
+                        <TableRow key={order.id}>
+                          <TableCell className="font-medium">Meja {order.tableNumber}</TableCell>
+                          <TableCell>{formatRupiah(order.totalAmount)}</TableCell>
+                          <TableCell>
+                            <Badge variant={order.paymentVerified ? 'secondary' : 'default'}>
+                              {order.paymentMethod.toUpperCase()} - {order.paymentVerified ? 'Lunas' : 'Belum Lunas'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                             <Select
+                                value={order.status}
+                                onValueChange={(value: Order['status']) => handleStatusChange(order.id, value)}
+                                >
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="Ubah status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="received">Diterima</SelectItem>
+                                    <SelectItem value="preparing">Disiapkan</SelectItem>
+                                    <SelectItem value="ready">Siap Diambil</SelectItem>
+                                    <SelectItem value="delivered">Selesai</SelectItem>
+                                    <SelectItem value="cancelled">Batalkan</SelectItem>
+                                </SelectContent>
+                                </Select>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {!order.paymentVerified && order.paymentMethod === 'qris' && (
+                                <Button size="sm" onClick={() => handlePaymentVerification(order.id)}>
+                                    <CheckCircle className="mr-2 h-4 w-4"/>
+                                    Verifikasi Bayar
+                                </Button>
+                            )}
+                          </TableCell>
                         </TableRow>
-                       ))
+                      ))
                     ) : (
                       <TableRow>
-                          <TableCell colSpan={4} className="text-center h-24">
-                            Belum ada meja yang ditambahkan.
-                          </TableCell>
+                        <TableCell colSpan={5} className="text-center h-24">
+                          Belum ada pesanan yang masuk.
+                        </TableCell>
                       </TableRow>
                     )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
           </Card>
         </main>
-        
-        <AddTableDialog 
-            isOpen={isAddTableDialogOpen}
-            onOpenChange={setIsAddTableDialogOpen}
-            tenantId={tenant?.id || ''}
-        />
-        {selectedTable && (
-            <DeleteTableDialog
-                isOpen={isDeleteDialogOpen}
-                onOpenChange={setIsDeleteDialogOpen}
-                table={selectedTable}
-            />
-        )}
-        <AlertDialog open={isQrDialogOpen} onOpenChange={setIsQrDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>URL QR Code untuk Meja {selectedTable?.tableNumber}</AlertDialogTitle>
-              <AlertDialogDescription>
-                Salin URL di bawah ini dan gunakan generator QR code untuk membuat kode QR yang bisa dipindai pelanggan di meja.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <div className="flex items-center space-x-2">
-              <Input value={qrCodeUrl} readOnly className="flex-1" />
-              <Button variant="outline" size="icon" onClick={copyToClipboard}>
-                <Copy className="h-4 w-4" />
-                <span className="sr-only">Salin URL</span>
-              </Button>
-            </div>
-            <AlertDialogFooter>
-              <AlertDialogAction onClick={() => setIsQrDialogOpen(false)}>Tutup</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </>
     );
   };
@@ -372,7 +310,7 @@ export default function CafeTableManagementPage() {
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive>
+                <SidebarMenuButton asChild>
                     <Link href={`/${slug}/admin/tables`}>
                         <Armchair />
                         Manajemen Meja
@@ -380,7 +318,7 @@ export default function CafeTableManagementPage() {
                 </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild>
+              <SidebarMenuButton asChild isActive>
                 <Link href={`/${slug}/admin/orders`}>
                   <ClipboardList />
                   Manajemen Pesanan
@@ -409,7 +347,7 @@ export default function CafeTableManagementPage() {
           <div className="flex items-center gap-2">
             <SidebarTrigger className="md:hidden" />
             <h1 className="font-headline text-xl font-semibold">
-              Manajemen Meja
+              Manajemen Pesanan
             </h1>
           </div>
            <div className="flex items-center gap-2">
