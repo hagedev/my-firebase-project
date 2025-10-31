@@ -9,7 +9,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Image from 'next/image';
-import { convertGoogleDriveUrl } from '@/lib/utils';
+import { convertGoogleImageUrl } from '@/lib/utils';
 
 import {
   Loader2,
@@ -342,7 +342,7 @@ export default function CafeSettingsPage() {
                                         <FormControl>
                                             <Input placeholder="https://..." {...field} />
                                         </FormControl>
-                                        <FormDescription>Gunakan link dari Google Drive atau layanan hosting gambar lainnya.</FormDescription>
+                                        <FormDescription>Salin "Copy Image Address" dari Google Photos untuk hasil terbaik.</FormDescription>
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -352,7 +352,7 @@ export default function CafeSettingsPage() {
                                 <FormLabel>Preview Logo</FormLabel>
                                 <div className="mt-2 p-4 border rounded-md flex justify-center items-center">
                                     <Image 
-                                        src={convertGoogleDriveUrl(watchedLogoUrl)} 
+                                        src={convertGoogleImageUrl(watchedLogoUrl)} 
                                         alt="Preview Logo" 
                                         width={150} 
                                         height={150}
@@ -371,7 +371,7 @@ export default function CafeSettingsPage() {
                                         <FormControl>
                                             <Input placeholder="https://..." {...field} />
                                         </FormControl>
-                                        <FormDescription>Gunakan link dari Google Drive atau layanan hosting gambar lainnya.</FormDescription>
+                                        <FormDescription>Salin "Copy Image Address" dari Google Photos untuk hasil terbaik.</FormDescription>
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -381,7 +381,7 @@ export default function CafeSettingsPage() {
                                 <FormLabel>Preview QRIS</FormLabel>
                                 <div className="mt-2 p-4 border rounded-md flex justify-center items-center">
                                     <Image 
-                                        src={convertGoogleDriveUrl(watchedQrisUrl)} 
+                                        src={convertGoogleImageUrl(watchedQrisUrl)} 
                                         alt="Preview QRIS" 
                                         width={250} 
                                         height={250}

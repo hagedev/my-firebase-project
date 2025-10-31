@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
-import { formatRupiah, convertGoogleDriveUrl } from '@/lib/utils';
+import { formatRupiah, convertGoogleImageUrl } from '@/lib/utils';
 import { PlusCircle, MinusCircle, ShoppingCart, X, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -77,7 +77,7 @@ export function OrderUI({ tenant, table, menuItems }: OrderUIProps) {
             </div>
             {tenant.logoUrl && (
                 <div className="relative h-12 w-12 rounded-full overflow-hidden border">
-                    <Image src={convertGoogleDriveUrl(tenant.logoUrl)} alt="Logo" layout="fill" objectFit="cover" />
+                    <Image src={convertGoogleImageUrl(tenant.logoUrl)} alt="Logo" layout="fill" objectFit="cover" />
                 </div>
             )}
         </div>
@@ -93,7 +93,7 @@ export function OrderUI({ tenant, table, menuItems }: OrderUIProps) {
                         <Card key={item.id} className="overflow-hidden flex flex-col">
                             {item.imageUrl ? (
                                 <div className="relative h-48 w-full">
-                                    <Image src={convertGoogleDriveUrl(item.imageUrl)} alt={item.name} layout="fill" objectFit="cover" />
+                                    <Image src={convertGoogleImageUrl(item.imageUrl)} alt={item.name} layout="fill" objectFit="cover" />
                                 </div>
                             ) : (
                                 <div className="h-48 w-full bg-muted flex items-center justify-center">

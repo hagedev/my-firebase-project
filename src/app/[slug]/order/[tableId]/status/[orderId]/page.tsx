@@ -8,7 +8,7 @@ import type { Tenant, Table as TableType, Order } from '@/lib/types';
 import { Loader2, CheckCircle, Clock, Wallet, Utensils, ChefHat, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import Image from 'next/image';
-import { formatRupiah, convertGoogleDriveUrl } from '@/lib/utils';
+import { formatRupiah, convertGoogleImageUrl } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import {
   AlertDialog,
@@ -106,7 +106,7 @@ export default function OrderStatusPage() {
                     {tenant.qrisImageUrl ? (
                         <div className="relative aspect-square w-full max-w-xs mx-auto border-4 border-primary rounded-lg overflow-hidden shadow-lg">
                             <Image 
-                                src={convertGoogleDriveUrl(tenant.qrisImageUrl)} 
+                                src={convertGoogleImageUrl(tenant.qrisImageUrl)} 
                                 alt="QRIS Payment Code" 
                                 layout="fill" 
                                 objectFit="contain" 
@@ -151,7 +151,7 @@ export default function OrderStatusPage() {
                 <CardHeader className="text-center">
                      {tenant.logoUrl && (
                         <Image 
-                            src={convertGoogleDriveUrl(tenant.logoUrl)} 
+                            src={convertGoogleImageUrl(tenant.logoUrl)} 
                             alt="Logo" 
                             width={64}
                             height={64}
