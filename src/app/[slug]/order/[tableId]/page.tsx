@@ -2,40 +2,54 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { useAuth, useFirestore } from '@/firebase';
-import { onAuthStateChanged, signInAnonymously, User } from 'firebase/auth';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import type { Tenant } from '@/lib/types';
-import { Loader2 } from 'lucide-react';
+import { useAuth, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
+import { collection, query, where, getDocs, doc, getDoc, addDoc, serverTimestamp } from 'firebase/firestore';
+import type { Tenant, Table as TableType } from '@/lib/types';
+import { Loader2, CheckCircle, XCircle, ShieldQuestion, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 // State machine for page flow
-type PageStatus = 'authenticating' | 'welcome' | 'testing' | 'test_success' | 'error';
+type PageStatus = 'authenticating' | 'welcome' | 'testing' | 'test_complete' | 'error';
+type TestStep = {
+    id: string;
+    description: string;
+    status: 'pending' | 'running' | 'success' | 'failed';
+    error?: string;
+};
+
+const INITIAL_TEST_STEPS: TestStep[] = [
+    { id: 'tenant', description: 'Uji 1: Membaca Info Kafe (tenants)', status: 'pending' },
+    { id: 'table', description: 'Uji 2: Membaca Info Meja (tables)', status: 'pending' },
+    { id: 'menu', description: 'Uji 3: Membaca Daftar Menu (menus)', status: 'pending' },
+    { id: 'order', description: 'Uji 4: Membuat Pesanan Baru (orders)', status: 'pending' },
+];
 
 export default function OrderPage() {
   const params = useParams();
-  const { slug } = params as { slug: string };
+  const { slug, tableId } = params as { slug: string, tableId: string };
   
   const auth = useAuth();
   const firestore = useFirestore();
 
   const [pageStatus, setPageStatus] = useState<PageStatus>('authenticating');
   const [errorMsg, setErrorMsg] = useState<string>('');
+  const [testSteps, setTestSteps] = useState<TestStep[]>(INITIAL_TEST_STEPS);
   
   // STEP 1: Handle Anonymous Authentication
   useEffect(() => {
     if (!auth) {
-      setErrorMsg('Layanan autentikasi tidak siap.');
-      setPageStatus('error');
+      if (pageStatus !== 'error') {
+        setErrorMsg('Layanan autentikasi tidak siap.');
+        setPageStatus('error');
+      }
       return;
     }
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        // User is authenticated, move to welcome screen.
-        setPageStatus('welcome');
+        setPageStatus('welcome'); // Autentikasi sukses, siap untuk testing
       } else {
-        // No user, attempt to sign in anonymously.
         signInAnonymously(auth).catch((error) => {
           console.error("Anonymous sign-in error:", error);
           setErrorMsg('Gagal memulai sesi. Coba refresh halaman.');
@@ -44,11 +58,19 @@ export default function OrderPage() {
       }
     });
     return () => unsubscribe();
-  }, [auth]);
+  }, [auth]); // Hanya bergantung pada auth
 
-  // STEP 2 & 3: Handle button click and test cafe info fetching
+  const updateTestStep = (id: string, status: TestStep['status'], error?: string) => {
+    setTestSteps(prev => prev.map(step => 
+        step.id === id ? { ...step, status, error } : step
+    ));
+  };
+
+
+  // STEP 2 & 3: Handle button click and run test sequence
   const handleStartOrderTest = async () => {
     setPageStatus('testing');
+    setTestSteps(INITIAL_TEST_STEPS); // Reset steps
 
     if (!firestore || !auth?.currentUser) {
         setErrorMsg('Sesi autentikasi tidak valid atau Firestore tidak siap. Silakan refresh halaman.');
@@ -56,25 +78,65 @@ export default function OrderPage() {
         return;
     }
 
+    let tenant: Tenant | null = null;
+    let table: TableType | null = null;
+
     try {
-      // --- TEST: Fetch Tenant Info ---
-      console.log('Testing: Attempting to fetch tenant with slug:', slug);
+      // --- TEST 1: Fetch Tenant Info ---
+      updateTestStep('tenant', 'running');
       const tenantQuery = query(collection(firestore, 'tenants'), where('slug', '==', slug));
       const tenantSnapshot = await getDocs(tenantQuery);
+      if (tenantSnapshot.empty) throw new Error(`Kafe dengan slug "${slug}" tidak ditemukan.`);
+      const tenantDoc = tenantSnapshot.docs[0];
+      tenant = { id: tenantDoc.id, ...tenantDoc.data() } as Tenant;
+      updateTestStep('tenant', 'success');
+
+      // --- TEST 2: Fetch Table Info ---
+      updateTestStep('table', 'running');
+      const tableRef = doc(firestore, `tenants/${tenant.id}/tables/${tableId}`);
+      const tableSnap = await getDoc(tableRef);
+      if (!tableSnap.exists()) throw new Error(`Meja dengan ID "${tableId}" tidak ditemukan.`);
+      table = { id: tableSnap.id, ...tableSnap.data() } as TableType;
+      updateTestStep('table', 'success');
       
-      if (tenantSnapshot.empty) {
-        throw new Error(`Kafe dengan slug "${slug}" tidak ditemukan.`);
-      }
+      // --- TEST 3: Fetch Menu Items ---
+      updateTestStep('menu', 'running');
+      const menuRef = collection(firestore, `tenants/${tenant.id}/menus`);
+      await getDocs(menuRef); // We just need to know if we can read it
+      updateTestStep('menu', 'success');
 
-      const tenantDoc = tenantSnapshot.docs[0].data();
-      console.log('Test successful. Found tenant:', tenantDoc.name);
+      // --- TEST 4: Create a dummy Order ---
+      updateTestStep('order', 'running');
+      const ordersRef = collection(firestore, `tenants/${tenant.id}/orders`);
+      const dummyOrderData = {
+          tenantId: tenant.id,
+          tableId: table.id,
+          verificationToken: tenant.tokenHarian, // Use the correct token
+          createdAt: serverTimestamp(),
+          status: 'cancelled', // Mark as cancelled so it doesn't affect real data
+      };
+      await addDoc(ordersRef, dummyOrderData);
+      updateTestStep('order', 'success');
 
-      // STEP 4: Show success message
-      setPageStatus('test_success');
+      setPageStatus('test_complete');
     } catch (err: any) {
-      console.error("Data fetching test error:", err);
-      setErrorMsg(err.message || 'Gagal mengambil data kafe.');
-      setPageStatus('error');
+        console.error("Test error:", err);
+        const runningStep = testSteps.find(s => s.status === 'running');
+        if (runningStep) {
+            updateTestStep(runningStep.id, 'failed', err.message);
+        }
+        setErrorMsg(err.message || 'Gagal pada salah satu langkah pengujian.');
+        setPageStatus('error');
+    }
+  };
+
+  const TestResultIcon = ({ status }: { status: TestStep['status'] }) => {
+    switch (status) {
+        case 'pending': return <ShieldQuestion className="text-muted-foreground" />;
+        case 'running': return <Loader2 className="animate-spin text-blue-500" />;
+        case 'success': return <CheckCircle className="text-green-500" />;
+        case 'failed': return <XCircle className="text-destructive" />;
+        default: return null;
     }
   };
 
@@ -92,48 +154,57 @@ export default function OrderPage() {
 
       case 'welcome':
         return (
-          <main className="flex-1 flex flex-col items-center justify-center">
-            <div className="container mx-auto px-4 flex flex-col items-center gap-6 text-center">
+          <main className="flex-1 flex flex-col items-center justify-center p-4">
+            <div className="container mx-auto flex flex-col items-center gap-6 text-center">
                 <h1 className="font-headline text-5xl md:text-7xl font-bold drop-shadow-lg">
                     Selamat Datang
                 </h1>
-                <p className="text-muted-foreground">Klik tombol di bawah untuk memulai tes.</p>
+                <p className="text-muted-foreground">Klik tombol di bawah untuk memulai tes akses data.</p>
                 <Button size="lg" className="mt-4" onClick={handleStartOrderTest}>
-                    Saya ingin order
+                    <Play className="mr-2"/>
+                    Mulai Uji
                 </Button>
             </div>
           </main>
         );
 
       case 'testing':
-         return (
-          <div className="flex h-screen w-full flex-col items-center justify-center bg-background text-center p-4">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="mt-4 text-lg text-muted-foreground">Menguji pembacaan info kafe...</p>
-          </div>
-        );
-      
-      case 'test_success':
-         return (
-          <div className="flex h-screen w-full flex-col items-center justify-center bg-background text-center p-4">
-            <h1 className="font-headline text-5xl font-bold text-green-600">
-              info kafe sukses
-            </h1>
-            <p className="mt-2 text-muted-foreground">Tes pembacaan data kafe berhasil dilakukan.</p>
-          </div>
-        );
-
+      case 'test_complete':
       case 'error':
-        return (
+         return (
           <div className="flex h-screen w-full flex-col items-center justify-center bg-background text-center p-4">
-            <h1 className="font-headline text-5xl font-bold text-destructive">Aduh!</h1>
-            <p className="mt-2 text-muted-foreground max-w-md">Terjadi masalah:</p>
-            <Card className="mt-4 text-left bg-destructive/10 border-destructive max-w-md w-full">
+            <Card className="w-full max-w-md">
                 <CardHeader>
-                    <CardTitle className="text-destructive">Detail Error</CardTitle>
+                    <CardTitle>Hasil Pengujian Akses</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <code className="text-sm text-destructive-foreground break-all">{errorMsg}</code>
+                    <ul className="space-y-4">
+                        {testSteps.map(step => (
+                            <li key={step.id} className="flex items-start gap-4">
+                                <TestResultIcon status={step.status} />
+                                <div className="text-left">
+                                    <p className="font-medium">{step.description}</p>
+                                    {step.status === 'failed' && (
+                                        <p className="text-xs text-destructive">{step.error}</p>
+                                    )}
+                                    {step.status === 'success' && (
+                                        <p className="text-xs text-green-600">SUKSES</p>
+                                    )}
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                    {pageStatus === 'test_complete' && (
+                        <div className="mt-6 p-4 bg-green-50 text-green-800 rounded-md border border-green-200">
+                           <p className="font-bold text-center">Semua pengujian berhasil!</p>
+                        </div>
+                    )}
+                     {pageStatus === 'error' && (
+                        <div className="mt-6 p-4 bg-red-50 text-red-800 rounded-md border border-red-200">
+                           <p className="font-bold text-center">Pengujian Gagal!</p>
+                           <p className="text-sm text-center mt-1">{errorMsg}</p>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
           </div>
