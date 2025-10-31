@@ -1,0 +1,21 @@
+{
+  "name": "AirCafe",
+  "short_name": "AirCafe",
+  "description": "Pemesanan digital untuk kafe modern.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFF3E0",
+  "theme_color": "#FF9800",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
