@@ -74,6 +74,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { OrderDetailsDialog } from './_components/order-details-dialog';
 
 const ORDERS_PER_PAGE = 20;
 
@@ -90,6 +91,9 @@ export default function CafeOrdersManagementPage() {
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
 
   // --- Pagination and Data State ---
   const [orders, setOrders] = useState<Order[]>([]);
@@ -138,7 +142,7 @@ export default function CafeOrdersManagementPage() {
       if (newOrders.length === 0) {
         if(direction === 'next') setIsLastPage(true);
         if(direction === 'initial') setOrders([]);
-        toast({ title: "Tidak ada data lagi", description: direction === 'next' ? 'Anda sudah di halaman terakhir' : 'Kembali ke halaman pertama' });
+        if(direction !== 'initial') toast({ title: "Tidak ada data lagi", description: direction === 'next' ? 'Anda sudah di halaman terakhir' : 'Kembali ke halaman pertama' });
       } else {
         setOrders(newOrders);
         setFirstVisible(documentSnapshots.docs[0]);
@@ -271,6 +275,12 @@ export default function CafeOrdersManagementPage() {
     }
   };
 
+  const handleRowClick = (order: Order) => {
+    setSelectedOrder(order);
+    setIsDetailsDialogOpen(true);
+  };
+
+
   // --- Page Content Rendering ---
   const pageContent = () => {
     if (isLoading || isUserLoading) {
@@ -309,7 +319,7 @@ export default function CafeOrdersManagementPage() {
           <Card>
             <CardHeader>
                 <CardTitle>Daftar Pesanan Hari Ini</CardTitle>
-                <CardDescription>Berikut adalah daftar pesanan yang masuk hari ini.</CardDescription>
+                <CardDescription>Berikut adalah daftar pesanan yang masuk hari ini. Klik baris untuk melihat detail.</CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
               <div className="border rounded-md">
@@ -332,7 +342,7 @@ export default function CafeOrdersManagementPage() {
                       </TableRow>
                     ) : orders && orders.length > 0 ? (
                       orders.map((order) => (
-                        <TableRow key={order.id}>
+                        <TableRow key={order.id} onClick={() => handleRowClick(order)} className="cursor-pointer">
                           <TableCell className="font-medium">Meja {order.tableNumber}</TableCell>
                           <TableCell>{formatRupiah(order.totalAmount || 0)}</TableCell>
                           <TableCell>
@@ -340,7 +350,7 @@ export default function CafeOrdersManagementPage() {
                               {(order.paymentMethod || 'N/A').toUpperCase()}
                             </Badge>
                           </TableCell>
-                          <TableCell>
+                          <TableCell onClick={(e) => e.stopPropagation()}>
                              <Select
                                 value={order.status}
                                 onValueChange={(value: Order['status']) => handleStatusChange(order.id, value)}
@@ -357,7 +367,7 @@ export default function CafeOrdersManagementPage() {
                                 </SelectContent>
                                 </Select>
                           </TableCell>
-                          <TableCell className="text-center">
+                          <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                             <div className="flex flex-col items-center justify-center space-y-2">
                                 <Switch
                                     id={`payment-switch-${order.id}`}
@@ -407,6 +417,12 @@ export default function CafeOrdersManagementPage() {
             </CardContent>
           </Card>
         </main>
+        
+        <OrderDetailsDialog 
+          isOpen={isDetailsDialogOpen}
+          onOpenChange={setIsDetailsDialogOpen}
+          order={selectedOrder}
+        />
       </>
     );
   };
