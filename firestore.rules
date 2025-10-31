@@ -8,48 +8,74 @@ service cloud.firestore {
     // Helper Functions
     // =================================
     function isSuperAdmin() {
-      return request.auth.uid == 'ttFbsVWt14cdTwVlKs1AbgBLUtx1';
+      // Periksa apakah UID pengguna ada di koleksi roles_superadmin
+      return exists(/databases/$(database)/documents/roles_superadmin/$(request.auth.uid));
     }
 
-    function isCafeAdmin() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin_kafe';
+    function isCafeAdmin(tenantId) {
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return userDoc.data.role == 'admin_kafe' && userDoc.data.tenantId == tenantId;
     }
+    
+    function isSignedIn() {
+        return request.auth != null;
+    }
+
 
     // =================================
     // Collection: tenants
     // =================================
     match /tenants/{tenantId} {
-      // Super Admin bisa melakukan apa saja
-      allow read, write: if isSuperAdmin();
+      // SIAPA SAJA (termasuk anonim) bisa membaca detail tenant (nama kafe, slug, dll)
+      allow get, list: if true;
 
-      // Admin Kafe hanya bisa mengupdate tenant mereka sendiri (misal: token harian)
-      allow update: if isCafeAdmin() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.tenantId == tenantId;
+      // HANYA Super Admin yang bisa membuat atau menghapus tenant
+      allow create, delete: if isSignedIn() && isSuperAdmin();
 
-      // Siapa pun (termasuk user belum login) bisa membaca daftar tenant dan detailnya
-      allow list, get: if true;
+      // Admin Kafe bisa mengupdate tenantnya sendiri, Super Admin bisa update semua.
+      allow update: if isSignedIn() && (isSuperAdmin() || isCafeAdmin(tenantId));
     }
 
-    // =_=_=_=_=_=_=_=_=_=_=_=_=_=_=_=_=_=_=_=_=_=_=_=_=
-    //  Collection: users
+    // =================================
+    // Collection: users
     // =================================
     match /users/{userId} {
-      // Super Admin bisa melakukan apa saja
-      allow read, write: if isSuperAdmin();
+      // HANYA Super Admin yang bisa melihat, membuat, atau menghapus data user lain.
+      allow read, write: if isSignedIn() && isSuperAdmin();
 
-      // Pengguna hanya bisa membaca dan mengedit data mereka sendiri
-      allow read, update: if request.auth.uid == userId;
+      // User hanya bisa mengupdate datanya sendiri (jika diperlukan di masa depan).
+      allow update: if isSignedIn() && request.auth.uid == userId;
     }
     
     // =================================
     // Tenant Sub-collections
     // =================================
-    match /tenants/{tenantId}/{collection}/{docId} {
-        // Super Admin bisa melakukan apa saja
-        allow read, write: if isSuperAdmin();
+    
+    // Aturan untuk /menus dan /tables
+    match /tenants/{tenantId}/{collectionName in ['menus', 'tables', 'categories']} {
+        // SIAPA SAJA (termasuk anonim) bisa membaca daftar menu dan meja.
+        allow get, list: if true;
 
-        // Admin Kafe bisa melakukan apa saja di dalam tenant mereka
-        allow read, write: if isCafeAdmin() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.tenantId == tenantId;
+        // HANYA Admin Kafe dari tenant tersebut (atau Super Admin) yang bisa mengubah data menu & meja.
+        allow write: if isSignedIn() && (isSuperAdmin() || isCafeAdmin(tenantId));
+    }
+
+    // Aturan spesifik untuk /orders
+    match /tenants/{tenantId}/orders/{orderId} {
+        // HANYA Admin Kafe (atau Super Admin) yang bisa membaca semua order atau mengupdatenya.
+        allow get, list, update: if isSignedIn() && (isSuperAdmin() || isCafeAdmin(tenantId));
+
+        // SIAPA SAJA (termasuk anonim) bisa membuat order BARU,
+        // DENGAN SYARAT: token verifikasi yang dikirim harus sama dengan token harian tenant.
+        allow create: if request.resource.data.verificationToken == get(/databases/$(database)/documents/tenants/$(tenantId)).data.tokenHarian;
+    }
+    
+    // =================================
+    // Collection: roles_superadmin
+    // =================================
+    match /roles_superadmin/{userId} {
+      // Hanya Super Admin lain yang bisa melihat atau mengubah koleksi ini.
+      allow read, write: if isSignedIn() && isSuperAdmin();
     }
   }
 }
