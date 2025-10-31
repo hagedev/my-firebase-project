@@ -38,21 +38,21 @@ export function convertGoogleDriveUrl(url: string | undefined | null): string {
 }
 
 /**
- * DEPRECATED: This function is confusing. Use convertGoogleDriveUrl for a safer approach.
- * Handles Google Photos URLs to make them usable in `next/image`.
- * @param url The public Google Photos URL.
- * @returns A direct image link usable in <img> src, or the original URL if no conversion is needed.
+ * Checks if a URL is a valid, accessible image by trying to fetch it.
+ * This is useful for validating image URLs on the client-side before rendering.
+ * @param url The URL to validate.
+ * @returns A promise that resolves to true if the image is valid, false otherwise.
  */
-export function convertGoogleImageUrl(url: string): string {
-  if (url.includes('lh3.googleusercontent.com')) {
-    return url.split('=')[0];
+export async function isValidUrl(url: string): Promise<boolean> {
+  if (!url) return false;
+  try {
+    const response = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
+    // no-cors will result in an opaque response, but it's enough to know the URL is reachable.
+    // The type 'opaque' indicates a successful cross-origin request in no-cors mode.
+    return response.type === 'opaque' || (response.ok && (response.headers.get('Content-Type')?.startsWith('image/') ?? false));
+  } catch (error) {
+    // Network errors or other issues will be caught here
+    console.error('Image validation error:', error);
+    return false;
   }
-  if (url.includes('photos.app.goo.gl')) {
-    console.warn(
-      `Invalid URL format: "${url}". This is a webpage link, not a direct image link. ` +
-      `Please right-click the image in Google Photos and select "Copy Image Address" ` +
-      `to get a '...googleusercontent.com' link.`
-    );
-  }
-  return url;
 }
