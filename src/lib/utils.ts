@@ -15,43 +15,30 @@ export function formatRupiah(amount: number) {
 }
 
 /**
- * Validates a URL for use in next/image. It returns the URL if it's from an allowed hostname,
- * otherwise returns an empty string to prevent crashes.
- * @param url The URL to validate.
- * @returns The original URL if valid, or an empty string.
+ * Converts a public Google Drive sharing URL into a direct image link
+ * that can be used by next/image.
+ * @param url The public Google Drive sharing URL.
+ * @returns The direct image URL or the original URL if it's not a Google Drive link.
  */
-export function getValidImageUrl(url: string | undefined | null): string {
+export function convertGoogleDriveUrl(url: string | undefined | null): string {
   if (!url) {
     return '';
   }
 
-  try {
-    const urlObject = new URL(url);
-    
-    // Explicitly block invalid Google Photos page links
-    if (urlObject.hostname === 'photos.app.goo.gl') {
-      console.warn(
-        `Invalid URL format: "${url}". This is a webpage link, not a direct image link. ` +
-        `Please right-click the image in Google Photos and select "Copy Image Address" ` +
-        `to get a '...googleusercontent.com' link.`
-      );
-      return '';
+  // Check if it's a Google Drive URL
+  if (url.includes('drive.google.com/file/d/')) {
+    const fileId = url.split('/d/')[1].split('/')[0];
+    if (fileId) {
+      return `https://drive.google.com/uc?export=view&id=${fileId}`;
     }
-
-    // For any other URL, we let Next.js handle it. If the hostname is not configured
-    // in next.config.js, Next.js will throw an error, which is informative.
-    // The previous implementation was too restrictive.
-    return url;
-    
-  } catch (error) {
-    // If the URL is malformed and the URL constructor fails.
-    console.error(`Invalid URL string provided: ${url}`);
-    return '';
   }
+  
+  // Return the original URL if it's not a convertible Google Drive link
+  return url;
 }
 
 /**
- * DEPRECATED: This function is confusing. Use getValidImageUrl for a safer approach.
+ * DEPRECATED: This function is confusing. Use convertGoogleDriveUrl for a safer approach.
  * Handles Google Photos URLs to make them usable in `next/image`.
  * @param url The public Google Photos URL.
  * @returns A direct image link usable in <img> src, or the original URL if no conversion is needed.
@@ -68,4 +55,46 @@ export function convertGoogleImageUrl(url: string): string {
     );
   }
   return url;
+}
+
+
+// This function is kept for reference but getValidImageUrl is preferred
+export function getValidImageUrl(url: string | undefined | null): string {
+  if (!url) {
+    return '';
+  }
+
+  try {
+    const urlObject = new URL(url);
+    
+    const allowedHostnames = [
+        "placehold.co",
+        "images.unsplash.com",
+        "picsum.photos",
+        "lh3.googleusercontent.com",
+        "photos.fife.usercontent.google.com",
+        "firebasestorage.googleapis.com",
+    ];
+
+    if (allowedHostnames.includes(urlObject.hostname)) {
+        return url;
+    }
+    
+    // Explicitly block invalid Google Photos page links
+    if (urlObject.hostname === 'photos.app.goo.gl') {
+      console.warn(
+        `Invalid URL format: "${url}". This is a webpage link, not a direct image link. ` +
+        `Please right-click the image in Google Photos and select "Copy Image Address" ` +
+        `to get a '...googleusercontent.com' link.`
+      );
+      return '';
+    }
+
+    return url; // Be lenient and let Next.js handle it, it will error out if not configured.
+    
+  } catch (error) {
+    // If the URL is malformed and the URL constructor fails.
+    console.error(`Invalid URL string provided: ${url}`);
+    return '';
+  }
 }

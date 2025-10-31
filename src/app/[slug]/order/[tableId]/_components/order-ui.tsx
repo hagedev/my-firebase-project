@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
-import { formatRupiah, getValidImageUrl } from '@/lib/utils';
+import { formatRupiah, convertGoogleDriveUrl } from '@/lib/utils';
 import { PlusCircle, MinusCircle, ShoppingCart, X, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -66,7 +66,7 @@ export function OrderUI({ tenant, table, menuItems }: OrderUIProps) {
     return acc;
   }, {} as Record<string, Menu[]>);
 
-  const validLogoUrl = getValidImageUrl(tenant.logoUrl);
+  const validLogoUrl = convertGoogleDriveUrl(tenant.logoUrl);
 
   return (
     <div className="relative min-h-screen w-full bg-slate-50 flex flex-col">
@@ -92,7 +92,7 @@ export function OrderUI({ tenant, table, menuItems }: OrderUIProps) {
                 <h2 className="font-headline text-2xl font-semibold mb-4">{category}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {items.map((item) => {
-                      const validMenuImageUrl = getValidImageUrl(item.imageUrl);
+                      const validMenuImageUrl = convertGoogleDriveUrl(item.imageUrl);
                       return (
                         <Card key={item.id} className="overflow-hidden flex flex-col">
                             {validMenuImageUrl ? (

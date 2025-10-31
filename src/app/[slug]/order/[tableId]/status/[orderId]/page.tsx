@@ -8,7 +8,7 @@ import type { Tenant, Table as TableType, Order } from '@/lib/types';
 import { Loader2, CheckCircle, Clock, Wallet, Utensils, ChefHat, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import Image from 'next/image';
-import { formatRupiah, getValidImageUrl } from '@/lib/utils';
+import { formatRupiah, convertGoogleDriveUrl } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import {
   AlertDialog,
@@ -84,8 +84,8 @@ export default function OrderStatusPage() {
     }
     
     const currentStatus = statusConfig[order.status] || statusConfig.received;
-    const validLogoUrl = getValidImageUrl(tenant.logoUrl);
-    const validQrisUrl = getValidImageUrl(tenant.qrisImageUrl);
+    const validLogoUrl = convertGoogleDriveUrl(tenant.logoUrl);
+    const validQrisUrl = convertGoogleDriveUrl(tenant.qrisImageUrl);
 
     const PaymentInstructions = () => {
         if (order.paymentVerified) {
