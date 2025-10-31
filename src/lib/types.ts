@@ -1,5 +1,7 @@
 'use client';
 
+import { Timestamp } from "firebase/firestore";
+
 // Merepresentasikan struktur data dari sebuah dokumen Tenant di Firestore.
 export interface Tenant {
   id: string; // ID dokumen dari Firestore
@@ -74,5 +76,5 @@ export interface Order {
   paymentMethod: 'qris' | 'cash';
   paymentVerified: boolean;
   verificationToken: string; // Token harian yang diinput pelanggan
-  createdAt: any; // Firestore Server Timestamp
+  createdAt: Timestamp; // Firestore Server Timestamp
 }

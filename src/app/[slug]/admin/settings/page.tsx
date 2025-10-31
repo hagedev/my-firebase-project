@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useUser, useFirestore, useAuth } from '@/firebase';
+import { useUser, useFirestore, useAuth, useStorage } from '@/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import type { Tenant, User as AppUser } from '@/lib/types';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 import {
   Loader2,
@@ -20,6 +21,8 @@ import {
   Info,
   ClipboardList,
   FileText,
+  Upload,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
@@ -49,16 +52,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import Image from 'next/image';
 
 const settingsSchema = z.object({
   name: z.string().min(3, 'Nama kafe minimal 3 karakter.'),
   tokenHarian: z.string().length(4, 'Token harus 4 digit angka.'),
-  logoUrl: z.string().url('URL logo tidak valid.').or(z.literal('')),
-  qrisImageUrl: z.string().url('URL gambar QRIS tidak valid.').or(z.literal('')),
   address: z.string().optional(),
   ownerName: z.string().optional(),
   phoneNumber: z.string().optional(),
   receiptMessage: z.string().optional(),
+  // URL fields are no longer directly edited by user, but still part of the data model
+  logoUrl: z.string().url().or(z.literal('')),
+  qrisImageUrl: z.string().url().or(z.literal('')),
 });
 
 type SettingsFormValues = z.infer<typeof settingsSchema>;
@@ -79,12 +84,18 @@ export default function CafeSettingsPage() {
 
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const storage = useStorage();
   const auth = useAuth();
   const { toast } = useToast();
 
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState<'logo' | 'qris' | null>(null);
+
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const qrisInputRef = useRef<HTMLInputElement>(null);
+
   
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsSchema),
@@ -157,6 +168,42 @@ export default function CafeSettingsPage() {
 
   }, [user, isUserLoading, firestore, slug, router, form]);
 
+  const handleFileUpload = async (file: File, type: 'logo' | 'qris') => {
+    if (!storage || !tenant) return;
+    if (!file.type.startsWith('image/')) {
+        toast({ variant: 'destructive', title: 'File tidak valid', description: 'Silakan pilih file gambar (PNG, JPG, dll).' });
+        return;
+    }
+
+    setIsUploading(type);
+    const filePath = `tenants/${tenant.id}/${type}/${file.name}`;
+    const fileRef = ref(storage, filePath);
+
+    try {
+        const snapshot = await uploadBytes(fileRef, file);
+        const downloadURL = await getDownloadURL(snapshot.ref);
+
+        const fieldToUpdate = type === 'logo' ? 'logoUrl' : 'qrisImageUrl';
+        
+        // Update Firestore
+        const tenantDocRef = doc(firestore, 'tenants', tenant.id);
+        await updateDoc(tenantDocRef, { [fieldToUpdate]: downloadURL });
+
+        // Update local state and form value
+        form.setValue(fieldToUpdate, downloadURL);
+        setTenant(prev => prev ? { ...prev, [fieldToUpdate]: downloadURL } : null);
+
+        toast({ title: 'Upload Berhasil', description: `${type === 'logo' ? 'Logo' : 'Gambar QRIS'} telah diperbarui.` });
+
+    } catch (error: any) {
+        console.error("File upload error:", error);
+        toast({ variant: 'destructive', title: 'Upload Gagal', description: error.message });
+    } finally {
+        setIsUploading(null);
+    }
+  };
+
+
   const onSubmit = async (data: SettingsFormValues) => {
     if (!firestore || !tenant) {
       toast({ variant: 'destructive', title: 'Error', description: 'Gagal menyimpan data.' });
@@ -168,8 +215,13 @@ export default function CafeSettingsPage() {
 
     try {
       await updateDoc(tenantDocRef, {
-        ...data,
+        name: data.name,
         slug: newSlug,
+        tokenHarian: data.tokenHarian,
+        address: data.address,
+        ownerName: data.ownerName,
+        phoneNumber: data.phoneNumber,
+        receiptMessage: data.receiptMessage,
       });
 
       toast({
@@ -229,18 +281,68 @@ export default function CafeSettingsPage() {
       );
     }
 
+    const ImageUploadCard = ({ type, inputRef }: { type: 'logo' | 'qris', inputRef: React.RefObject<HTMLInputElement> }) => {
+        const title = type === 'logo' ? 'Logo Kafe' : 'Gambar QRIS';
+        const description = type === 'logo' ? 'Ganti logo kafe Anda.' : 'Ganti gambar kode QRIS.';
+        const imageUrl = type === 'logo' ? form.watch('logoUrl') : form.watch('qrisImageUrl');
+        
+        return (
+             <Card>
+                <CardHeader>
+                    <CardTitle>{title}</CardTitle>
+                    <CardDescription>{description}</CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center gap-4">
+                    <div className="relative w-48 h-48 rounded-lg border-2 border-dashed flex items-center justify-center bg-muted overflow-hidden">
+                        {imageUrl ? (
+                            <Image src={imageUrl} alt={title} layout="fill" objectFit="contain" />
+                        ) : (
+                            <div className="text-center text-muted-foreground">
+                                <ImageIcon className="mx-auto h-12 w-12"/>
+                                <p>Belum ada gambar</p>
+                            </div>
+                        )}
+                    </div>
+                    <Input
+                        ref={inputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                            if (e.target.files?.[0]) {
+                                handleFileUpload(e.target.files[0], type);
+                            }
+                        }}
+                    />
+                    <Button 
+                        variant="outline"
+                        onClick={() => inputRef.current?.click()}
+                        disabled={isUploading === type}
+                    >
+                         {isUploading === type ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                         ) : (
+                            <Upload className="mr-2 h-4 w-4" />
+                         )}
+                        {isUploading === type ? 'Mengunggah...' : 'Ganti Gambar'}
+                    </Button>
+                </CardContent>
+            </Card>
+        );
+    };
+
     return (
         <main className="flex-1 p-4 md:p-6 lg:p-8">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Setting Profil Kafe</CardTitle>
-                    <CardDescription>
-                        Perbarui informasi umum dan detail tentang kafe Anda.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                     <Card>
+                        <CardHeader>
+                            <CardTitle>Informasi Umum Kafe</CardTitle>
+                            <CardDescription>
+                                Perbarui detail kontak dan informasi umum tentang kafe Anda.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
                             <FormField
                                 control={form.control}
                                 name="name"
@@ -322,51 +424,31 @@ export default function CafeSettingsPage() {
                                     </FormItem>
                                 )}
                             />
-                             <FormField
-                                control={form.control}
-                                name="logoUrl"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>URL Logo</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="https://example.com/logo.png" {...field} />
-                                        </FormControl>
-                                        <FormDescription>URL publik untuk file gambar logo Anda.</FormDescription>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                             <FormField
-                                control={form.control}
-                                name="qrisImageUrl"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>URL Gambar QRIS</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="https://example.com/qris.jpg" {...field} />
-                                        </FormControl>
-                                         <FormDescription>URL publik untuk gambar kode QRIS Anda.</FormDescription>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <Button type="submit" disabled={form.formState.isSubmitting}>
-                                {form.formState.isSubmitting ? (
-                                    <>
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Menyimpan...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Save className="mr-2 h-4 w-4" />
-                                        Simpan Perubahan
-                                    </>
-                                )}
-                            </Button>
-                        </form>
-                    </Form>
-                </CardContent>
-            </Card>
+                        </CardContent>
+                    </Card>
+
+                    <div className="grid md:grid-cols-2 gap-8">
+                       <ImageUploadCard type="logo" inputRef={logoInputRef} />
+                       <ImageUploadCard type="qris" inputRef={qrisInputRef} />
+                    </div>
+
+                    <div className="flex justify-end">
+                        <Button type="submit" disabled={form.formState.isSubmitting || isUploading !== null}>
+                            {form.formState.isSubmitting ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Menyimpan...
+                                </>
+                            ) : (
+                                <>
+                                    <Save className="mr-2 h-4 w-4" />
+                                    Simpan Perubahan
+                                </>
+                            )}
+                        </Button>
+                    </div>
+                </form>
+            </Form>
         </main>
     )
   }
@@ -390,7 +472,7 @@ export default function CafeSettingsPage() {
                     </Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
-            <SidebarMenuItem>
+             <SidebarMenuItem>
               <SidebarMenuButton asChild>
                 <Link href={`/${slug}/admin/orders`}>
                   <ClipboardList />
@@ -398,7 +480,7 @@ export default function CafeSettingsPage() {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <SidebarMenuItem>
+             <SidebarMenuItem>
               <SidebarMenuButton asChild>
                 <Link href={`/${slug}/admin/reports`}>
                   <FileText />
