@@ -310,16 +310,10 @@ export default function CafeOrdersManagementPage() {
     return (
       <>
         <main className="flex-1 p-4 md:p-6 lg:p-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="font-headline text-2xl md:text-3xl font-bold">Manajemen Pesanan</h1>
-              <p className="text-muted-foreground">Pantau dan kelola semua pesanan yang masuk untuk hari ini.</p>
-            </div>
-          </div>
           <Card>
             <CardHeader>
                 <CardTitle>Daftar Pesanan Hari Ini</CardTitle>
-                <CardDescription>Berikut adalah daftar pesanan yang masuk hari ini. Klik baris untuk melihat detail.</CardDescription>
+                <CardDescription>Pantau dan kelola semua pesanan yang masuk untuk hari ini. Klik baris untuk melihat detail.</CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
               <div className="border rounded-md overflow-x-auto">

@@ -194,7 +194,6 @@ export default function UserManagementPage() {
         <main className="flex-1 p-4 md:p-6">
           <Card>
               <CardHeader>
-                <CardTitle>Daftar User Admin Kafe</CardTitle>
                 <CardDescription>Berikut adalah daftar semua user dengan peran sebagai admin kafe.</CardDescription>
               </CardHeader>
               <CardContent>

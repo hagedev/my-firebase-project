@@ -347,7 +347,7 @@ export default function CafeSettingsPage() {
                                         {watchedLogoUrl && (
                                             <div className="mt-2 p-4 border rounded-md flex justify-center items-center">
                                                 <Image 
-                                                    src={watchedLogoUrl} 
+                                                    src={watchedLogoUrl}
                                                     alt="Preview Logo" 
                                                     width={150} 
                                                     height={150}
@@ -483,7 +483,7 @@ export default function CafeSettingsPage() {
           <div className="flex items-center gap-2">
             <SidebarTrigger className="md:hidden" />
             <h1 className="font-headline text-xl font-semibold">
-              Settings
+              Setting Profil Kafe
             </h1>
           </div>
            <div className="flex items-center gap-2">

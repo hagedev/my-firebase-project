@@ -199,7 +199,6 @@ export default function CafeMenuManagementPage() {
         <main className="flex-1 p-4 md:p-6 lg:p-8">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
             <div>
-              <h1 className="font-headline text-2xl md:text-3xl font-bold">Manajemen Menu</h1>
               <p className="text-muted-foreground">Tambah, edit, atau hapus item menu untuk kafe Anda.</p>
             </div>
             <Button onClick={() => setIsAddMenuDialogOpen(true)} className="w-full md:w-auto">

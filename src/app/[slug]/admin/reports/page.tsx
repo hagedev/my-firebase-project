@@ -345,8 +345,7 @@ export default function CafeReportsPage() {
       <main className="flex-1 p-4 md:p-6 lg:p-8">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
           <div>
-            <h1 className="font-headline text-2xl md:text-3xl font-bold">Laporan Transaksi</h1>
-            <p className="text-muted-foreground">Analisis penjualan dan transaksi kafe Anda.</p>
+             <p className="text-muted-foreground">Analisis penjualan dan transaksi kafe Anda.</p>
           </div>
           <div className="flex w-full md:w-auto flex-col md:flex-row md:items-center gap-4">
             <RadioGroup defaultValue="date" value={filterMode} onValueChange={(value: 'date' | 'month') => setFilterMode(value)} className="flex items-center">

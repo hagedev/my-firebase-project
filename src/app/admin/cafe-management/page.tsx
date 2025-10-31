@@ -161,7 +161,6 @@ export default function CafeManagementPage() {
         <main className="flex-1 p-4 md:p-6">
         <Card>
             <CardHeader>
-            <CardTitle>Daftar Kafe</CardTitle>
             <CardDescription>Berikut adalah daftar semua kafe yang terdaftar dalam sistem.</CardDescription>
             </CardHeader>
             <CardContent>
