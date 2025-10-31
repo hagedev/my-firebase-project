@@ -42,13 +42,16 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
+import { Calendar, useDayPicker } from '@/components/ui/calendar';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { formatRupiah } from '@/lib/utils';
+import { startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 
 
 export default function CafeReportsPage() {
@@ -64,20 +67,34 @@ export default function CafeReportsPage() {
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  const [filterMode, setFilterMode] = useState<'date' | 'month'>('date');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [selectedMonth, setSelectedMonth] = useState<Date | undefined>(new Date());
+
 
   // --- Date Range for Query ---
   const dateRange = useMemo(() => {
-    if (!selectedDate) return { start: null, end: null };
-    const start = new Date(selectedDate);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(selectedDate);
-    end.setHours(23, 59, 59, 999);
-    return {
-      start: Timestamp.fromDate(start),
-      end: Timestamp.fromDate(end),
-    };
-  }, [selectedDate]);
+    if (filterMode === 'date' && selectedDate) {
+      const start = new Date(selectedDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(selectedDate);
+      end.setHours(23, 59, 59, 999);
+      return {
+        start: Timestamp.fromDate(start),
+        end: Timestamp.fromDate(end),
+      };
+    }
+    if (filterMode === 'month' && selectedMonth) {
+      const start = startOfMonth(selectedMonth);
+      const end = endOfMonth(selectedMonth);
+       return {
+        start: Timestamp.fromDate(start),
+        end: Timestamp.fromDate(end),
+      };
+    }
+    return { start: null, end: null };
+  }, [selectedDate, selectedMonth, filterMode]);
 
 
   // --- Data Fetching ---
@@ -98,7 +115,7 @@ export default function CafeReportsPage() {
 
   const reportSummary = useMemo(() => {
     if (!orders) return { totalRevenue: 0, totalTransactions: 0 };
-    const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
+    const totalRevenue = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
     const totalTransactions = orders.length;
     return { totalRevenue, totalTransactions };
   }, [orders]);
@@ -184,33 +201,154 @@ export default function CafeReportsPage() {
       );
     }
 
+    const DatePicker = () => (
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant={"outline"}
+            className="w-full md:w-[280px] justify-start text-left font-normal"
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {selectedDate ? format(selectedDate, "PPP", { locale: idLocale }) : <span>Pilih tanggal</span>}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0">
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={setSelectedDate}
+            initialFocus
+          />
+        </PopoverContent>
+      </Popover>
+    );
+
+    const MonthPicker = () => (
+       <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant={"outline"}
+            className="w-full md:w-[280px] justify-start text-left font-normal"
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {selectedMonth ? format(selectedMonth, "MMMM yyyy", { locale: idLocale }) : <span>Pilih bulan</span>}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0">
+          <Calendar
+            mode="single"
+            selected={selectedMonth}
+            onSelect={(month) => {
+              setSelectedMonth(month);
+              // also set date to the first of the month to avoid confusion
+              if(month) setSelectedDate(startOfMonth(month));
+            }}
+            initialFocus
+            onMonthChange={setSelectedMonth}
+            className="p-0"
+            classNames={{
+                caption_label: "flex items-center text-sm font-medium",
+                head_row: 'flex',
+                head_cell: 'text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]',
+                row: 'flex w-full mt-2',
+                cell: 'text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20',
+                day: 'h-9 w-9 p-0 font-normal aria-selected:opacity-100',
+                day_selected:
+                  'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground',
+                day_today: 'bg-accent text-accent-foreground',
+                day_outside: 'text-muted-foreground opacity-50',
+                day_disabled: 'text-muted-foreground opacity-50',
+                day_hidden: 'invisible',
+                month: 'space-y-4',
+                months: 'flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0',
+                caption: 'flex justify-center pt-1 relative items-center',
+                nav: 'space-x-1 flex items-center',
+                nav_button: 'h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100',
+                nav_button_previous: 'absolute left-1',
+                nav_button_next: 'absolute right-1',
+            }}
+             components={{
+                Caption: ({ ...props }) => {
+                    const { fromDate, toDate } = useDayPicker();
+
+                    const handleMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+                        const newDate = new Date(props.displayMonth);
+                        newDate.setMonth(parseInt(e.target.value, 10));
+                        setSelectedMonth(newDate);
+                    };
+
+                    const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+                        const newDate = new Date(props.displayMonth);
+                        newDate.setFullYear(parseInt(e.target.value, 10));
+                        setSelectedMonth(newDate);
+                    };
+
+                    const months = Array.from({ length: 12 }, (_, i) => ({
+                        value: i,
+                        label: format(new Date(0, i), 'MMMM', { locale: idLocale }),
+                    }));
+
+                    const years: number[] = [];
+                    if (fromDate && toDate) {
+                        const fromYear = fromDate.getFullYear();
+                        const toYear = toDate.getFullYear();
+                        for (let year = fromYear; year <= toYear; year++) {
+                            years.push(year);
+                        }
+                    } else {
+                        // fallback if no from/to date
+                        const currentYear = new Date().getFullYear();
+                        for(let i = -5; i<=0; i++) years.push(currentYear + i)
+                    }
+
+                    return (
+                        <div className="flex justify-center gap-2 p-2">
+                           <select 
+                                onChange={handleMonthChange}
+                                value={props.displayMonth.getMonth()}
+                                className="p-1 rounded-md border text-sm"
+                            >
+                                {months.map(month => (
+                                    <option key={month.value} value={month.value}>{month.label}</option>
+                                ))}
+                            </select>
+                            <select
+                                onChange={handleYearChange}
+                                value={props.displayMonth.getFullYear()}
+                                className="p-1 rounded-md border text-sm"
+                             >
+                                {years.map(year => (
+                                    <option key={year} value={year}>{year}</option>
+                                ))}
+                            </select>
+                        </div>
+                    );
+                },
+            }}
+          />
+        </PopoverContent>
+      </Popover>
+    );
+
     return (
       <main className="flex-1 p-4 md:p-6 lg:p-8">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
           <div>
             <h1 className="font-headline text-2xl md:text-3xl font-bold">Laporan Transaksi</h1>
             <p className="text-muted-foreground">Analisis penjualan dan transaksi kafe Anda.</p>
           </div>
-          <div>
-             <Popover>
-                <PopoverTrigger asChild>
-                    <Button
-                    variant={"outline"}
-                    className="w-[280px] justify-start text-left font-normal"
-                    >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {selectedDate ? format(selectedDate, "PPP", { locale: idLocale }) : <span>Pilih tanggal</span>}
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                    <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={setSelectedDate}
-                    initialFocus
-                    />
-                </PopoverContent>
-            </Popover>
+          <div className="flex w-full md:w-auto flex-col md:flex-row md:items-center gap-4">
+            <RadioGroup defaultValue="date" value={filterMode} onValueChange={(value: 'date' | 'month') => setFilterMode(value)} className="flex items-center">
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="date" id="r-date" />
+                <Label htmlFor="r-date">Per Tanggal</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="month" id="r-month" />
+                <Label htmlFor="r-month">Per Bulan</Label>
+              </div>
+            </RadioGroup>
+            {filterMode === 'date' ? <DatePicker /> : <MonthPicker />}
           </div>
         </div>
 
@@ -223,7 +361,7 @@ export default function CafeReportsPage() {
                 </CardHeader>
                 <CardContent>
                   {isOrdersLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{formatRupiah(reportSummary.totalRevenue)}</div>}
-                  <p className="text-xs text-muted-foreground">Total pendapatan pada tanggal yang dipilih</p>
+                  <p className="text-xs text-muted-foreground">Total pendapatan pada periode yang dipilih</p>
                 </CardContent>
               </Card>
               <Card>
@@ -233,7 +371,7 @@ export default function CafeReportsPage() {
                 </CardHeader>
                 <CardContent>
                    {isOrdersLoading ? <Loader2 className="h-6 w-6 animate-spin"/> : <div className="text-2xl font-bold">{reportSummary.totalTransactions}</div>}
-                  <p className="text-xs text-muted-foreground">Jumlah transaksi pada tanggal yang dipilih</p>
+                  <p className="text-xs text-muted-foreground">Jumlah transaksi pada periode yang dipilih</p>
                 </CardContent>
               </Card>
             </div>
@@ -242,7 +380,7 @@ export default function CafeReportsPage() {
         <Card>
           <CardHeader>
               <CardTitle>Detail Transaksi</CardTitle>
-              <CardDescription>Daftar semua transaksi yang tercatat pada tanggal yang dipilih.</CardDescription>
+              <CardDescription>Daftar semua transaksi yang tercatat pada periode yang dipilih.</CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
             <div className="border rounded-md">
@@ -267,13 +405,13 @@ export default function CafeReportsPage() {
                     orders.map((order) => (
                       <TableRow key={order.id}>
                         <TableCell className="font-medium">
-                            {order.createdAt ? format(order.createdAt.toDate(), 'HH:mm:ss') : 'N/A'}
+                            {order.createdAt ? format(order.createdAt.toDate(), 'dd/MM/yy HH:mm') : 'N/A'}
                         </TableCell>
                         <TableCell>Meja {order.tableNumber}</TableCell>
                         <TableCell>{formatRupiah(order.totalAmount)}</TableCell>
                         <TableCell>
                           <Badge variant={order.paymentVerified ? 'secondary' : 'default'}>
-                            {order.paymentMethod.toUpperCase()} - {order.paymentVerified ? 'Lunas' : 'Belum'}
+                            {(order.paymentMethod || 'N/A').toUpperCase()} - {order.paymentVerified ? 'Lunas' : 'Belum'}
                           </Badge>
                         </TableCell>
                         <TableCell><Badge variant="outline">{order.status}</Badge></TableCell>
@@ -282,7 +420,7 @@ export default function CafeReportsPage() {
                   ) : (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center h-24">
-                        Tidak ada transaksi pada tanggal yang dipilih.
+                        Tidak ada transaksi pada periode yang dipilih.
                       </TableCell>
                     </TableRow>
                   )}
