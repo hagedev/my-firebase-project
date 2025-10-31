@@ -36,23 +36,3 @@ export function convertGoogleDriveUrl(url: string | undefined | null): string {
   // Return the original URL if it's not a convertible Google Drive link
   return url;
 }
-
-/**
- * Checks if a URL is a valid, accessible image by trying to fetch it.
- * This is useful for validating image URLs on the client-side before rendering.
- * @param url The URL to validate.
- * @returns A promise that resolves to true if the image is valid, false otherwise.
- */
-export async function isValidUrl(url: string): Promise<boolean> {
-  if (!url) return false;
-  try {
-    const response = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
-    // no-cors will result in an opaque response, but it's enough to know the URL is reachable.
-    // The type 'opaque' indicates a successful cross-origin request in no-cors mode.
-    return response.type === 'opaque' || (response.ok && (response.headers.get('Content-Type')?.startsWith('image/') ?? false));
-  } catch (error) {
-    // Network errors or other issues will be caught here
-    console.error('Image validation error:', error);
-    return false;
-  }
-}

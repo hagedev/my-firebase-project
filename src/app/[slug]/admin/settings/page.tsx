@@ -9,7 +9,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Image from 'next/image';
-import { convertGoogleDriveUrl, isValidUrl } from '@/lib/utils';
+import { convertGoogleDriveUrl } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import {
   Loader2,
@@ -87,10 +87,6 @@ export default function CafeSettingsPage() {
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  const [validLogoUrl, setValidLogoUrl] = useState<string>('');
-  const [validQrisUrl, setValidQrisUrl] = useState<string>('');
-
 
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsSchema),
@@ -109,31 +105,8 @@ export default function CafeSettingsPage() {
   const watchedLogoUrl = form.watch('logoUrl');
   const watchedQrisUrl = form.watch('qrisImageUrl');
   
-  // Effect to validate and update logo preview URL
-  useEffect(() => {
-    const checkUrl = async () => {
-      const convertedUrl = convertGoogleDriveUrl(watchedLogoUrl);
-      if (await isValidUrl(convertedUrl)) {
-        setValidLogoUrl(convertedUrl);
-      } else {
-        setValidLogoUrl('');
-      }
-    };
-    checkUrl();
-  }, [watchedLogoUrl]);
-
-  // Effect to validate and update QRIS preview URL
-  useEffect(() => {
-    const checkUrl = async () => {
-      const convertedUrl = convertGoogleDriveUrl(watchedQrisUrl);
-      if (await isValidUrl(convertedUrl)) {
-        setValidQrisUrl(convertedUrl);
-      } else {
-        setValidQrisUrl('');
-      }
-    };
-    checkUrl();
-  }, [watchedQrisUrl]);
+  const convertedLogoUrl = convertGoogleDriveUrl(watchedLogoUrl);
+  const convertedQrisUrl = convertGoogleDriveUrl(watchedQrisUrl);
 
 
   useEffect(() => {
@@ -375,10 +348,10 @@ export default function CafeSettingsPage() {
                                             Salin link dari Google Drive. Pastikan file di-share dengan "Anyone with the link".
                                         </FormDescription>
                                         <FormMessage />
-                                        {validLogoUrl && (
+                                        {convertedLogoUrl && (
                                             <div className="mt-2 p-4 border rounded-md flex justify-center items-center">
                                                 <Image 
-                                                    src={validLogoUrl} 
+                                                    src={convertedLogoUrl} 
                                                     alt="Preview Logo" 
                                                     width={150} 
                                                     height={150}
@@ -402,10 +375,10 @@ export default function CafeSettingsPage() {
                                             Salin link dari Google Drive. Pastikan file di-share dengan "Anyone with the link".
                                         </FormDescription>
                                         <FormMessage />
-                                        {validQrisUrl && (
+                                        {convertedQrisUrl && (
                                             <div className="mt-2 p-4 border rounded-md flex justify-center items-center">
                                                 <Image 
-                                                    src={validQrisUrl} 
+                                                    src={convertedQrisUrl} 
                                                     alt="Preview QRIS" 
                                                     width={250} 
                                                     height={250}
