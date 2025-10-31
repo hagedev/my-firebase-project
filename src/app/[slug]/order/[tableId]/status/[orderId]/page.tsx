@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where, getDocs } from 'firebase/firestore';
 import type { Tenant, Table as TableType, Order } from '@/lib/types';
-import { Loader2, CheckCircle, Clock, Wallet, Utensils, ChefHat } from 'lucide-react';
+import { Loader2, CheckCircle, Clock, Wallet, Utensils, ChefHat, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import Image from 'next/image';
 import { formatRupiah, convertGoogleDriveUrl } from '@/lib/utils';
@@ -195,4 +195,3 @@ export default function OrderStatusPage() {
         </div>
     );
 }
-
