@@ -8,7 +8,7 @@ export default function Home() {
                 Selamat Datang
             </h1>
             <p className="max-w-2xl text-lg md:text-xl text-muted-foreground drop-shadow-md">
-                Proyek telah direset. Mulai dari sini.
+                we are green!
             </p>
         </div>
     </main>
