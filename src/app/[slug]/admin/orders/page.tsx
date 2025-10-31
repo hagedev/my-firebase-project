@@ -38,13 +38,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { signOut } from 'firebase/auth';
@@ -58,6 +51,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 export default function CafeOrdersManagementPage() {
   const router = useRouter();
@@ -152,14 +147,14 @@ export default function CafeOrdersManagementPage() {
     }
   };
   
-  const handlePaymentVerification = async (orderId: string) => {
+  const handlePaymentVerifiedChange = async (orderId: string, isVerified: boolean) => {
     if (!firestore || !tenant) return;
     try {
         const orderDocRef = doc(firestore, `tenants/${tenant.id}/orders`, orderId);
-        await updateDoc(orderDocRef, { paymentVerified: true });
+        await updateDoc(orderDocRef, { paymentVerified: isVerified });
         toast({
-            title: 'Pembayaran Diverifikasi',
-            description: 'Pembayaran untuk pesanan ini telah dikonfirmasi.',
+            title: 'Status Pembayaran Diperbarui',
+            description: `Pesanan ditandai sebagai ${isVerified ? 'Lunas' : 'Belum Lunas'}.`,
         });
     } catch (error: any) {
         toast({
@@ -217,9 +212,9 @@ export default function CafeOrdersManagementPage() {
                     <TableRow>
                       <TableHead>Meja</TableHead>
                       <TableHead>Total</TableHead>
-                      <TableHead>Pembayaran</TableHead>
+                      <TableHead>Metode</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Aksi</TableHead>
+                      <TableHead className="text-center">Lunas</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -235,8 +230,8 @@ export default function CafeOrdersManagementPage() {
                           <TableCell className="font-medium">Meja {order.tableNumber}</TableCell>
                           <TableCell>{formatRupiah(order.totalAmount)}</TableCell>
                           <TableCell>
-                            <Badge variant={order.paymentVerified ? 'secondary' : 'default'}>
-                              {(order.paymentMethod || 'N/A').toUpperCase()} - {order.paymentVerified ? 'Lunas' : 'Belum Lunas'}
+                            <Badge variant={'outline'}>
+                              {(order.paymentMethod || 'N/A').toUpperCase()}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -256,13 +251,17 @@ export default function CafeOrdersManagementPage() {
                                 </SelectContent>
                                 </Select>
                           </TableCell>
-                          <TableCell className="text-right">
-                            {!order.paymentVerified && order.paymentMethod === 'qris' && (
-                                <Button size="sm" onClick={() => handlePaymentVerification(order.id)}>
-                                    <CheckCircle className="mr-2 h-4 w-4"/>
-                                    Verifikasi Bayar
-                                </Button>
-                            )}
+                          <TableCell className="text-center">
+                            <div className="flex flex-col items-center justify-center space-y-2">
+                                <Switch
+                                    id={`payment-switch-${order.id}`}
+                                    checked={order.paymentVerified}
+                                    onCheckedChange={(isChecked) => handlePaymentVerifiedChange(order.id, isChecked)}
+                                />
+                                 <Label htmlFor={`payment-switch-${order.id}`} className="text-xs text-muted-foreground">
+                                    {order.paymentVerified ? 'Lunas' : 'Belum Lunas'}
+                                </Label>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))
