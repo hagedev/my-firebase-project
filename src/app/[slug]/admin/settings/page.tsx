@@ -8,6 +8,8 @@ import type { Tenant, User as AppUser } from '@/lib/types';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import Image from 'next/image';
+import { convertGoogleDriveUrl } from '@/lib/utils';
 
 import {
   Loader2,
@@ -98,6 +100,10 @@ export default function CafeSettingsPage() {
       receiptMessage: '',
     },
   });
+
+  const watchedLogoUrl = form.watch('logoUrl');
+  const watchedQrisUrl = form.watch('qrisImageUrl');
+
 
   useEffect(() => {
     if (isUserLoading || !firestore) {
@@ -341,6 +347,21 @@ export default function CafeSettingsPage() {
                                     </FormItem>
                                 )}
                             />
+                            {watchedLogoUrl && (
+                                <div className="mt-4">
+                                <FormLabel>Preview Logo</FormLabel>
+                                <div className="mt-2 p-4 border rounded-md flex justify-center items-center">
+                                    <Image 
+                                        src={convertGoogleDriveUrl(watchedLogoUrl)} 
+                                        alt="Preview Logo" 
+                                        width={150} 
+                                        height={150}
+                                        className="rounded-md object-contain"
+                                    />
+                                </div>
+                                </div>
+                            )}
+
                              <FormField
                                 control={form.control}
                                 name="qrisImageUrl"
@@ -355,6 +376,20 @@ export default function CafeSettingsPage() {
                                     </FormItem>
                                 )}
                             />
+                             {watchedQrisUrl && (
+                                <div className="mt-4">
+                                <FormLabel>Preview QRIS</FormLabel>
+                                <div className="mt-2 p-4 border rounded-md flex justify-center items-center">
+                                    <Image 
+                                        src={convertGoogleDriveUrl(watchedQrisUrl)} 
+                                        alt="Preview QRIS" 
+                                        width={250} 
+                                        height={250}
+                                        className="rounded-md object-contain"
+                                    />
+                                </div>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
 
