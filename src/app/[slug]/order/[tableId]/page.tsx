@@ -44,7 +44,10 @@ export default function OrderPage() {
     }
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        setPageStatus('welcome'); // Autentikasi sukses, siap untuk memesan
+        // Once authenticated, move to welcome state. Don't fetch data yet.
+        if (pageStatus === 'authenticating') {
+            setPageStatus('welcome');
+        }
       } else {
         signInAnonymously(auth).catch((error) => {
           console.error("Anonymous sign-in error:", error);
@@ -85,7 +88,9 @@ export default function OrderPage() {
         // --- 3. Fetch Menu Items ---
         const menuRef = collection(firestore, `tenants/${tenantData.id}/menus`);
         const menuSnap = await getDocs(menuRef);
-        const menuData = menuSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as MenuType));
+        const menuData = menuSnap.docs
+            .map(doc => ({ id: doc.id, ...doc.data() } as MenuType))
+            .filter(item => item.available); // Only show available items
         setMenuItems(menuData);
         
         // --- All data loaded, move to ordering UI ---
@@ -93,6 +98,13 @@ export default function OrderPage() {
 
     } catch (error: any) {
         console.error("Data loading error:", error);
+         if (error instanceof FirebaseError && error.code === 'permission-denied') {
+          const contextualError = new FirestorePermissionError({
+            operation: 'list', // Assuming the failing operation is a list/get
+            path: error.customData?.path || `tenants/${slug}`, // Provide a fallback path
+          });
+          errorEmitter.emit('permission-error', contextualError);
+        }
         setErrorMsg(error.message || 'Terjadi kesalahan saat memuat data kafe.');
         setPageStatus('error');
     }
