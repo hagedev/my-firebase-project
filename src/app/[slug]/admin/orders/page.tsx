@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser, useFirestore, useAuth, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, getDoc, collection, updateDoc, query, orderBy } from 'firebase/firestore';
+import { doc, getDoc, collection, updateDoc, query, orderBy, where, Timestamp } from 'firebase/firestore';
 import type { Tenant, User as AppUser, Order } from '@/lib/types';
 import {
   Loader2,
@@ -68,10 +68,27 @@ export default function CafeOrdersManagementPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // --- Date Range for Today's Orders ---
+  const { todayStart, todayEnd } = useMemo(() => {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+    return {
+      todayStart: Timestamp.fromDate(start),
+      todayEnd: Timestamp.fromDate(end),
+    };
+  }, []);
+
   // --- Data Fetching ---
   const ordersCollectionRef = useMemoFirebase(
-    () => (firestore && tenant ? query(collection(firestore, `tenants/${tenant.id}/orders`), orderBy('createdAt', 'desc')) : null),
-    [firestore, tenant]
+    () => (firestore && tenant ? query(
+      collection(firestore, `tenants/${tenant.id}/orders`),
+      where('createdAt', '>=', todayStart),
+      where('createdAt', '<=', todayEnd),
+      orderBy('createdAt', 'desc')
+    ) : null),
+    [firestore, tenant, todayStart, todayEnd]
   );
   
   const { data: orders, isLoading: isOrdersLoading } = useCollection<Order>(ordersCollectionRef);
@@ -197,13 +214,13 @@ export default function CafeOrdersManagementPage() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="font-headline text-2xl md:text-3xl font-bold">Manajemen Pesanan</h1>
-              <p className="text-muted-foreground">Pantau dan kelola semua pesanan yang masuk.</p>
+              <p className="text-muted-foreground">Pantau dan kelola semua pesanan yang masuk untuk hari ini.</p>
             </div>
           </div>
           <Card>
             <CardHeader>
-                <CardTitle>Daftar Pesanan</CardTitle>
-                <CardDescription>Berikut adalah daftar pesanan yang sedang berjalan dan yang sudah selesai.</CardDescription>
+                <CardTitle>Daftar Pesanan Hari Ini</CardTitle>
+                <CardDescription>Berikut adalah daftar pesanan yang masuk hari ini.</CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
               <div className="border rounded-md">
@@ -268,7 +285,7 @@ export default function CafeOrdersManagementPage() {
                     ) : (
                       <TableRow>
                         <TableCell colSpan={5} className="text-center h-24">
-                          Belum ada pesanan yang masuk.
+                          Belum ada pesanan yang masuk hari ini.
                         </TableCell>
                       </TableRow>
                     )}
