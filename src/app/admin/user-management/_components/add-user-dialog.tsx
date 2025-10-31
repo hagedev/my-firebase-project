@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, doc, writeBatch } from 'firebase/firestore';
+import { collection, doc, setDoc } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, getAuth } from 'firebase/auth';
 import { deleteApp, initializeApp, FirebaseError } from 'firebase/app';
 import { Loader2 } from 'lucide-react';
@@ -89,12 +89,10 @@ export function AddUserDialog({ isOpen, onOpenChange, tenants }: AddUserDialogPr
 
     try {
       // Step 1: Create user in Firebase Auth using the temporary app instance.
-      // This will NOT affect the main app's auth state.
       const userCredential = await createUserWithEmailAndPassword(tempAuth, data.email, data.password);
       newUserUid = userCredential.user.uid;
 
-      // Step 2: Create the user's profile document in Firestore.
-      // This operation uses the main Firestore instance, which is authenticated as Super Admin.
+      // Step 2: Create the user's profile document in Firestore with a specific ID.
       const newUserProfile = {
         authUid: newUserUid,
         email: data.email,
@@ -103,12 +101,9 @@ export function AddUserDialog({ isOpen, onOpenChange, tenants }: AddUserDialogPr
         tenantName: selectedTenant.name,
       };
 
-      const batch = writeBatch(firestore);
+      // Use setDoc with an explicit document ID (the UID)
       const newUserDocRef = doc(firestore, 'users', newUserUid);
-      batch.set(newUserDocRef, newUserProfile);
-
-      // This commit is performed by the Super Admin.
-      await batch.commit();
+      await setDoc(newUserDocRef, newUserProfile);
 
       toast({
         title: 'User Berhasil Dibuat',
@@ -122,8 +117,6 @@ export function AddUserDialog({ isOpen, onOpenChange, tenants }: AddUserDialogPr
       // Handle known Firebase errors
       if (error instanceof FirebaseError) {
         if (error.code === 'permission-denied') {
-          // This error is now highly unlikely but kept for robustness.
-          // It would indicate a fundamental issue with the Super Admin's rules.
           const contextualError = new FirestorePermissionError({
             operation: 'create',
             path: `users/${newUserUid || 'unknown_uid'}`,
