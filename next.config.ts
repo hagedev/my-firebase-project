@@ -51,6 +51,12 @@ const nextConfig: NextConfig = {
         hostname: 'drive.google.com',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'webappv2.infinityfree.me',
+        port: '',
+        pathname: '/**',
       }
     ],
   },

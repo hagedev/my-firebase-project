@@ -8,7 +8,7 @@ import type { Tenant, Table as TableType, Order } from '@/lib/types';
 import { Loader2, CheckCircle, Clock, Wallet, Utensils, ChefHat, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import Image from 'next/image';
-import { formatRupiah, convertGoogleDriveUrl } from '@/lib/utils';
+import { formatRupiah } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import {
   AlertDialog,
@@ -84,8 +84,8 @@ export default function OrderStatusPage() {
     }
     
     const currentStatus = statusConfig[order.status] || statusConfig.received;
-    const validLogoUrl = convertGoogleDriveUrl(tenant.logoUrl);
-    const validQrisUrl = convertGoogleDriveUrl(tenant.qrisImageUrl);
+    const validLogoUrl = tenant.logoUrl;
+    const validQrisUrl = tenant.qrisImageUrl;
 
     const PaymentInstructions = () => {
         if (order.paymentVerified) {
@@ -112,6 +112,7 @@ export default function OrderStatusPage() {
                                 alt="QRIS Payment Code" 
                                 layout="fill" 
                                 objectFit="contain" 
+                                unoptimized
                             />
                         </div>
                     ) : (
@@ -158,6 +159,7 @@ export default function OrderStatusPage() {
                             width={64}
                             height={64}
                             className="mx-auto rounded-full border p-1"
+                            unoptimized
                         />
                     )}
                     <h1 className="font-headline text-3xl font-bold text-primary mt-2">{tenant.name}</h1>

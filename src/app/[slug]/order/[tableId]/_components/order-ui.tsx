@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
-import { formatRupiah, convertGoogleDriveUrl } from '@/lib/utils';
+import { formatRupiah } from '@/lib/utils';
 import { PlusCircle, MinusCircle, ShoppingCart, X, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -66,7 +66,7 @@ export function OrderUI({ tenant, table, menuItems }: OrderUIProps) {
     return acc;
   }, {} as Record<string, Menu[]>);
 
-  const validLogoUrl = convertGoogleDriveUrl(tenant.logoUrl);
+  const validLogoUrl = tenant.logoUrl;
 
   return (
     <div className="relative min-h-screen w-full bg-slate-50 flex flex-col">
@@ -79,7 +79,7 @@ export function OrderUI({ tenant, table, menuItems }: OrderUIProps) {
             </div>
             {validLogoUrl && (
                 <div className="relative h-12 w-12 rounded-full overflow-hidden border">
-                    <Image src={validLogoUrl} alt="Logo" layout="fill" objectFit="cover" />
+                    <Image src={validLogoUrl} alt="Logo" layout="fill" objectFit="cover" unoptimized />
                 </div>
             )}
         </div>
@@ -92,12 +92,12 @@ export function OrderUI({ tenant, table, menuItems }: OrderUIProps) {
                 <h2 className="font-headline text-2xl font-semibold mb-4">{category}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {items.map((item) => {
-                      const validMenuImageUrl = convertGoogleDriveUrl(item.imageUrl);
+                      const validMenuImageUrl = item.imageUrl;
                       return (
                         <Card key={item.id} className="overflow-hidden flex flex-col">
                             {validMenuImageUrl ? (
                                 <div className="relative h-48 w-full">
-                                    <Image src={validMenuImageUrl} alt={item.name} layout="fill" objectFit="cover" />
+                                    <Image src={validMenuImageUrl} alt={item.name} layout="fill" objectFit="cover" unoptimized/>
                                 </div>
                             ) : (
                                 <div className="h-48 w-full bg-muted flex items-center justify-center">

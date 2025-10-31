@@ -9,7 +9,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Image from 'next/image';
-import { convertGoogleDriveUrl } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import {
   Loader2,
@@ -104,9 +103,6 @@ export default function CafeSettingsPage() {
 
   const watchedLogoUrl = form.watch('logoUrl');
   const watchedQrisUrl = form.watch('qrisImageUrl');
-  
-  const convertedLogoUrl = convertGoogleDriveUrl(watchedLogoUrl);
-  const convertedQrisUrl = convertGoogleDriveUrl(watchedQrisUrl);
 
 
   useEffect(() => {
@@ -345,17 +341,18 @@ export default function CafeSettingsPage() {
                                             <Input placeholder="https://..." {...field} />
                                         </FormControl>
                                         <FormDescription>
-                                            Salin link dari Google Drive. Pastikan file di-share dengan "Anyone with the link".
+                                            Gunakan URL gambar yang dapat diakses secara publik.
                                         </FormDescription>
                                         <FormMessage />
-                                        {convertedLogoUrl && (
+                                        {watchedLogoUrl && (
                                             <div className="mt-2 p-4 border rounded-md flex justify-center items-center">
                                                 <Image 
-                                                    src={convertedLogoUrl} 
+                                                    src={watchedLogoUrl} 
                                                     alt="Preview Logo" 
                                                     width={150} 
                                                     height={150}
                                                     className="rounded-md"
+                                                    unoptimized // Important for external URLs that aren't in next.config.ts
                                                 />
                                             </div>
                                         )}
@@ -372,17 +369,18 @@ export default function CafeSettingsPage() {
                                             <Input placeholder="https://..." {...field} />
                                         </FormControl>
                                          <FormDescription>
-                                            Salin link dari Google Drive. Pastikan file di-share dengan "Anyone with the link".
+                                            Gunakan URL gambar yang dapat diakses secara publik.
                                         </FormDescription>
                                         <FormMessage />
-                                        {convertedQrisUrl && (
+                                        {watchedQrisUrl && (
                                             <div className="mt-2 p-4 border rounded-md flex justify-center items-center">
                                                 <Image 
-                                                    src={convertedQrisUrl} 
+                                                    src={watchedQrisUrl} 
                                                     alt="Preview QRIS" 
                                                     width={250} 
                                                     height={250}
                                                     className="rounded-md"
+                                                    unoptimized
                                                 />
                                             </div>
                                         )}
