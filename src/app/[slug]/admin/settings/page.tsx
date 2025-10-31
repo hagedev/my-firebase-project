@@ -49,6 +49,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { signOut } from 'firebase/auth';
 import Link from 'next/link';
+import { convertGoogleDriveUrl } from '@/lib/utils';
 
 // Schema for the settings form including image URLs
 const settingsSchema = z.object({
@@ -238,6 +239,9 @@ export default function CafeSettingsPage() {
       );
     }
 
+    const finalLogoUrl = watchedLogoUrl ? convertGoogleDriveUrl(watchedLogoUrl) : '';
+    const finalQrisUrl = watchedQrisUrl ? convertGoogleDriveUrl(watchedQrisUrl) : '';
+
     return (
         <main className="flex-1 p-4 md:p-6 lg:p-8">
             <Form {...form}>
@@ -341,17 +345,17 @@ export default function CafeSettingsPage() {
                                             <Input placeholder="https://..." {...field} />
                                         </FormControl>
                                         <FormDescription>
-                                            Gunakan URL gambar yang dapat diakses secara publik.
+                                            Gunakan URL gambar yang dapat diakses secara publik (misal: dari Google Drive).
                                         </FormDescription>
                                         <FormMessage />
-                                        {watchedLogoUrl && (
+                                        {finalLogoUrl && (
                                             <div className="mt-2 p-4 border rounded-md flex justify-center items-center">
                                                 <Image 
-                                                    src={watchedLogoUrl} 
+                                                    src={finalLogoUrl} 
                                                     alt="Preview Logo" 
                                                     width={150} 
                                                     height={150}
-                                                    className="rounded-md"
+                                                    className="rounded-md object-contain"
                                                     unoptimized
                                                 />
                                             </div>
@@ -369,17 +373,17 @@ export default function CafeSettingsPage() {
                                             <Input placeholder="https://..." {...field} />
                                         </FormControl>
                                          <FormDescription>
-                                            Gunakan URL gambar yang dapat diakses secara publik.
+                                            Gunakan URL gambar yang dapat diakses secara publik (misal: dari Google Drive).
                                         </FormDescription>
                                         <FormMessage />
-                                        {watchedQrisUrl && (
+                                        {finalQrisUrl && (
                                             <div className="mt-2 p-4 border rounded-md flex justify-center items-center">
                                                 <Image 
-                                                    src={watchedQrisUrl} 
+                                                    src={finalQrisUrl} 
                                                     alt="Preview QRIS" 
                                                     width={250} 
                                                     height={250}
-                                                    className="rounded-md"
+                                                    className="rounded-md object-contain"
                                                     unoptimized
                                                 />
                                             </div>

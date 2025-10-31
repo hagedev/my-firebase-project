@@ -5,7 +5,7 @@ import type { Tenant, Table, Menu, CartItem } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
-import { formatRupiah } from '@/lib/utils';
+import { formatRupiah, convertGoogleDriveUrl } from '@/lib/utils';
 import { ShoppingCart } from 'lucide-react';
 import {
   Accordion,
@@ -51,7 +51,7 @@ export function OrderUI({ tenant, table, menuItems }: OrderUIProps) {
     return acc;
   }, {} as Record<string, Menu[]>);
 
-  const validLogoUrl = tenant.logoUrl;
+  const validLogoUrl = tenant.logoUrl ? convertGoogleDriveUrl(tenant.logoUrl) : '';
 
   return (
     <div className="relative min-h-screen w-full bg-slate-50 flex flex-col">

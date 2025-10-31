@@ -394,7 +394,7 @@ export default function CafeReportsPage() {
               <CardDescription>Daftar semua transaksi yang tercatat pada periode yang dipilih.</CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
-            <div className="border rounded-md">
+            <div className="border rounded-md overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>

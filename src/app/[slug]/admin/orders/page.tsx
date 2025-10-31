@@ -322,7 +322,7 @@ export default function CafeOrdersManagementPage() {
                 <CardDescription>Berikut adalah daftar pesanan yang masuk hari ini. Klik baris untuk melihat detail.</CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
-              <div className="border rounded-md">
+              <div className="border rounded-md overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -355,7 +355,7 @@ export default function CafeOrdersManagementPage() {
                                 value={order.status}
                                 onValueChange={(value: Order['status']) => handleStatusChange(order.id, value)}
                                 >
-                                <SelectTrigger className="w-[180px]">
+                                <SelectTrigger className="w-full min-w-[160px]">
                                     <SelectValue placeholder="Ubah status" />
                                 </SelectTrigger>
                                 <SelectContent>
