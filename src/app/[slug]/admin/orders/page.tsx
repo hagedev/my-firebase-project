@@ -230,13 +230,13 @@ export default function CafeOrdersManagementPage() {
                         </TableCell>
                       </TableRow>
                     ) : orders && orders.length > 0 ? (
-                      orders.sort((a, b) => b.createdAt?.toMillis() - a.createdAt?.toMillis()).map((order) => (
+                      orders.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0)).map((order) => (
                         <TableRow key={order.id}>
                           <TableCell className="font-medium">Meja {order.tableNumber}</TableCell>
                           <TableCell>{formatRupiah(order.totalAmount)}</TableCell>
                           <TableCell>
                             <Badge variant={order.paymentVerified ? 'secondary' : 'default'}>
-                              {order.paymentMethod.toUpperCase()} - {order.paymentVerified ? 'Lunas' : 'Belum Lunas'}
+                              {(order.paymentMethod || 'N/A').toUpperCase()} - {order.paymentVerified ? 'Lunas' : 'Belum Lunas'}
                             </Badge>
                           </TableCell>
                           <TableCell>
