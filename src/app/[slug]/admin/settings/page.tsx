@@ -8,7 +8,7 @@ import type { Tenant, User as AppUser } from '@/lib/types';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 
 import {
   Loader2,
@@ -49,6 +49,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Progress } from '@/components/ui/progress';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -61,20 +62,18 @@ const settingsSchema = z.object({
   ownerName: z.string().optional(),
   phoneNumber: z.string().optional(),
   receiptMessage: z.string().optional(),
-  // URL fields are no longer directly edited by user, but still part of the data model
-  logoUrl: z.string().url().or(z.literal('')),
-  qrisImageUrl: z.string().url().or(z.literal('')),
+  logoUrl: z.string().url().or(z.literal('')).optional(),
+  qrisImageUrl: z.string().url().or(z.literal('')).optional(),
 });
 
 type SettingsFormValues = z.infer<typeof settingsSchema>;
 
-// Function to generate a URL-friendly slug
 const createSlug = (name: string) => {
     return name
       .toLowerCase()
-      .replace(/[^a-z0-9 -]/g, '') // remove invalid chars
-      .replace(/\s+/g, '-') // collapse whitespace and replace by -
-      .replace(/-+/g, '-'); // collapse dashes
+      .replace(/[^a-z0-9 -]/g, '') 
+      .replace(/\s+/g, '-') 
+      .replace(/-+/g, '-'); 
 };
 
 export default function CafeSettingsPage() {
@@ -91,6 +90,7 @@ export default function CafeSettingsPage() {
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<{ [key in 'logo' | 'qris']: number | null }>({ logo: null, qris: null });
   const [isUploading, setIsUploading] = useState<'logo' | 'qris' | null>(null);
 
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -144,7 +144,6 @@ export default function CafeSettingsPage() {
         }
 
         setTenant(tenantData);
-        // Populate form with fetched data
         form.reset({
           name: tenantData.name,
           tokenHarian: tenantData.tokenHarian || '',
@@ -168,7 +167,7 @@ export default function CafeSettingsPage() {
 
   }, [user, isUserLoading, firestore, slug, router, form]);
 
-  const handleFileUpload = async (file: File, type: 'logo' | 'qris') => {
+  const handleFileUpload = (file: File, type: 'logo' | 'qris') => {
     if (!storage || !tenant) return;
     if (!file.type.startsWith('image/')) {
         toast({ variant: 'destructive', title: 'File tidak valid', description: 'Silakan pilih file gambar (PNG, JPG, dll).' });
@@ -176,31 +175,43 @@ export default function CafeSettingsPage() {
     }
 
     setIsUploading(type);
+    setUploadProgress(prev => ({ ...prev, [type]: 0 }));
     const filePath = `tenants/${tenant.id}/${type}/${file.name}`;
     const fileRef = ref(storage, filePath);
+    const uploadTask = uploadBytesResumable(fileRef, file);
 
-    try {
-        const snapshot = await uploadBytes(fileRef, file);
-        const downloadURL = await getDownloadURL(snapshot.ref);
+    uploadTask.on('state_changed',
+        (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            setUploadProgress(prev => ({ ...prev, [type]: progress }));
+        },
+        (error) => {
+            console.error("File upload error:", error);
+            toast({ variant: 'destructive', title: 'Upload Gagal', description: error.message });
+            setIsUploading(null);
+            setUploadProgress(prev => ({ ...prev, [type]: null }));
+        },
+        async () => {
+            try {
+                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                const fieldToUpdate = type === 'logo' ? 'logoUrl' : 'qrisImageUrl';
+                
+                const tenantDocRef = doc(firestore, 'tenants', tenant.id);
+                await updateDoc(tenantDocRef, { [fieldToUpdate]: downloadURL });
+                
+                form.setValue(fieldToUpdate, downloadURL, { shouldDirty: true, shouldValidate: true });
 
-        const fieldToUpdate = type === 'logo' ? 'logoUrl' : 'qrisImageUrl';
-        
-        // Update Firestore
-        const tenantDocRef = doc(firestore, 'tenants', tenant.id);
-        await updateDoc(tenantDocRef, { [fieldToUpdate]: downloadURL });
+                toast({ title: 'Upload Berhasil', description: `${type === 'logo' ? 'Logo' : 'Gambar QRIS'} telah diperbarui.` });
 
-        // Update local state and form value
-        form.setValue(fieldToUpdate, downloadURL);
-        setTenant(prev => prev ? { ...prev, [fieldToUpdate]: downloadURL } : null);
-
-        toast({ title: 'Upload Berhasil', description: `${type === 'logo' ? 'Logo' : 'Gambar QRIS'} telah diperbarui.` });
-
-    } catch (error: any) {
-        console.error("File upload error:", error);
-        toast({ variant: 'destructive', title: 'Upload Gagal', description: error.message });
-    } finally {
-        setIsUploading(null);
-    }
+            } catch (error: any) {
+                console.error("Error getting download URL or updating doc:", error);
+                toast({ variant: 'destructive', title: 'Gagal Menyimpan URL', description: error.message });
+            } finally {
+                setIsUploading(null);
+                setUploadProgress(prev => ({ ...prev, [type]: null }));
+            }
+        }
+    );
   };
 
 
@@ -229,7 +240,6 @@ export default function CafeSettingsPage() {
         description: 'Profil kafe Anda telah diperbarui.',
       });
 
-      // If slug changes, redirect to the new admin URL
       if (newSlug !== slug) {
         router.replace(`/${newSlug}/admin/settings`);
       }
@@ -284,7 +294,8 @@ export default function CafeSettingsPage() {
     const ImageUploadCard = ({ type, inputRef }: { type: 'logo' | 'qris', inputRef: React.RefObject<HTMLInputElement> }) => {
         const title = type === 'logo' ? 'Logo Kafe' : 'Gambar QRIS';
         const description = type === 'logo' ? 'Ganti logo kafe Anda.' : 'Ganti gambar kode QRIS.';
-        const imageUrl = type === 'logo' ? form.watch('logoUrl') : form.watch('qrisImageUrl');
+        const imageUrl = form.watch(type === 'logo' ? 'logoUrl' : 'qrisImageUrl');
+        const progress = uploadProgress[type];
         
         return (
              <Card>
@@ -314,18 +325,21 @@ export default function CafeSettingsPage() {
                             }
                         }}
                     />
-                    <Button 
-                        variant="outline"
-                        onClick={() => inputRef.current?.click()}
-                        disabled={isUploading === type}
-                    >
-                         {isUploading === type ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                         ) : (
+                    {progress !== null ? (
+                        <div className="w-full px-4">
+                            <Progress value={progress} className="w-full" />
+                            <p className="text-center text-sm text-muted-foreground mt-2">{Math.round(progress)}%</p>
+                        </div>
+                    ) : (
+                        <Button 
+                            variant="outline"
+                            onClick={() => inputRef.current?.click()}
+                            disabled={isUploading !== null}
+                        >
                             <Upload className="mr-2 h-4 w-4" />
-                         )}
-                        {isUploading === type ? 'Mengunggah...' : 'Ganti Gambar'}
-                    </Button>
+                            Ganti Gambar
+                        </Button>
+                    )}
                 </CardContent>
             </Card>
         );
@@ -540,3 +554,5 @@ export default function CafeSettingsPage() {
     </SidebarProvider>
   );
 }
+
+    
