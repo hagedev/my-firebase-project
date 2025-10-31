@@ -345,7 +345,9 @@ export default function CafeSettingsPage() {
                                         <FormControl>
                                             <Input placeholder="https://..." {...field} />
                                         </FormControl>
-                                        <FormDescription>Salin "Copy Image Address" dari Google Photos untuk hasil terbaik.</FormDescription>
+                                        <FormDescription>
+                                            Buka Google Photos, klik kanan pada gambar, lalu pilih "Copy Image Address".
+                                        </FormDescription>
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -374,7 +376,9 @@ export default function CafeSettingsPage() {
                                         <FormControl>
                                             <Input placeholder="https://..." {...field} />
                                         </FormControl>
-                                        <FormDescription>Salin "Copy Image Address" dari Google Photos untuk hasil terbaik.</FormDescription>
+                                        <FormDescription>
+                                            Buka Google Photos, klik kanan pada gambar, lalu pilih "Copy Image Address".
+                                        </FormDescription>
                                         <FormMessage />
                                     </FormItem>
                                 )}
