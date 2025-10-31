@@ -103,10 +103,13 @@ function ImageUploadCard({ title, description, currentImageUrl, onUploadComplete
       const fileRef = ref(storage, `tenants/${tenantId}/${storagePath}/${file.name}`);
       const snapshot = await uploadBytes(fileRef, file);
       const downloadURL = await getDownloadURL(snapshot.ref);
-      await onUploadComplete(downloadURL);
+      
+      await onUploadComplete(downloadURL); // This now waits for the Firestore update to complete
+
       toast({ title: 'Upload Berhasil!', description: `${title} telah diperbarui.` });
     } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Upload Gagal', description: error.message });
+      console.error("Upload error:", error);
+      toast({ variant: 'destructive', title: 'Upload Gagal', description: error.message || 'Terjadi kesalahan pada server.' });
     } finally {
       setIsUploading(false);
     }
@@ -121,21 +124,19 @@ function ImageUploadCard({ title, description, currentImageUrl, onUploadComplete
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {validImageUrl ? (
-           <div className="mt-2 p-4 border rounded-md flex justify-center items-center">
-            <Image 
-              src={validImageUrl} 
-              alt={`Preview ${title}`}
-              width={storagePath === 'logos' ? 150 : 250}
-              height={storagePath === 'logos' ? 150 : 250}
-              className="rounded-md object-contain"
-            />
-          </div>
-        ) : (
-          <div className="mt-2 p-4 border rounded-md flex justify-center items-center h-[150px] bg-muted/50">
-            <p className="text-sm text-muted-foreground">Belum ada gambar</p>
-          </div>
-        )}
+        <div className="mt-2 p-4 border rounded-md flex justify-center items-center min-h-[180px] bg-muted/50">
+            {validImageUrl ? (
+                <Image 
+                src={validImageUrl} 
+                alt={`Preview ${title}`}
+                width={storagePath === 'logos' ? 150 : 250}
+                height={storagePath === 'logos' ? 150 : 250}
+                className="rounded-md object-contain"
+                />
+            ) : (
+                <p className="text-sm text-muted-foreground">Belum ada gambar</p>
+            )}
+        </div>
        
         <Button asChild variant="outline" className="w-full" disabled={isUploading}>
           <label htmlFor={`file-upload-${storagePath}`} className="cursor-pointer">
@@ -285,16 +286,20 @@ export default function CafeSettingsPage() {
   };
 
   const handleImageUploadComplete = useCallback(async (fieldName: 'logoUrl' | 'qrisImageUrl', url: string) => {
-    if (!firestore || !tenant) return;
+    if (!firestore || !tenant) {
+      throw new Error("Firestore atau tenant tidak tersedia.");
+    };
     const tenantDocRef = doc(firestore, 'tenants', tenant.id);
     try {
       await updateDoc(tenantDocRef, { [fieldName]: url });
       // Update local tenant state to reflect the new image URL for the preview
       setTenant(prev => prev ? { ...prev, [fieldName]: url } : null);
     } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Gagal Menyimpan URL Gambar', description: error.message });
+      console.error("Image URL update error:", error);
+      // Throw the error so the caller (handleFileChange) can catch it
+      throw new Error(error.message || 'Gagal menyimpan URL gambar ke database.');
     }
-  }, [firestore, tenant, toast]);
+  }, [firestore, tenant]);
 
   const handleLogout = async () => {
     if (!auth) return;
