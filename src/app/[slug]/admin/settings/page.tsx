@@ -22,6 +22,7 @@ import {
   Info,
   ClipboardList,
   FileText,
+  AlertCircle,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
@@ -48,6 +49,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
@@ -217,6 +219,20 @@ export default function CafeSettingsPage() {
     }
   };
 
+  const UrlWarning = ({ url }: { url?: string }) => {
+    if (url && (url.includes('fife.usercontent.google.com') || url.includes('photos.app.goo.gl'))) {
+      return (
+        <Alert variant="destructive" className="mt-2">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            URL ini sepertinya bersifat pribadi dan mungkin tidak akan muncul setelah dipublikasikan. Gunakan &quot;Copy Image Address&quot; untuk hasil terbaik.
+          </AlertDescription>
+        </Alert>
+      );
+    }
+    return null;
+  };
+
   const pageContent = () => {
     if (isLoading || isUserLoading) {
       return (
@@ -346,8 +362,9 @@ export default function CafeSettingsPage() {
                                             <Input placeholder="https://..." {...field} />
                                         </FormControl>
                                         <FormDescription>
-                                            Buka Google Photos, klik kanan pada gambar, lalu pilih "Copy Image Address".
+                                            Buka Google Photos, klik kanan pada gambar, lalu pilih &quot;Copy Image Address&quot;.
                                         </FormDescription>
+                                        <UrlWarning url={field.value} />
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -377,8 +394,9 @@ export default function CafeSettingsPage() {
                                             <Input placeholder="https://..." {...field} />
                                         </FormControl>
                                         <FormDescription>
-                                            Buka Google Photos, klik kanan pada gambar, lalu pilih "Copy Image Address".
+                                            Buka Google Photos, klik kanan pada gambar, lalu pilih &quot;Copy Image Address&quot;.
                                         </FormDescription>
+                                        <UrlWarning url={field.value} />
                                         <FormMessage />
                                     </FormItem>
                                 )}
