@@ -4,12 +4,15 @@ import { useState } from 'react';
 import type { Tenant, Table, Menu, CartItem } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
 import { formatRupiah } from '@/lib/utils';
-import { PlusCircle, MinusCircle, ShoppingCart, X, Trash2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { ShoppingCart } from 'lucide-react';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 import { CheckoutDialog } from './checkout-dialog';
 
 interface OrderUIProps {
@@ -36,24 +39,6 @@ export function OrderUI({ tenant, table, menuItems }: OrderUIProps) {
     });
   };
 
-  const removeFromCart = (itemId: string) => {
-    setCart((prevCart) => {
-      const existingItem = prevCart.find((cartItem) => cartItem.id === itemId);
-      if (existingItem && existingItem.quantity > 1) {
-        return prevCart.map((cartItem) =>
-          cartItem.id === itemId
-            ? { ...cartItem, quantity: cartItem.quantity - 1 }
-            : cartItem
-        );
-      }
-      return prevCart.filter((cartItem) => cartItem.id !== itemId);
-    });
-  };
-  
-  const clearItemFromCart = (itemId: string) => {
-    setCart(prevCart => prevCart.filter(item => item.id !== itemId));
-  };
-  
   const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
   const totalAmount = cart.reduce((total, item) => total + item.price * item.quantity, 0);
 
@@ -87,41 +72,31 @@ export function OrderUI({ tenant, table, menuItems }: OrderUIProps) {
 
       {/* Main Content */}
       <main className="flex-1 container mx-auto p-4 pb-32">
-        {Object.entries(groupedMenu).map(([category, items]) => (
-            <div key={category} className="mb-8">
-                <h2 className="font-headline text-2xl font-semibold mb-4">{category}</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {items.map((item) => {
-                      const validMenuImageUrl = item.imageUrl;
-                      return (
-                        <Card key={item.id} className="overflow-hidden flex flex-col">
-                            {validMenuImageUrl ? (
-                                <div className="relative h-48 w-full">
-                                    <Image src={validMenuImageUrl} alt={item.name} layout="fill" objectFit="cover" unoptimized/>
-                                </div>
-                            ) : (
-                                <div className="h-48 w-full bg-muted flex items-center justify-center">
-                                    <p className="text-muted-foreground text-sm">Gambar tidak tersedia</p>
-                                </div>
-                            )}
-                            <CardContent className="p-4 flex-1 flex flex-col justify-between">
-                               <div>
-                                    <h3 className="font-semibold text-lg">{item.name}</h3>
-                                    <p className="text-muted-foreground text-sm mt-1">{item.description}</p>
-                               </div>
-                               <div className="flex justify-between items-center mt-4">
-                                 <p className="font-bold text-lg text-primary">{formatRupiah(item.price)}</p>
-                                 <Button onClick={() => addToCart(item)} size="sm">
+        <Accordion type="multiple" defaultValue={Object.keys(groupedMenu)}>
+            {Object.entries(groupedMenu).map(([category, items]) => (
+                <AccordionItem value={category} key={category} className="mb-4 border-b-0 rounded-lg bg-background shadow-sm">
+                    <AccordionTrigger className="px-6 py-4 font-headline text-xl">
+                        {category}
+                    </AccordionTrigger>
+                    <AccordionContent className="px-6 pb-4">
+                        <div className="flex flex-col divide-y">
+                            {items.map((item) => (
+                               <div key={item.id} className="flex items-center justify-between py-3">
+                                   <div className="flex-1 pr-4">
+                                       <h4 className="font-semibold">{item.name}</h4>
+                                       {item.description && <p className="text-sm text-muted-foreground mt-1">{item.description}</p>}
+                                       <p className="font-semibold text-primary mt-1">{formatRupiah(item.price)}</p>
+                                   </div>
+                                   <Button onClick={() => addToCart(item)} size="sm">
                                      Pesan
-                                 </Button>
+                                   </Button>
                                </div>
-                            </CardContent>
-                        </Card>
-                      )
-                    })}
-                </div>
-            </div>
-        ))}
+                            ))}
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
+            ))}
+        </Accordion>
       </main>
 
       {/* Cart Footer */}
