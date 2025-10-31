@@ -51,7 +51,7 @@ import Link from 'next/link';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { formatRupiah } from '@/lib/utils';
-import { startOfMonth, endOfMonth } from 'date-fns';
+import { startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 
 
 export default function CafeReportsPage() {
@@ -206,7 +206,7 @@ export default function CafeReportsPage() {
         <PopoverTrigger asChild>
           <Button
             variant={"outline"}
-            className="w-[280px] justify-start text-left font-normal"
+            className="w-full md:w-[280px] justify-start text-left font-normal"
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
             {selectedDate ? format(selectedDate, "PPP", { locale: idLocale }) : <span>Pilih tanggal</span>}
@@ -228,7 +228,7 @@ export default function CafeReportsPage() {
         <PopoverTrigger asChild>
           <Button
             variant={"outline"}
-            className="w-[280px] justify-start text-left font-normal"
+            className="w-full md:w-[280px] justify-start text-left font-normal"
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
             {selectedMonth ? format(selectedMonth, "MMMM yyyy", { locale: idLocale }) : <span>Pilih bulan</span>}
@@ -238,12 +238,93 @@ export default function CafeReportsPage() {
           <Calendar
             mode="single"
             selected={selectedMonth}
-            onSelect={setSelectedMonth}
+            onSelect={(month) => {
+              setSelectedMonth(month);
+              // also set date to the first of the month to avoid confusion
+              if(month) setSelectedDate(startOfMonth(month));
+            }}
             initialFocus
-            captionLayout="dropdown-buttons"
-            fromYear={2020}
-            toYear={new Date().getFullYear()}
             onMonthChange={setSelectedMonth}
+            className="p-0"
+            classNames={{
+                caption_label: "flex items-center text-sm font-medium",
+                head_row: 'flex',
+                head_cell: 'text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]',
+                row: 'flex w-full mt-2',
+                cell: 'text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20',
+                day: 'h-9 w-9 p-0 font-normal aria-selected:opacity-100',
+                day_selected:
+                  'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground',
+                day_today: 'bg-accent text-accent-foreground',
+                day_outside: 'text-muted-foreground opacity-50',
+                day_disabled: 'text-muted-foreground opacity-50',
+                day_hidden: 'invisible',
+                month: 'space-y-4',
+                months: 'flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0',
+                caption: 'flex justify-center pt-1 relative items-center',
+                nav: 'space-x-1 flex items-center',
+                nav_button: 'h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100',
+                nav_button_previous: 'absolute left-1',
+                nav_button_next: 'absolute right-1',
+            }}
+             components={{
+                Caption: ({ ...props }) => {
+                    const { fromDate, toDate } = useDayPicker();
+
+                    const handleMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+                        const newDate = new Date(props.displayMonth);
+                        newDate.setMonth(parseInt(e.target.value, 10));
+                        setSelectedMonth(newDate);
+                    };
+
+                    const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+                        const newDate = new Date(props.displayMonth);
+                        newDate.setFullYear(parseInt(e.target.value, 10));
+                        setSelectedMonth(newDate);
+                    };
+
+                    const months = Array.from({ length: 12 }, (_, i) => ({
+                        value: i,
+                        label: format(new Date(0, i), 'MMMM', { locale: idLocale }),
+                    }));
+
+                    const years: number[] = [];
+                    if (fromDate && toDate) {
+                        const fromYear = fromDate.getFullYear();
+                        const toYear = toDate.getFullYear();
+                        for (let year = fromYear; year <= toYear; year++) {
+                            years.push(year);
+                        }
+                    } else {
+                        // fallback if no from/to date
+                        const currentYear = new Date().getFullYear();
+                        for(let i = -5; i<=0; i++) years.push(currentYear + i)
+                    }
+
+                    return (
+                        <div className="flex justify-center gap-2 p-2">
+                           <select 
+                                onChange={handleMonthChange}
+                                value={props.displayMonth.getMonth()}
+                                className="p-1 rounded-md border text-sm"
+                            >
+                                {months.map(month => (
+                                    <option key={month.value} value={month.value}>{month.label}</option>
+                                ))}
+                            </select>
+                            <select
+                                onChange={handleYearChange}
+                                value={props.displayMonth.getFullYear()}
+                                className="p-1 rounded-md border text-sm"
+                             >
+                                {years.map(year => (
+                                    <option key={year} value={year}>{year}</option>
+                                ))}
+                            </select>
+                        </div>
+                    );
+                },
+            }}
           />
         </PopoverContent>
       </Popover>
@@ -256,7 +337,7 @@ export default function CafeReportsPage() {
             <h1 className="font-headline text-2xl md:text-3xl font-bold">Laporan Transaksi</h1>
             <p className="text-muted-foreground">Analisis penjualan dan transaksi kafe Anda.</p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex w-full md:w-auto flex-col md:flex-row md:items-center gap-4">
             <RadioGroup defaultValue="date" value={filterMode} onValueChange={(value: 'date' | 'month') => setFilterMode(value)} className="flex items-center">
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="date" id="r-date" />
@@ -439,3 +520,4 @@ export default function CafeReportsPage() {
     </SidebarProvider>
   );
 }
+
