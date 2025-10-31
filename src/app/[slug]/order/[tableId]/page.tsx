@@ -8,12 +8,13 @@ import { collection, query, where, getDocs, doc, getDoc, addDoc, serverTimestamp
 import type { Tenant, Table as TableType } from '@/lib/types';
 import { Loader2, CheckCircle, XCircle, ShieldQuestion, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { FirebaseError } from 'firebase/app';
 
 // State machine for page flow
 type PageStatus = 'authenticating' | 'welcome' | 'testing' | 'test_complete' | 'error';
 type TestStep = {
-    id: string;
+    id: 'tenant' | 'table' | 'menu' | 'order';
     description: string;
     status: 'pending' | 'running' | 'success' | 'failed';
     error?: string;
@@ -58,19 +59,36 @@ export default function OrderPage() {
       }
     });
     return () => unsubscribe();
-  }, [auth]); // Hanya bergantung pada auth
+  }, [auth]);
 
-  const updateTestStep = (id: string, status: TestStep['status'], error?: string) => {
+  const updateTestStep = (id: TestStep['id'], status: TestStep['status'], error?: string) => {
     setTestSteps(prev => prev.map(step => 
         step.id === id ? { ...step, status, error } : step
     ));
+    if (status === 'failed') {
+      setErrorMsg(error || `Kegagalan pada ${id}`);
+      setPageStatus('error');
+    }
   };
 
+  const handleFailure = (stepId: TestStep['id'], error: any, path: string, operation: 'get' | 'list' | 'create', requestData?: any) => {
+    console.error(`Test error on step ${stepId}:`, error);
+    if (error instanceof FirebaseError && error.code === 'permission-denied') {
+        const contextualError = new FirestorePermissionError({
+            operation: operation,
+            path: path,
+            requestResourceData: requestData,
+        });
+        errorEmitter.emit('permission-error', contextualError);
+    } else {
+        updateTestStep(stepId, 'failed', error.message);
+    }
+  };
 
   // STEP 2 & 3: Handle button click and run test sequence
   const handleStartOrderTest = async () => {
     setPageStatus('testing');
-    setTestSteps(INITIAL_TEST_STEPS); // Reset steps
+    setTestSteps(INITIAL_TEST_STEPS);
 
     if (!firestore || !auth?.currentUser) {
         setErrorMsg('Sesi autentikasi tidak valid atau Firestore tidak siap. Silakan refresh halaman.');
@@ -79,55 +97,71 @@ export default function OrderPage() {
     }
 
     let tenant: Tenant | null = null;
-    let table: TableType | null = null;
+    
+    // --- TEST 1: Fetch Tenant Info ---
+    updateTestStep('tenant', 'running');
+    const tenantQuery = query(collection(firestore, 'tenants'), where('slug', '==', slug));
+    const tenantSnapshot = await getDocs(tenantQuery).catch(err => {
+        handleFailure('tenant', err, 'tenants', 'list');
+        return null;
+    });
 
-    try {
-      // --- TEST 1: Fetch Tenant Info ---
-      updateTestStep('tenant', 'running');
-      const tenantQuery = query(collection(firestore, 'tenants'), where('slug', '==', slug));
-      const tenantSnapshot = await getDocs(tenantQuery);
-      if (tenantSnapshot.empty) throw new Error(`Kafe dengan slug "${slug}" tidak ditemukan.`);
-      const tenantDoc = tenantSnapshot.docs[0];
-      tenant = { id: tenantDoc.id, ...tenantDoc.data() } as Tenant;
-      updateTestStep('tenant', 'success');
+    if (!tenantSnapshot) return; // Stop if failed
 
-      // --- TEST 2: Fetch Table Info ---
-      updateTestStep('table', 'running');
-      const tableRef = doc(firestore, `tenants/${tenant.id}/tables/${tableId}`);
-      const tableSnap = await getDoc(tableRef);
-      if (!tableSnap.exists()) throw new Error(`Meja dengan ID "${tableId}" tidak ditemukan.`);
-      table = { id: tableSnap.id, ...tableSnap.data() } as TableType;
-      updateTestStep('table', 'success');
-      
-      // --- TEST 3: Fetch Menu Items ---
-      updateTestStep('menu', 'running');
-      const menuRef = collection(firestore, `tenants/${tenant.id}/menus`);
-      await getDocs(menuRef); // We just need to know if we can read it
-      updateTestStep('menu', 'success');
-
-      // --- TEST 4: Create a dummy Order ---
-      updateTestStep('order', 'running');
-      const ordersRef = collection(firestore, `tenants/${tenant.id}/orders`);
-      const dummyOrderData = {
-          tenantId: tenant.id,
-          tableId: table.id,
-          verificationToken: tenant.tokenHarian, // Use the correct token
-          createdAt: serverTimestamp(),
-          status: 'cancelled', // Mark as cancelled so it doesn't affect real data
-      };
-      await addDoc(ordersRef, dummyOrderData);
-      updateTestStep('order', 'success');
-
-      setPageStatus('test_complete');
-    } catch (err: any) {
-        console.error("Test error:", err);
-        const runningStep = testSteps.find(s => s.status === 'running');
-        if (runningStep) {
-            updateTestStep(runningStep.id, 'failed', err.message);
-        }
-        setErrorMsg(err.message || 'Gagal pada salah satu langkah pengujian.');
-        setPageStatus('error');
+    if (tenantSnapshot.empty) {
+        updateTestStep('tenant', 'failed', `Kafe dengan slug "${slug}" tidak ditemukan.`);
+        return;
     }
+    tenant = { id: tenantSnapshot.docs[0].id, ...tenantSnapshot.docs[0].data() } as Tenant;
+    updateTestStep('tenant', 'success');
+
+    // --- TEST 2: Fetch Table Info ---
+    updateTestStep('table', 'running');
+    const tableRef = doc(firestore, `tenants/${tenant.id}/tables/${tableId}`);
+    const tableSnap = await getDoc(tableRef).catch(err => {
+        handleFailure('table', err, tableRef.path, 'get');
+        return null;
+    });
+
+    if (!tableSnap) return; // Stop if failed
+
+    if (!tableSnap.exists()) {
+        updateTestStep('table', 'failed', `Meja dengan ID "${tableId}" tidak ditemukan.`);
+        return;
+    }
+    updateTestStep('table', 'success');
+      
+    // --- TEST 3: Fetch Menu Items ---
+    updateTestStep('menu', 'running');
+    const menuRef = collection(firestore, `tenants/${tenant.id}/menus`);
+    const menuSnap = await getDocs(menuRef).catch(err => {
+        handleFailure('menu', err, menuRef.path, 'list');
+        return null;
+    });
+    
+    if (!menuSnap) return; // Stop if failed
+    updateTestStep('menu', 'success');
+
+    // --- TEST 4: Create a dummy Order ---
+    updateTestStep('order', 'running');
+    const ordersRef = collection(firestore, `tenants/${tenant.id}/orders`);
+    const dummyOrderData = {
+        tenantId: tenant.id,
+        tableId: tableId,
+        verificationToken: tenant.tokenHarian, // Use the correct token
+        createdAt: serverTimestamp(),
+        status: 'cancelled', // Mark as cancelled so it doesn't affect real data
+    };
+    
+    const orderDoc = await addDoc(ordersRef, dummyOrderData).catch(err => {
+        handleFailure('order', err, ordersRef.path, 'create', dummyOrderData);
+        return null;
+    });
+
+    if (!orderDoc) return; // Stop if failed
+    updateTestStep('order', 'success');
+
+    setPageStatus('test_complete');
   };
 
   const TestResultIcon = ({ status }: { status: TestStep['status'] }) => {
@@ -176,6 +210,11 @@ export default function OrderPage() {
             <Card className="w-full max-w-md">
                 <CardHeader>
                     <CardTitle>Hasil Pengujian Akses</CardTitle>
+                    <CardDescription>
+                       {pageStatus === 'testing' && 'Pengujian sedang berjalan...'}
+                       {pageStatus === 'test_complete' && 'Semua pengujian berhasil!'}
+                       {pageStatus === 'error' && 'Pengujian gagal pada salah satu langkah.'}
+                    </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <ul className="space-y-4">
@@ -199,7 +238,7 @@ export default function OrderPage() {
                            <p className="font-bold text-center">Semua pengujian berhasil!</p>
                         </div>
                     )}
-                     {pageStatus === 'error' && (
+                     {pageStatus === 'error' && errorMsg && (
                         <div className="mt-6 p-4 bg-red-50 text-red-800 rounded-md border border-red-200">
                            <p className="font-bold text-center">Pengujian Gagal!</p>
                            <p className="text-sm text-center mt-1">{errorMsg}</p>
