@@ -1,14 +1,13 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useUser, useFirestore, useAuth, useStorage } from '@/firebase';
+import { useUser, useFirestore, useAuth } from '@/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import type { Tenant, User as AppUser } from '@/lib/types';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 
 import {
   Loader2,
@@ -21,8 +20,6 @@ import {
   Info,
   ClipboardList,
   FileText,
-  Upload,
-  Image as ImageIcon,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
@@ -49,11 +46,9 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Progress } from '@/components/ui/progress';
 import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import Image from 'next/image';
 
 const settingsSchema = z.object({
   name: z.string().min(3, 'Nama kafe minimal 3 karakter.'),
@@ -62,8 +57,8 @@ const settingsSchema = z.object({
   ownerName: z.string().optional(),
   phoneNumber: z.string().optional(),
   receiptMessage: z.string().optional(),
-  logoUrl: z.string().url().or(z.literal('')).optional(),
-  qrisImageUrl: z.string().url().or(z.literal('')).optional(),
+  logoUrl: z.string().url({ message: 'URL tidak valid' }).or(z.literal('')).optional(),
+  qrisImageUrl: z.string().url({ message: 'URL tidak valid' }).or(z.literal('')).optional(),
 });
 
 type SettingsFormValues = z.infer<typeof settingsSchema>;
@@ -83,20 +78,13 @@ export default function CafeSettingsPage() {
 
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
-  const storage = useStorage();
   const auth = useAuth();
   const { toast } = useToast();
 
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<{ [key in 'logo' | 'qris']: number | null }>({ logo: null, qris: null });
-  const [isUploading, setIsUploading] = useState<'logo' | 'qris' | null>(null);
 
-  const logoInputRef = useRef<HTMLInputElement>(null);
-  const qrisInputRef = useRef<HTMLInputElement>(null);
-
-  
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsSchema),
     defaultValues: {
@@ -167,54 +155,6 @@ export default function CafeSettingsPage() {
 
   }, [user, isUserLoading, firestore, slug, router, form]);
 
-  const handleFileUpload = (file: File, type: 'logo' | 'qris') => {
-    if (!storage || !tenant) return;
-    if (!file.type.startsWith('image/')) {
-        toast({ variant: 'destructive', title: 'File tidak valid', description: 'Silakan pilih file gambar (PNG, JPG, dll).' });
-        return;
-    }
-
-    setIsUploading(type);
-    setUploadProgress(prev => ({ ...prev, [type]: 0 }));
-    const filePath = `tenants/${tenant.id}/${type}/${file.name}`;
-    const fileRef = ref(storage, filePath);
-    const uploadTask = uploadBytesResumable(fileRef, file);
-
-    uploadTask.on('state_changed',
-        (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            setUploadProgress(prev => ({ ...prev, [type]: progress }));
-        },
-        (error) => {
-            console.error("File upload error:", error);
-            toast({ variant: 'destructive', title: 'Upload Gagal', description: error.message });
-            setIsUploading(null);
-            setUploadProgress(prev => ({ ...prev, [type]: null }));
-        },
-        async () => {
-            try {
-                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                const fieldToUpdate = type === 'logo' ? 'logoUrl' : 'qrisImageUrl';
-                
-                const tenantDocRef = doc(firestore, 'tenants', tenant.id);
-                await updateDoc(tenantDocRef, { [fieldToUpdate]: downloadURL });
-                
-                form.setValue(fieldToUpdate, downloadURL, { shouldDirty: true, shouldValidate: true });
-
-                toast({ title: 'Upload Berhasil', description: `${type === 'logo' ? 'Logo' : 'Gambar QRIS'} telah diperbarui.` });
-
-            } catch (error: any) {
-                console.error("Error getting download URL or updating doc:", error);
-                toast({ variant: 'destructive', title: 'Gagal Menyimpan URL', description: error.message });
-            } finally {
-                setIsUploading(null);
-                setUploadProgress(prev => ({ ...prev, [type]: null }));
-            }
-        }
-    );
-  };
-
-
   const onSubmit = async (data: SettingsFormValues) => {
     if (!firestore || !tenant) {
       toast({ variant: 'destructive', title: 'Error', description: 'Gagal menyimpan data.' });
@@ -233,6 +173,8 @@ export default function CafeSettingsPage() {
         ownerName: data.ownerName,
         phoneNumber: data.phoneNumber,
         receiptMessage: data.receiptMessage,
+        logoUrl: data.logoUrl,
+        qrisImageUrl: data.qrisImageUrl,
       });
 
       toast({
@@ -255,6 +197,7 @@ export default function CafeSettingsPage() {
 
 
   const handleLogout = async () => {
+    if (!auth) return;
     try {
       await signOut(auth);
       toast({ title: 'Logout Berhasil' });
@@ -291,69 +234,15 @@ export default function CafeSettingsPage() {
       );
     }
 
-    const ImageUploadCard = ({ type, inputRef }: { type: 'logo' | 'qris', inputRef: React.RefObject<HTMLInputElement> }) => {
-        const title = type === 'logo' ? 'Logo Kafe' : 'Gambar QRIS';
-        const description = type === 'logo' ? 'Ganti logo kafe Anda.' : 'Ganti gambar kode QRIS.';
-        const imageUrl = form.watch(type === 'logo' ? 'logoUrl' : 'qrisImageUrl');
-        const progress = uploadProgress[type];
-        
-        return (
-             <Card>
-                <CardHeader>
-                    <CardTitle>{title}</CardTitle>
-                    <CardDescription>{description}</CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-col items-center gap-4">
-                    <div className="relative w-48 h-48 rounded-lg border-2 border-dashed flex items-center justify-center bg-muted overflow-hidden">
-                        {imageUrl ? (
-                            <Image src={imageUrl} alt={title} layout="fill" objectFit="contain" />
-                        ) : (
-                            <div className="text-center text-muted-foreground">
-                                <ImageIcon className="mx-auto h-12 w-12"/>
-                                <p>Belum ada gambar</p>
-                            </div>
-                        )}
-                    </div>
-                    <Input
-                        ref={inputRef}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                            if (e.target.files?.[0]) {
-                                handleFileUpload(e.target.files[0], type);
-                            }
-                        }}
-                    />
-                    {progress !== null ? (
-                        <div className="w-full px-4">
-                            <Progress value={progress} className="w-full" />
-                            <p className="text-center text-sm text-muted-foreground mt-2">{Math.round(progress)}%</p>
-                        </div>
-                    ) : (
-                        <Button 
-                            variant="outline"
-                            onClick={() => inputRef.current?.click()}
-                            disabled={isUploading !== null}
-                        >
-                            <Upload className="mr-2 h-4 w-4" />
-                            Ganti Gambar
-                        </Button>
-                    )}
-                </CardContent>
-            </Card>
-        );
-    };
-
     return (
         <main className="flex-1 p-4 md:p-6 lg:p-8">
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                      <Card>
                         <CardHeader>
-                            <CardTitle>Informasi Umum Kafe</CardTitle>
+                            <CardTitle>Informasi Umum & Gambar</CardTitle>
                             <CardDescription>
-                                Perbarui detail kontak dan informasi umum tentang kafe Anda.
+                                Perbarui detail kontak, informasi umum, dan gambar untuk kafe Anda.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
@@ -438,16 +327,39 @@ export default function CafeSettingsPage() {
                                     </FormItem>
                                 )}
                             />
+                            <FormField
+                                control={form.control}
+                                name="logoUrl"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>URL Logo Kafe</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="https://..." {...field} />
+                                        </FormControl>
+                                        <FormDescription>Gunakan link dari Google Drive atau layanan hosting gambar lainnya.</FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={form.control}
+                                name="qrisImageUrl"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>URL Gambar QRIS</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="https://..." {...field} />
+                                        </FormControl>
+                                        <FormDescription>Gunakan link dari Google Drive atau layanan hosting gambar lainnya.</FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
                         </CardContent>
                     </Card>
 
-                    <div className="grid md:grid-cols-2 gap-8">
-                       <ImageUploadCard type="logo" inputRef={logoInputRef} />
-                       <ImageUploadCard type="qris" inputRef={qrisInputRef} />
-                    </div>
-
                     <div className="flex justify-end">
-                        <Button type="submit" disabled={form.formState.isSubmitting || isUploading !== null}>
+                        <Button type="submit" disabled={form.formState.isSubmitting}>
                             {form.formState.isSubmitting ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
