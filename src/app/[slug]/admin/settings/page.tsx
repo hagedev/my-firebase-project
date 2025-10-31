@@ -9,7 +9,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Image from 'next/image';
-import { convertGoogleImageUrl } from '@/lib/utils';
+import { getValidImageUrl } from '@/lib/utils';
 
 import {
   Loader2,
@@ -103,6 +103,9 @@ export default function CafeSettingsPage() {
 
   const watchedLogoUrl = form.watch('logoUrl');
   const watchedQrisUrl = form.watch('qrisImageUrl');
+  
+  const validLogoUrl = getValidImageUrl(watchedLogoUrl);
+  const validQrisUrl = getValidImageUrl(watchedQrisUrl);
 
 
   useEffect(() => {
@@ -347,12 +350,12 @@ export default function CafeSettingsPage() {
                                     </FormItem>
                                 )}
                             />
-                            {watchedLogoUrl && (
+                            {validLogoUrl && (
                                 <div className="mt-4">
                                 <FormLabel>Preview Logo</FormLabel>
                                 <div className="mt-2 p-4 border rounded-md flex justify-center items-center">
                                     <Image 
-                                        src={convertGoogleImageUrl(watchedLogoUrl)} 
+                                        src={validLogoUrl} 
                                         alt="Preview Logo" 
                                         width={150} 
                                         height={150}
@@ -376,12 +379,12 @@ export default function CafeSettingsPage() {
                                     </FormItem>
                                 )}
                             />
-                             {watchedQrisUrl && (
+                             {validQrisUrl && (
                                 <div className="mt-4">
                                 <FormLabel>Preview QRIS</FormLabel>
                                 <div className="mt-2 p-4 border rounded-md flex justify-center items-center">
                                     <Image 
-                                        src={convertGoogleImageUrl(watchedQrisUrl)} 
+                                        src={validQrisUrl} 
                                         alt="Preview QRIS" 
                                         width={250} 
                                         height={250}

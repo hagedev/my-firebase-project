@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
-import { formatRupiah, convertGoogleImageUrl } from '@/lib/utils';
+import { formatRupiah, getValidImageUrl } from '@/lib/utils';
 import { PlusCircle, MinusCircle, ShoppingCart, X, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -66,6 +66,8 @@ export function OrderUI({ tenant, table, menuItems }: OrderUIProps) {
     return acc;
   }, {} as Record<string, Menu[]>);
 
+  const validLogoUrl = getValidImageUrl(tenant.logoUrl);
+
   return (
     <div className="relative min-h-screen w-full bg-slate-50 flex flex-col">
       {/* Header */}
@@ -75,9 +77,9 @@ export function OrderUI({ tenant, table, menuItems }: OrderUIProps) {
                 <h1 className="font-headline text-2xl font-bold text-primary">{tenant.name}</h1>
                 <p className="text-muted-foreground">Meja No. {table.tableNumber}</p>
             </div>
-            {tenant.logoUrl && (
+            {validLogoUrl && (
                 <div className="relative h-12 w-12 rounded-full overflow-hidden border">
-                    <Image src={convertGoogleImageUrl(tenant.logoUrl)} alt="Logo" layout="fill" objectFit="cover" />
+                    <Image src={validLogoUrl} alt="Logo" layout="fill" objectFit="cover" />
                 </div>
             )}
         </div>
@@ -89,11 +91,13 @@ export function OrderUI({ tenant, table, menuItems }: OrderUIProps) {
             <div key={category} className="mb-8">
                 <h2 className="font-headline text-2xl font-semibold mb-4">{category}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {items.map((item) => (
+                    {items.map((item) => {
+                      const validMenuImageUrl = getValidImageUrl(item.imageUrl);
+                      return (
                         <Card key={item.id} className="overflow-hidden flex flex-col">
-                            {item.imageUrl ? (
+                            {validMenuImageUrl ? (
                                 <div className="relative h-48 w-full">
-                                    <Image src={convertGoogleImageUrl(item.imageUrl)} alt={item.name} layout="fill" objectFit="cover" />
+                                    <Image src={validMenuImageUrl} alt={item.name} layout="fill" objectFit="cover" />
                                 </div>
                             ) : (
                                 <div className="h-48 w-full bg-muted flex items-center justify-center">
@@ -113,7 +117,8 @@ export function OrderUI({ tenant, table, menuItems }: OrderUIProps) {
                                </div>
                             </CardContent>
                         </Card>
-                    ))}
+                      )
+                    })}
                 </div>
             </div>
         ))}

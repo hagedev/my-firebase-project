@@ -8,7 +8,7 @@ import type { Tenant, Table as TableType, Order } from '@/lib/types';
 import { Loader2, CheckCircle, Clock, Wallet, Utensils, ChefHat, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import Image from 'next/image';
-import { formatRupiah, convertGoogleImageUrl } from '@/lib/utils';
+import { formatRupiah, getValidImageUrl } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import {
   AlertDialog,
@@ -84,6 +84,8 @@ export default function OrderStatusPage() {
     }
     
     const currentStatus = statusConfig[order.status] || statusConfig.received;
+    const validLogoUrl = getValidImageUrl(tenant.logoUrl);
+    const validQrisUrl = getValidImageUrl(tenant.qrisImageUrl);
 
     const PaymentInstructions = () => {
         if (order.paymentVerified) {
@@ -103,10 +105,10 @@ export default function OrderStatusPage() {
                     <p className="text-center text-xs text-muted-foreground mb-4">
                         Pindai kode QRIS di bawah ini dengan aplikasi perbankan atau e-wallet Anda.
                     </p>
-                    {tenant.qrisImageUrl ? (
+                    {validQrisUrl ? (
                         <div className="relative aspect-square w-full max-w-xs mx-auto border-4 border-primary rounded-lg overflow-hidden shadow-lg">
                             <Image 
-                                src={convertGoogleImageUrl(tenant.qrisImageUrl)} 
+                                src={validQrisUrl} 
                                 alt="QRIS Payment Code" 
                                 layout="fill" 
                                 objectFit="contain" 
@@ -149,9 +151,9 @@ export default function OrderStatusPage() {
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
             <Card className="w-full max-w-md mx-auto shadow-2xl">
                 <CardHeader className="text-center">
-                     {tenant.logoUrl && (
+                     {validLogoUrl && (
                         <Image 
-                            src={convertGoogleImageUrl(tenant.logoUrl)} 
+                            src={validLogoUrl} 
                             alt="Logo" 
                             width={64}
                             height={64}

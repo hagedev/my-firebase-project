@@ -12,7 +12,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { FirebaseError } from 'firebase/app';
 import { FirestorePermissionError } from '@/firebase/errors';
 import Image from 'next/image';
-import { formatRupiah, convertGoogleDriveUrl } from '@/lib/utils';
 import { OrderUI } from './_components/order-ui';
 
 // State machine for page flow
