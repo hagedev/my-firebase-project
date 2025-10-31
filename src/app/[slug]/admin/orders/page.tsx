@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser, useFirestore, useAuth, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, getDoc, collection, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, updateDoc, query, orderBy } from 'firebase/firestore';
 import type { Tenant, User as AppUser, Order } from '@/lib/types';
 import {
   Loader2,
@@ -70,7 +70,7 @@ export default function CafeOrdersManagementPage() {
 
   // --- Data Fetching ---
   const ordersCollectionRef = useMemoFirebase(
-    () => (firestore && tenant ? collection(firestore, `tenants/${tenant.id}/orders`) : null),
+    () => (firestore && tenant ? query(collection(firestore, `tenants/${tenant.id}/orders`), orderBy('createdAt', 'desc')) : null),
     [firestore, tenant]
   );
   
@@ -225,10 +225,10 @@ export default function CafeOrdersManagementPage() {
                         </TableCell>
                       </TableRow>
                     ) : orders && orders.length > 0 ? (
-                      orders.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0)).map((order) => (
+                      orders.map((order) => (
                         <TableRow key={order.id}>
                           <TableCell className="font-medium">Meja {order.tableNumber}</TableCell>
-                          <TableCell>{formatRupiah(order.totalAmount)}</TableCell>
+                          <TableCell>{formatRupiah(order.totalAmount || 0)}</TableCell>
                           <TableCell>
                             <Badge variant={'outline'}>
                               {(order.paymentMethod || 'N/A').toUpperCase()}
@@ -247,7 +247,7 @@ export default function CafeOrdersManagementPage() {
                                     <SelectItem value="preparing">Disiapkan</SelectItem>
                                     <SelectItem value="ready">Siap Diambil</SelectItem>
                                     <SelectItem value="delivered">Selesai</SelectItem>
-                                    <SelectItem value="cancelled">Batalkan</SelectItem>
+                                    <SelectItem value="cancelled">Dibatalkan</SelectItem>
                                 </SelectContent>
                                 </Select>
                           </TableCell>

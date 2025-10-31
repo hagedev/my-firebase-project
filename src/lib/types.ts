@@ -69,7 +69,7 @@ export interface Order {
     quantity: number;
   }[];
   totalAmount: number;
-  uniqueCode?: number; // 3-digit unique code for QRIS payment
+  uniqueCode?: number | null; // 3-digit unique code for QRIS payment
   status: 'received' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
   paymentMethod: 'qris' | 'cash';
   paymentVerified: boolean;

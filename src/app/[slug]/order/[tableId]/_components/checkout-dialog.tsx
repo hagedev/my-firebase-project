@@ -115,7 +115,7 @@ export function CheckoutDialog({
       paymentMethod: data.paymentMethod,
       paymentVerified: false,
       verificationToken: data.verificationToken,
-      createdAt: serverTimestamp(),
+      createdAt: serverTimestamp(), // Always add createdAt timestamp
     };
 
     const ordersCollectionRef = collection(firestore, `tenants/${tenant.id}/orders`);
