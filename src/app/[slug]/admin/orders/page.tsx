@@ -1,9 +1,24 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useUser, useFirestore, useAuth, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, getDoc, collection, updateDoc, query, orderBy, where, Timestamp } from 'firebase/firestore';
+import { useUser, useFirestore, useAuth } from '@/firebase';
+import {
+  doc,
+  getDoc,
+  collection,
+  updateDoc,
+  query,
+  orderBy,
+  where,
+  Timestamp,
+  limit,
+  getDocs,
+  startAfter,
+  endBefore,
+  limitToLast,
+  DocumentSnapshot,
+} from 'firebase/firestore';
 import type { Tenant, User as AppUser, Order } from '@/lib/types';
 import {
   Loader2,
@@ -14,7 +29,6 @@ import {
   Armchair,
   Info,
   ClipboardList,
-  CheckCircle,
   FileText,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -38,6 +52,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+    Pagination,
+    PaginationContent,
+    PaginationItem,
+    PaginationNext,
+    PaginationPrevious,
+} from "@/components/ui/pagination";
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { signOut } from 'firebase/auth';
@@ -54,6 +75,8 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 
+const ORDERS_PER_PAGE = 20;
+
 export default function CafeOrdersManagementPage() {
   const router = useRouter();
   const params = useParams();
@@ -68,6 +91,15 @@ export default function CafeOrdersManagementPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // --- Pagination and Data State ---
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isOrdersLoading, setIsOrdersLoading] = useState(true);
+  const [lastVisible, setLastVisible] = useState<DocumentSnapshot | null>(null);
+  const [firstVisible, setFirstVisible] = useState<DocumentSnapshot | null>(null);
+  const [page, setPage] = useState(1);
+  const [isLastPage, setIsLastPage] = useState(false);
+
+
   // --- Date Range for Today's Orders ---
   const { todayStart, todayEnd } = useMemo(() => {
     const start = new Date();
@@ -79,19 +111,68 @@ export default function CafeOrdersManagementPage() {
       todayEnd: Timestamp.fromDate(end),
     };
   }, []);
+  
+  const fetchOrders = useCallback(async (direction: 'next' | 'prev' | 'initial' = 'initial') => {
+    if (!firestore || !tenant) return;
 
-  // --- Data Fetching ---
-  const ordersCollectionRef = useMemoFirebase(
-    () => (firestore && tenant ? query(
+    setIsOrdersLoading(true);
+    let q = query(
       collection(firestore, `tenants/${tenant.id}/orders`),
       where('createdAt', '>=', todayStart),
       where('createdAt', '<=', todayEnd),
       orderBy('createdAt', 'desc')
-    ) : null),
-    [firestore, tenant, todayStart, todayEnd]
-  );
-  
-  const { data: orders, isLoading: isOrdersLoading } = useCollection<Order>(ordersCollectionRef);
+    );
+
+    if (direction === 'next' && lastVisible) {
+      q = query(q, startAfter(lastVisible), limit(ORDERS_PER_PAGE));
+    } else if (direction === 'prev' && firstVisible) {
+      q = query(q, endBefore(firstVisible), limitToLast(ORDERS_PER_PAGE));
+    } else {
+      q = query(q, limit(ORDERS_PER_PAGE));
+    }
+    
+    try {
+      const documentSnapshots = await getDocs(q);
+      const newOrders = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+
+      if (newOrders.length === 0) {
+        if(direction === 'next') setIsLastPage(true);
+        if(direction === 'initial') setOrders([]);
+        toast({ title: "Tidak ada data lagi", description: direction === 'next' ? 'Anda sudah di halaman terakhir' : 'Kembali ke halaman pertama' });
+      } else {
+        setOrders(newOrders);
+        setFirstVisible(documentSnapshots.docs[0]);
+        setLastVisible(documentSnapshots.docs[documentSnapshots.docs.length - 1]);
+        if(direction === 'next') setPage(p => p + 1);
+        if(direction === 'prev') setPage(p => p - 1);
+        if(direction === 'initial') setPage(1);
+
+        // Check if it's the last page on a 'next' call
+        if (direction === 'next' || direction === 'initial') {
+            const nextQuery = query(collection(firestore, `tenants/${tenant.id}/orders`), orderBy('createdAt', 'desc'), startAfter(documentSnapshots.docs[documentSnapshots.docs.length - 1]), limit(1));
+            const nextSnap = await getDocs(nextQuery);
+            setIsLastPage(nextSnap.empty);
+        } else {
+             setIsLastPage(false);
+        }
+      }
+    } catch (err: any) {
+      console.error("Error fetching orders:", err);
+      toast({ variant: 'destructive', title: 'Gagal Memuat Pesanan', description: err.message });
+      setOrders([]);
+    } finally {
+      setIsOrdersLoading(false);
+    }
+  }, [firestore, tenant, todayStart, todayEnd, lastVisible, firstVisible, toast]);
+
+  // --- Initial Fetch & Refetch on Tenant Change ---
+  useEffect(() => {
+    if (tenant) {
+      fetchOrders('initial');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenant]); // Only re-run when tenant is set
+
 
   // --- User and Tenant Verification ---
   useEffect(() => {
@@ -152,6 +233,10 @@ export default function CafeOrdersManagementPage() {
     try {
         const orderDocRef = doc(firestore, `tenants/${tenant.id}/orders`, orderId);
         await updateDoc(orderDocRef, { status: newStatus });
+        
+        // Update local state to show immediate feedback
+        setOrders(prevOrders => prevOrders.map(o => o.id === orderId ? {...o, status: newStatus} : o));
+
         toast({
             title: 'Status Pesanan Diperbarui',
         });
@@ -169,6 +254,10 @@ export default function CafeOrdersManagementPage() {
     try {
         const orderDocRef = doc(firestore, `tenants/${tenant.id}/orders`, orderId);
         await updateDoc(orderDocRef, { paymentVerified: isVerified });
+        
+        // Update local state
+        setOrders(prevOrders => prevOrders.map(o => o.id === orderId ? {...o, paymentVerified: isVerified} : o));
+
         toast({
             title: 'Status Pembayaran Diperbarui',
             description: `Pesanan ditandai sebagai ${isVerified ? 'Lunas' : 'Belum Lunas'}.`,
@@ -277,7 +366,7 @@ export default function CafeOrdersManagementPage() {
                                 />
                                  <Label htmlFor={`payment-switch-${order.id}`} className="text-xs text-muted-foreground">
                                     {order.paymentVerified ? 'Lunas' : 'Belum Lunas'}
-                                </Label>
+                                 </Label>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -292,6 +381,29 @@ export default function CafeOrdersManagementPage() {
                   </TableBody>
                 </Table>
               </div>
+               <div className="flex items-center justify-end space-x-2 py-4">
+                    <Pagination>
+                        <PaginationContent>
+                            <PaginationItem>
+                                <PaginationPrevious 
+                                    onClick={() => fetchOrders('prev')} 
+                                    aria-disabled={page <= 1}
+                                    className={page <= 1 ? "pointer-events-none opacity-50" : undefined}
+                                />
+                            </PaginationItem>
+                             <PaginationItem>
+                                <span className="p-2 text-sm font-medium">Halaman {page}</span>
+                            </PaginationItem>
+                            <PaginationItem>
+                                <PaginationNext 
+                                    onClick={() => fetchOrders('next')} 
+                                    aria-disabled={isLastPage}
+                                    className={isLastPage ? "pointer-events-none opacity-50" : undefined}
+                                />
+                            </PaginationItem>
+                        </PaginationContent>
+                    </Pagination>
+                </div>
             </CardContent>
           </Card>
         </main>
