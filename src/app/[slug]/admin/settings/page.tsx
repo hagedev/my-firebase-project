@@ -392,22 +392,6 @@ export default function CafeSettingsPage() {
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild>
-                <Link href={`/${slug}/admin/menu`}>
-                  <Utensils />
-                  Manajemen Menu
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-             <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                    <Link href={`/${slug}/admin/tables`}>
-                        <Armchair />
-                        Manajemen Meja
-                    </Link>
-                </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
                 <Link href={`/${slug}/admin/orders`}>
                   <ClipboardList />
                   Manajemen Pesanan
@@ -421,6 +405,22 @@ export default function CafeSettingsPage() {
                   Laporan Transaksi
                 </Link>
               </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <Link href={`/${slug}/admin/menu`}>
+                  <Utensils />
+                  Manajemen Menu
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+             <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                    <Link href={`/${slug}/admin/tables`}>
+                        <Armchair />
+                        Manajemen Meja
+                    </Link>
+                </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive>

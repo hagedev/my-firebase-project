@@ -79,8 +79,9 @@ export default function CafeAdminDashboardPage() {
 
   // --- Stats Calculation ---
   const stats = useMemo(() => {
-    const totalOrders = todayOrders?.length || 0;
-    const totalRevenue = todayOrders?.reduce((sum, order) => sum + (order.totalAmount || 0), 0) || 0;
+    if (!todayOrders) return { totalOrders: 0, totalRevenue: 0, availableMenus: 0, unavailableMenus: 0 };
+    const totalOrders = todayOrders.length;
+    const totalRevenue = todayOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
     const availableMenus = menuItems?.filter(item => item.available).length || 0;
     const unavailableMenus = (menuItems?.length || 0) - availableMenus;
     
@@ -211,6 +212,22 @@ export default function CafeAdminDashboardPage() {
                     </Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <Link href={`/${slug}/admin/orders`}>
+                  <ClipboardList />
+                  Manajemen Pesanan
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+             <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <Link href={`/${slug}/admin/reports`}>
+                  <FileText />
+                  Laporan Transaksi
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
              <SidebarMenuItem>
               <SidebarMenuButton asChild>
                 <Link href={`/${slug}/admin/menu`}>
@@ -226,22 +243,6 @@ export default function CafeAdminDashboardPage() {
                         Manajemen Meja
                     </Link>
                 </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <Link href={`/${slug}/admin/orders`}>
-                  <ClipboardList />
-                  Manajemen Pesanan
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <Link href={`/${slug}/admin/reports`}>
-                  <FileText />
-                  Laporan Transaksi
-                </Link>
-              </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild>

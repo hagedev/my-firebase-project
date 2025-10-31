@@ -93,7 +93,14 @@ export default function CafeReportsPage() {
         end: Timestamp.fromDate(end),
       };
     }
-    return { start: null, end: null };
+    // Fallback to a valid default to avoid null queries initially
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    return { 
+        start: Timestamp.fromDate(start), 
+        end: Timestamp.fromDate(end)
+    };
   }, [selectedDate, selectedMonth, filterMode]);
 
 
@@ -239,12 +246,17 @@ export default function CafeReportsPage() {
             mode="single"
             selected={selectedMonth}
             onSelect={(month) => {
-              setSelectedMonth(month);
-              // also set date to the first of the month to avoid confusion
-              if(month) setSelectedDate(startOfMonth(month));
+              if (month) {
+                const firstDay = startOfMonth(month);
+                setSelectedMonth(firstDay);
+                setSelectedDate(firstDay); // Sync date picker
+              } else {
+                setSelectedMonth(undefined);
+                setSelectedDate(undefined);
+              }
             }}
             initialFocus
-            onMonthChange={setSelectedMonth}
+            onMonthChange={setSelectedMonth} // For navigating months in the picker
             className="p-0"
             classNames={{
                 caption_label: "flex items-center text-sm font-medium",
@@ -274,13 +286,13 @@ export default function CafeReportsPage() {
                     const handleMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
                         const newDate = new Date(props.displayMonth);
                         newDate.setMonth(parseInt(e.target.value, 10));
-                        setSelectedMonth(newDate);
+                        setSelectedMonth(startOfMonth(newDate));
                     };
 
                     const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
                         const newDate = new Date(props.displayMonth);
                         newDate.setFullYear(parseInt(e.target.value, 10));
-                        setSelectedMonth(newDate);
+                        setSelectedMonth(startOfMonth(newDate));
                     };
 
                     const months = Array.from({ length: 12 }, (_, i) => ({
@@ -296,7 +308,6 @@ export default function CafeReportsPage() {
                             years.push(year);
                         }
                     } else {
-                        // fallback if no from/to date
                         const currentYear = new Date().getFullYear();
                         for(let i = -5; i<=0; i++) years.push(currentYear + i)
                     }
@@ -452,22 +463,6 @@ export default function CafeReportsPage() {
                     </Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <Link href={`/${slug}/admin/menu`}>
-                  <Utensils />
-                  Manajemen Menu
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                    <Link href={`/${slug}/admin/tables`}>
-                        <Armchair />
-                        Manajemen Meja
-                    </Link>
-                </SidebarMenuButton>
-            </SidebarMenuItem>
              <SidebarMenuItem>
               <SidebarMenuButton asChild>
                 <Link href={`/${slug}/admin/orders`}>
@@ -483,6 +478,22 @@ export default function CafeReportsPage() {
                   Laporan Transaksi
                 </Link>
               </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <Link href={`/${slug}/admin/menu`}>
+                  <Utensils />
+                  Manajemen Menu
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                    <Link href={`/${slug}/admin/tables`}>
+                        <Armchair />
+                        Manajemen Meja
+                    </Link>
+                </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild>
