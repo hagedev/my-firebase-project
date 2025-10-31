@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useUser, useFirestore, useAuth } from '@/firebase';
+import { useUser, useFirestore, useAuth, useStorage } from '@/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import type { Tenant, User as AppUser } from '@/lib/types';
 import { useForm } from 'react-hook-form';
@@ -352,7 +352,7 @@ export default function CafeSettingsPage() {
                                                     width={150} 
                                                     height={150}
                                                     className="rounded-md"
-                                                    unoptimized // Important for external URLs that aren't in next.config.ts
+                                                    unoptimized
                                                 />
                                             </div>
                                         )}
