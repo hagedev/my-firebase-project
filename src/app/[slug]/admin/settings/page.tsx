@@ -90,12 +90,7 @@ function ImageUploadCard({ title, description, currentImageUrl, onUploadComplete
 
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [localPreview, setLocalPreview] = useState<string | null>(currentImageUrl);
-
-  useEffect(() => {
-    setLocalPreview(currentImageUrl);
-  }, [currentImageUrl]);
-
+  
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !storage || !tenantId) return;
@@ -123,7 +118,6 @@ function ImageUploadCard({ title, description, currentImageUrl, onUploadComplete
       () => {
         getDownloadURL(uploadTask.snapshot.ref).then(async (downloadURL) => {
           await onUploadComplete(downloadURL);
-          setLocalPreview(downloadURL);
           setUploading(false);
           toast({ title: 'Upload Berhasil!', description: `${title} telah diperbarui.` });
         });
@@ -131,7 +125,7 @@ function ImageUploadCard({ title, description, currentImageUrl, onUploadComplete
     );
   };
   
-  const validImageUrl = getValidImageUrl(localPreview);
+  const validImageUrl = getValidImageUrl(currentImageUrl);
 
   return (
     <Card>
