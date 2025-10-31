@@ -42,7 +42,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
+import { Calendar, useDayPicker } from '@/components/ui/calendar';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { signOut } from 'firebase/auth';
@@ -411,7 +411,7 @@ export default function CafeReportsPage() {
                         <TableCell>{formatRupiah(order.totalAmount)}</TableCell>
                         <TableCell>
                           <Badge variant={order.paymentVerified ? 'secondary' : 'default'}>
-                            {order.paymentMethod.toUpperCase()} - {order.paymentVerified ? 'Lunas' : 'Belum'}
+                            {(order.paymentMethod || 'N/A').toUpperCase()} - {order.paymentVerified ? 'Lunas' : 'Belum'}
                           </Badge>
                         </TableCell>
                         <TableCell><Badge variant="outline">{order.status}</Badge></TableCell>
@@ -520,4 +520,3 @@ export default function CafeReportsPage() {
     </SidebarProvider>
   );
 }
-
