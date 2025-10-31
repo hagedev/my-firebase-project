@@ -26,12 +26,13 @@ service cloud.firestore {
     // Collection: tenants
     // =================================
     match /tenants/{tenantId} {
-      // SIAPA SAJA (termasuk anonim) bisa membaca (get) detail satu tenant.
+      // SIAPA SAJA (termasuk anonim) bisa membaca (get) detail satu tenant
+      // DAN melakukan query (list) pada koleksi tenants (misal: untuk mencari via slug).
       // Ini penting agar aturan untuk sub-koleksi di bawahnya bisa dievaluasi.
-      allow get: if true;
+      allow get, list: if true;
 
-      // HANYA Super Admin yang bisa membuat, menghapus, atau melihat daftar semua tenant.
-      allow list, create, delete: if isSignedIn() && isSuperAdmin();
+      // HANYA Super Admin yang bisa membuat atau menghapus tenant.
+      allow create, delete: if isSignedIn() && isSuperAdmin();
 
       // Admin Kafe bisa mengupdate tenantnya sendiri, Super Admin bisa update semua.
       allow update: if isSignedIn() && (isSuperAdmin() || isCafeAdmin(tenantId));
