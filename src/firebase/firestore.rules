@@ -58,40 +58,9 @@ service cloud.firestore {
 
     // --- Rules ---
 
-    match /tenants/{tenantId} {
-      allow get, list: if true;
-      allow update: if isSignedIn() && (isSuperAdmin() || isTenantAdmin(tenantId));
-      allow create, delete: if isSignedIn() && isSuperAdmin();
-    }
-
-    match /users/{userId} {
-      allow get: if isSignedIn() && (isOwner(userId) || isSuperAdmin());
-      allow list: if isSignedIn() && isSuperAdmin(); // Only superadmin can list users
-      allow create: if isSignedIn() && (isOwner(userId) || isSuperAdmin());
-      allow update: if isSignedIn() && (isOwner(userId) || isSuperAdmin());
-      allow delete: if isSignedIn() && isSuperAdmin();
-    }
-    
-    match /roles_superadmin/{userId} {
-      allow read, write: if isSignedIn() && isSuperAdmin();
-    }
-
-    match /tenants/{tenantId}/menus/{menuId} {
-      allow get, list: if true; // Publicly readable
-      allow write: if isSignedIn() && isTenantAdmin(tenantId);
-    }
-    
-    match /tenants/{tenantId}/tables/{tableId} {
-        allow get, list: if true; // Publicly readable for ordering
-        allow write: if isSignedIn() && isTenantAdmin(tenantId);
-    }
-
-    match /tenants/{tenantId}/orders/{orderId} {
-      allow get: if isSignedIn() && (isTenantAdmin(tenantId) || isOwner(resource.data.authUid));
-      allow list: if isSignedIn() && isTenantAdmin(tenantId);
-      allow create: if validateOrder(tenantId);
-      allow update: if isSignedIn() && isTenantAdmin(tenantId);
-      allow delete: if false; // Orders should not be deleted
+    // FOR DEVELOPMENT: Allow any authenticated user to read/write all data
+    match /{path=**} {
+      allow read, write: if isSignedIn();
     }
   }
 }
