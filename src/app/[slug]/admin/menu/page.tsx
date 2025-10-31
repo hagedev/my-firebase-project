@@ -3,8 +3,8 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser, useFirestore, useAuth, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, getDoc, collection, updateDoc } from 'firebase/firestore';
-import type { Tenant, User as AppUser, Menu as MenuType, Category } from '@/lib/types';
+import { doc, getDoc, collection, updateDoc, deleteDoc } from 'firebase/firestore';
+import type { Tenant, User as AppUser, Menu as MenuType } from '@/lib/types';
 import {
   Loader2,
   LogOut,
@@ -55,6 +55,8 @@ import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { formatRupiah } from '@/lib/utils';
 import { AddMenuDialog } from './_components/add-menu-dialog';
+import { EditMenuDialog } from './_components/edit-menu-dialog';
+import { DeleteMenuDialog } from './_components/delete-menu-dialog';
 
 export default function CafeMenuManagementPage() {
   const router = useRouter();
@@ -69,7 +71,12 @@ export default function CafeMenuManagementPage() {
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Dialog states
   const [isAddMenuDialogOpen, setIsAddMenuDialogOpen] = useState(false);
+  const [isEditMenuDialogOpen, setIsEditMenuDialogOpen] = useState(false);
+  const [isDeleteMenuDialogOpen, setIsDeleteMenuDialogOpen] = useState(false);
+  const [selectedMenu, setSelectedMenu] = useState<MenuType | null>(null);
 
   // --- Data Fetching ---
   const menusCollectionRef = useMemoFirebase(
@@ -149,6 +156,16 @@ export default function CafeMenuManagementPage() {
             description: error.message,
         });
     }
+  };
+  
+  const handleEditClick = (menu: MenuType) => {
+    setSelectedMenu(menu);
+    setIsEditMenuDialogOpen(true);
+  };
+  
+  const handleDeleteClick = (menu: MenuType) => {
+    setSelectedMenu(menu);
+    setIsDeleteMenuDialogOpen(true);
   };
 
   // --- Page Content Rendering ---
@@ -232,9 +249,16 @@ export default function CafeMenuManagementPage() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Aksi</DropdownMenuLabel>
-                                <DropdownMenuItem>Edit</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleEditClick(item)}>
+                                  Edit
+                                </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-destructive">Hapus</DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  className="text-destructive focus:text-destructive-foreground focus:bg-destructive"
+                                  onClick={() => handleDeleteClick(item)}
+                                >
+                                  Hapus
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -259,6 +283,20 @@ export default function CafeMenuManagementPage() {
             onOpenChange={setIsAddMenuDialogOpen}
             tenantId={tenant?.id || ''}
         />
+        {selectedMenu && (
+          <>
+            <EditMenuDialog
+              isOpen={isEditMenuDialogOpen}
+              onOpenChange={setIsEditMenuDialogOpen}
+              menu={selectedMenu}
+            />
+            <DeleteMenuDialog
+              isOpen={isDeleteMenuDialogOpen}
+              onOpenChange={setIsDeleteMenuDialogOpen}
+              menu={selectedMenu}
+            />
+          </>
+        )}
       </>
     );
   };
