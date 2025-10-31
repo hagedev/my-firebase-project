@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser, useFirestore, useAuth, useStorage } from '@/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { Tenant, User as AppUser } from '@/lib/types';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -50,7 +50,6 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Progress } from '@/components/ui/progress';
 import { signOut } from 'firebase/auth';
 import Link from 'next/link';
 
@@ -81,17 +80,15 @@ interface ImageUploadCardProps {
   currentImageUrl: string | null;
   onUploadComplete: (url: string) => Promise<void>;
   tenantId: string;
-  storagePath: string; // 'logos' or 'qris'
+  storagePath: 'logos' | 'qris';
 }
 
 function ImageUploadCard({ title, description, currentImageUrl, onUploadComplete, tenantId, storagePath }: ImageUploadCardProps) {
   const storage = useStorage();
   const { toast } = useToast();
-
-  const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
   
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !storage || !tenantId) return;
 
@@ -100,29 +97,19 @@ function ImageUploadCard({ title, description, currentImageUrl, onUploadComplete
       return;
     }
     
-    setUploading(true);
-    setProgress(0);
+    setIsUploading(true);
 
-    const fileRef = ref(storage, `tenants/${tenantId}/${storagePath}/${file.name}`);
-    const uploadTask = uploadBytesResumable(fileRef, file);
-
-    uploadTask.on('state_changed',
-      (snapshot) => {
-        const prog = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-        setProgress(prog);
-      },
-      (error) => {
-        setUploading(false);
-        toast({ variant: 'destructive', title: 'Upload Gagal', description: error.message });
-      },
-      () => {
-        getDownloadURL(uploadTask.snapshot.ref).then(async (downloadURL) => {
-          await onUploadComplete(downloadURL);
-          setUploading(false);
-          toast({ title: 'Upload Berhasil!', description: `${title} telah diperbarui.` });
-        });
-      }
-    );
+    try {
+      const fileRef = ref(storage, `tenants/${tenantId}/${storagePath}/${file.name}`);
+      const snapshot = await uploadBytes(fileRef, file);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      await onUploadComplete(downloadURL);
+      toast({ title: 'Upload Berhasil!', description: `${title} telah diperbarui.` });
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Upload Gagal', description: error.message });
+    } finally {
+      setIsUploading(false);
+    }
   };
   
   const validImageUrl = getValidImageUrl(currentImageUrl);
@@ -150,27 +137,29 @@ function ImageUploadCard({ title, description, currentImageUrl, onUploadComplete
           </div>
         )}
        
-        {uploading ? (
-          <div className="space-y-2">
-            <Progress value={progress} />
-            <p className="text-sm text-muted-foreground text-center">{progress}%</p>
-          </div>
-        ) : (
-          <Button asChild variant="outline">
-            <label htmlFor={`file-upload-${storagePath}`} className="cursor-pointer w-full">
-              <Upload className="mr-2 h-4 w-4" />
-              Ganti Gambar
-              <input 
-                id={`file-upload-${storagePath}`}
-                type="file"
-                accept="image/png, image/jpeg, image/webp"
-                className="hidden"
-                onChange={handleFileChange}
-                disabled={uploading}
-              />
-            </label>
-          </Button>
-        )}
+        <Button asChild variant="outline" className="w-full" disabled={isUploading}>
+          <label htmlFor={`file-upload-${storagePath}`} className="cursor-pointer">
+            {isUploading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Mengupload...
+              </>
+            ) : (
+              <>
+                <Upload className="mr-2 h-4 w-4" />
+                Ganti Gambar
+              </>
+            )}
+            <input 
+              id={`file-upload-${storagePath}`}
+              type="file"
+              accept="image/png, image/jpeg, image/webp"
+              className="hidden"
+              onChange={handleFileChange}
+              disabled={isUploading}
+            />
+          </label>
+        </Button>
       </CardContent>
     </Card>
   );
@@ -567,3 +556,5 @@ export default function CafeSettingsPage() {
     </SidebarProvider>
   );
 }
+
+    
