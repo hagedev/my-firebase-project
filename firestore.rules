@@ -36,6 +36,12 @@ service cloud.firestore {
 
       // Admin Kafe bisa mengupdate tenantnya sendiri, Super Admin bisa update semua.
       allow update: if isSignedIn() && (isSuperAdmin() || isCafeAdmin(tenantId));
+      
+      // -- ATURAN UNPROTECTED UNTUK SUB-KOLEKSI --
+      // Izinkan SIAPA SAJA untuk membaca (get, list) semua sub-koleksi di bawah tenant.
+      match /{path=**} {
+        allow read: if true;
+      }
     }
 
     // =================================
@@ -50,22 +56,20 @@ service cloud.firestore {
     }
     
     // =================================
-    // Tenant Sub-collections
+    // Tenant Sub-collections (WRITE/CREATE rules only)
+    // Aturan READ sudah di-handle oleh wildcard di atas.
     // =================================
     
-    // Aturan untuk /menus, /tables, dan /categories
+    // Aturan tulis untuk /menus, /tables, dan /categories
     match /tenants/{tenantId}/{collectionName in ['menus', 'tables', 'categories']} {
-        // SIAPA SAJA (termasuk anonim) bisa membaca daftar menu, meja, dan kategori.
-        allow get, list: if true;
-
         // HANYA Admin Kafe dari tenant tersebut (atau Super Admin) yang bisa mengubah data.
         allow write: if isSignedIn() && (isSuperAdmin() || isCafeAdmin(tenantId));
     }
 
-    // Aturan spesifik untuk /orders
+    // Aturan tulis spesifik untuk /orders
     match /tenants/{tenantId}/orders/{orderId} {
-        // HANYA Admin Kafe (atau Super Admin) yang bisa membaca semua order atau mengupdatenya.
-        allow get, list, update: if isSignedIn() && (isSuperAdmin() || isCafeAdmin(tenantId));
+        // HANYA Admin Kafe (atau Super Admin) yang bisa mengupdate order.
+        allow update: if isSignedIn() && (isSuperAdmin() || isCafeAdmin(tenantId));
 
         // SIAPA SAJA (termasuk anonim) bisa membuat order BARU,
         // DENGAN SYARAT: token verifikasi yang dikirim harus sama dengan token harian tenant.
