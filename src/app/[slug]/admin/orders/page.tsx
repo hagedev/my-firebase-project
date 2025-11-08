@@ -44,6 +44,7 @@ import {
   SidebarInset,
   SidebarTrigger,
   SidebarFooter,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import {
     Pagination,
@@ -81,6 +82,7 @@ export default function CafeOrdersManagementPage() {
   const firestore = useFirestore();
   const auth = useAuth();
   const { toast } = useToast();
+  const { isMobile } = useSidebar();
 
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -306,8 +308,8 @@ export default function CafeOrdersManagementPage() {
         <main className="flex-1 p-2 md:p-6 lg:p-8">
             <Card>
                 <CardHeader>
-                    <CardTitle>Daftar Pesanan Hari Ini</CardTitle>
-                    <CardDescription>Pantau dan kelola semua pesanan yang masuk untuk hari ini. Klik kartu untuk melihat detail.</CardDescription>
+                    <CardTitle className="hidden md:block">Daftar Pesanan Hari Ini</CardTitle>
+                    <CardDescription className="hidden md:block">Pantau dan kelola semua pesanan yang masuk untuk hari ini. Klik kartu untuk melihat detail.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     {isOrdersLoading ? (
@@ -410,6 +412,7 @@ export default function CafeOrdersManagementPage() {
   
   return (
     <SidebarProvider>
+      {!isMobile && (
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2">
@@ -476,6 +479,7 @@ export default function CafeOrdersManagementPage() {
           </Button>
         </SidebarFooter>
       </Sidebar>
+      )}
       <SidebarInset>
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-card px-4 md:px-6">
           <div className="flex items-center gap-2">
@@ -492,6 +496,50 @@ export default function CafeOrdersManagementPage() {
         </header>
         {pageContent()}
       </SidebarInset>
+       {isMobile && (
+        <Sidebar>
+            <SidebarContent>
+              <SidebarMenu>
+                 <SidebarMenuItem>
+                   <SidebarMenuButton asChild href={`/${slug}/admin`}>
+                        <Info />
+                        Dashboard
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild href={`/${slug}/admin/orders`} isActive>
+                    <ClipboardList />
+                    Pesanan
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                 <SidebarMenuItem>
+                  <SidebarMenuButton asChild href={`/${slug}/admin/menu`}>
+                    <Utensils />
+                    Menu
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                    <SidebarMenuButton asChild href={`/${slug}/admin/tables`}>
+                        <Armchair />
+                        Meja
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+                 <SidebarMenuItem>
+                  <SidebarMenuButton asChild href={`/${slug}/admin/reports`}>
+                    <FileText />
+                    Laporan
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild href={`/${slug}/admin/settings`}>
+                    <Settings />
+                    Settings
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarContent>
+        </Sidebar>
+        )}
     </SidebarProvider>
   );
 }

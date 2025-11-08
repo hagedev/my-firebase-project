@@ -3,14 +3,14 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { VariantProps, cva } from "class-variance-authority"
-import { PanelLeft } from "lucide-react"
+import { PanelLeft, MoreHorizontal, X } from "lucide-react"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Tooltip,
@@ -156,6 +156,71 @@ const SidebarProvider = React.forwardRef<
 )
 SidebarProvider.displayName = "SidebarProvider"
 
+
+type BottomNavItem = {
+    icon: React.ReactNode;
+    label: string;
+    href: string;
+    isActive?: boolean;
+    asChild?: boolean;
+    component: React.ReactNode;
+};
+
+interface BottomNavProps extends React.HTMLAttributes<"div"> {
+    items: BottomNavItem[];
+    moreItems?: BottomNavItem[];
+}
+
+const BottomNav = React.forwardRef<HTMLDivElement, BottomNavProps>(
+  ({ items, moreItems, className, ...props }, ref) => {
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          "fixed bottom-0 left-0 right-0 z-50 h-16 border-t bg-background shadow-t-lg",
+          "md:hidden", // Hide on medium screens and up
+          className
+        )}
+        {...props}
+      >
+        <div className="grid h-full grid-cols-5 max-w-lg mx-auto">
+          {items.map((item, index) => (
+            <Slot key={index} data-active={item.isActive}>
+                {item.component}
+            </Slot>
+          ))}
+          {moreItems && moreItems.length > 0 && (
+            <Sheet>
+                <SheetTrigger asChild>
+                    <Button variant="ghost" className="inline-flex flex-col items-center justify-center font-medium px-2 hover:bg-muted group">
+                        <MoreHorizontal className="w-6 h-6 mb-1 text-gray-500 group-hover:text-primary"/>
+                        <span className="text-xs text-gray-500 group-hover:text-primary">Lainnya</span>
+                    </Button>
+                </SheetTrigger>
+                <SheetContent side="bottom" className="h-auto">
+                    <SheetTitle className="sr-only">Menu Lainnya</SheetTitle>
+                    <div className="p-2">
+                        <ul className="space-y-1">
+                            {moreItems.map((item, index) => (
+                                <li key={index}>
+                                    <SheetClose asChild>
+                                        {item.component}
+                                    </SheetClose>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                </SheetContent>
+            </Sheet>
+          )}
+        </div>
+      </div>
+    );
+  }
+);
+BottomNav.displayName = "BottomNav"
+
+
 const Sidebar = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div"> & {
@@ -193,26 +258,44 @@ const Sidebar = React.forwardRef<
     }
 
     if (isMobile) {
-      return (
-        <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
-          <SheetContent
-            data-sidebar="sidebar"
-            data-mobile="true"
-            className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
-            style={
-              {
-                "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
-              } as React.CSSProperties
+      // In mobile view, we render the BottomNav instead of the Sheet-based sidebar.
+      // We still need to extract the items from the children.
+      const menuItems = React.Children.toArray(children)
+        .flatMap(child => 
+            React.isValidElement(child) && child.type === SidebarContent 
+            ? React.Children.toArray(child.props.children)
+            : []
+        )
+        .flatMap(child => 
+            React.isValidElement(child) && child.type === SidebarMenu
+            ? React.Children.toArray(child.props.children)
+            : []
+        )
+         .map(child => {
+            if (React.isValidElement(child) && child.type === SidebarMenuItem) {
+                const button = React.Children.only(child.props.children);
+                if (React.isValidElement(button)) {
+                    return {
+                        icon: button.props.children[0],
+                        label: button.props.children[1],
+                        href: button.props.href,
+                        isActive: button.props.isActive,
+                        asChild: true,
+                        component: button
+                    };
+                }
             }
-            side={side}
-          >
-            <SheetTitle className="sr-only">Sidebar</SheetTitle>
-            <div className="flex h-full w-full flex-col">{children}</div>
-          </SheetContent>
-        </Sheet>
-      )
+            return null;
+        })
+        .filter((item): item is BottomNavItem => item !== null);
+
+        const mainItems = menuItems.slice(0, 4);
+        const moreItems = menuItems.slice(4);
+
+      return <BottomNav items={mainItems} moreItems={moreItems} />;
     }
 
+    // Desktop sidebar logic (remains unchanged)
     return (
       <div
         ref={ref}
@@ -264,7 +347,12 @@ const SidebarTrigger = React.forwardRef<
   React.ElementRef<typeof Button>,
   React.ComponentProps<typeof Button>
 >(({ className, onClick, ...props }, ref) => {
-  const { toggleSidebar } = useSidebar()
+  const { toggleSidebar, isMobile } = useSidebar()
+
+  if (isMobile) {
+    // On mobile, the trigger is not needed as we use the bottom bar
+    return null;
+  }
 
   return (
     <Button
@@ -319,11 +407,14 @@ const SidebarInset = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"main">
 >(({ className, ...props }, ref) => {
+    const { isMobile } = useSidebar();
   return (
     <main
       ref={ref}
       className={cn(
         "relative flex min-h-svh flex-1 flex-col bg-background",
+        // Add padding-bottom on mobile to account for the bottom nav bar
+        isMobile ? "pb-16" : "",
         "peer-data-[variant=inset]:min-h-[calc(100svh-theme(spacing.4))] md:peer-data-[variant=inset]:m-2 md:peer-data-[state=collapsed]:peer-data-[variant=inset]:ml-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow",
         className
       )}
@@ -518,6 +609,7 @@ const sidebarMenuButtonVariants = cva(
     variants: {
       variant: {
         default: "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+        mobile: "flex-col h-16 justify-center rounded-none px-2 group data-[active=true]:bg-transparent data-[active=true]:text-primary data-[active=true]:font-medium hover:bg-muted hover:text-primary",
         outline:
           "bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))]",
       },
@@ -550,12 +642,23 @@ const SidebarMenuButton = React.forwardRef<
       size = "default",
       tooltip,
       className,
+      children,
       ...props
     },
     ref
   ) => {
     const Comp = asChild ? Slot : "button"
     const { isMobile, state } = useSidebar()
+    
+    if (isMobile) {
+        const [icon, label] = React.Children.toArray(children);
+        return (
+             <Comp ref={ref} data-active={isActive} className={cn(sidebarMenuButtonVariants({ variant: 'mobile' }), className)} {...props}>
+                {React.isValidElement(icon) && React.cloneElement(icon as React.ReactElement, { className: cn('w-6 h-6 mb-1', isActive ? 'text-primary' : 'text-gray-500 group-hover:text-primary') })}
+                <span className={cn("text-xs", isActive ? 'text-primary' : 'text-gray-500 group-hover:text-primary')}>{label}</span>
+            </Comp>
+        )
+    }
 
     const button = (
       <Comp
@@ -565,7 +668,9 @@ const SidebarMenuButton = React.forwardRef<
         data-active={isActive}
         className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
         {...props}
-      />
+      >
+        {children}
+    </Comp>
     )
 
     if (!tooltip) {

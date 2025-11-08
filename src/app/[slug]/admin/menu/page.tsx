@@ -57,6 +57,7 @@ import { formatRupiah } from '@/lib/utils';
 import { AddMenuDialog } from './_components/add-menu-dialog';
 import { EditMenuDialog } from './_components/edit-menu-dialog';
 import { DeleteMenuDialog } from './_components/delete-menu-dialog';
+import { useSidebar } from '@/components/ui/sidebar';
 
 export default function CafeMenuManagementPage() {
   const router = useRouter();
@@ -67,6 +68,8 @@ export default function CafeMenuManagementPage() {
   const firestore = useFirestore();
   const auth = useAuth();
   const { toast } = useToast();
+  const { isMobile } = useSidebar();
+
 
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -198,9 +201,7 @@ export default function CafeMenuManagementPage() {
       <>
         <main className="flex-1 p-4 md:p-6 lg:p-8">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
-            <div>
-              <p className="text-muted-foreground">Tambah, edit, atau hapus item menu untuk kafe Anda.</p>
-            </div>
+              <p className="text-muted-foreground hidden md:block">Tambah, edit, atau hapus item menu untuk kafe Anda.</p>
             <Button onClick={() => setIsAddMenuDialogOpen(true)} className="w-full md:w-auto">
               <PlusCircle className="mr-2 h-4 w-4" />
               Tambah Menu
@@ -302,6 +303,7 @@ export default function CafeMenuManagementPage() {
   
   return (
     <SidebarProvider>
+      {!isMobile && (
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2">
@@ -368,6 +370,7 @@ export default function CafeMenuManagementPage() {
           </Button>
         </SidebarFooter>
       </Sidebar>
+      )}
       <SidebarInset>
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-card px-4 md:px-6">
           <div className="flex items-center gap-2">
@@ -384,6 +387,50 @@ export default function CafeMenuManagementPage() {
         </header>
         {pageContent()}
       </SidebarInset>
+       {isMobile && (
+          <Sidebar>
+            <SidebarContent>
+              <SidebarMenu>
+                 <SidebarMenuItem>
+                   <SidebarMenuButton asChild href={`/${slug}/admin`}>
+                        <Info />
+                        Dashboard
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild href={`/${slug}/admin/orders`}>
+                    <ClipboardList />
+                    Pesanan
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                 <SidebarMenuItem>
+                  <SidebarMenuButton asChild href={`/${slug}/admin/menu`} isActive>
+                    <Utensils />
+                    Menu
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                    <SidebarMenuButton asChild href={`/${slug}/admin/tables`}>
+                        <Armchair />
+                        Meja
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+                 <SidebarMenuItem>
+                  <SidebarMenuButton asChild href={`/${slug}/admin/reports`}>
+                    <FileText />
+                    Laporan
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild href={`/${slug}/admin/settings`}>
+                    <Settings />
+                    Settings
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarContent>
+          </Sidebar>
+        )}
     </SidebarProvider>
   );
 }

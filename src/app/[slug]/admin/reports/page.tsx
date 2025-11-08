@@ -30,6 +30,7 @@ import {
   SidebarInset,
   SidebarTrigger,
   SidebarFooter,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import {
   Table,
@@ -63,6 +64,7 @@ export default function CafeReportsPage() {
   const firestore = useFirestore();
   const auth = useAuth();
   const { toast } = useToast();
+  const { isMobile } = useSidebar();
 
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -344,9 +346,7 @@ export default function CafeReportsPage() {
     return (
       <main className="flex-1 p-4 md:p-6 lg:p-8">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
-          <div>
-             <p className="text-muted-foreground">Analisis penjualan dan transaksi kafe Anda.</p>
-          </div>
+            <p className="text-muted-foreground hidden md:block">Analisis penjualan dan transaksi kafe Anda.</p>
           <div className="flex w-full md:w-auto flex-col md:flex-row md:items-center gap-4">
             <RadioGroup defaultValue="date" value={filterMode} onValueChange={(value: 'date' | 'month') => setFilterMode(value)} className="flex items-center">
               <div className="flex items-center space-x-2">
@@ -445,6 +445,7 @@ export default function CafeReportsPage() {
   
   return (
     <SidebarProvider>
+      {!isMobile && (
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2">
@@ -511,6 +512,7 @@ export default function CafeReportsPage() {
           </Button>
         </SidebarFooter>
       </Sidebar>
+      )}
       <SidebarInset>
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-card px-4 md:px-6">
           <div className="flex items-center gap-2">
@@ -527,6 +529,50 @@ export default function CafeReportsPage() {
         </header>
         {pageContent()}
       </SidebarInset>
+      {isMobile && (
+        <Sidebar>
+            <SidebarContent>
+              <SidebarMenu>
+                 <SidebarMenuItem>
+                   <SidebarMenuButton asChild href={`/${slug}/admin`}>
+                        <Info />
+                        Dashboard
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild href={`/${slug}/admin/orders`}>
+                    <ClipboardList />
+                    Pesanan
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                 <SidebarMenuItem>
+                  <SidebarMenuButton asChild href={`/${slug}/admin/menu`}>
+                    <Utensils />
+                    Menu
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                    <SidebarMenuButton asChild href={`/${slug}/admin/tables`}>
+                        <Armchair />
+                        Meja
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+                 <SidebarMenuItem>
+                  <SidebarMenuButton asChild href={`/${slug}/admin/reports`} isActive>
+                    <FileText />
+                    Laporan
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild href={`/${slug}/admin/settings`}>
+                    <Settings />
+                    Settings
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarContent>
+        </Sidebar>
+        )}
     </SidebarProvider>
   );
 }

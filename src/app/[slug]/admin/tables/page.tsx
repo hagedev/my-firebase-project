@@ -41,6 +41,7 @@ import {
   SidebarInset,
   SidebarTrigger,
   SidebarFooter,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import {
   Table,
@@ -77,6 +78,7 @@ export default function CafeTableManagementPage() {
   const firestore = useFirestore();
   const auth = useAuth();
   const { toast } = useToast();
+  const { isMobile } = useSidebar();
 
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -220,9 +222,7 @@ export default function CafeTableManagementPage() {
       <>
         <main className="flex-1 p-4 md:p-6 lg:p-8">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
-            <div>
-              <p className="text-muted-foreground">Tambah, hapus, dan generate QR Code untuk meja di kafe Anda.</p>
-            </div>
+              <p className="text-muted-foreground hidden md:block">Tambah, hapus, dan generate QR Code untuk meja di kafe Anda.</p>
             <Button onClick={() => setIsAddTableDialogOpen(true)} className="w-full md:w-auto">
               <PlusCircle className="mr-2 h-4 w-4" />
               Tambah Meja
@@ -230,10 +230,10 @@ export default function CafeTableManagementPage() {
           </div>
           <Card>
               <CardHeader>
-                  <CardTitle>Daftar Meja</CardTitle>
-                  <CardDescription>Berikut adalah daftar meja yang tersedia di kafe Anda.</CardDescription>
+                  <CardTitle  className="hidden md:block">Daftar Meja</CardTitle>
+                  <CardDescription  className="hidden md:block">Berikut adalah daftar meja yang tersedia di kafe Anda.</CardDescription>
               </CardHeader>
-              <CardContent className="pt-6">
+              <CardContent className="pt-0 md:pt-6">
                 <div className="border rounded-md overflow-x-auto">
                   <Table>
                     <TableHeader>
@@ -284,7 +284,7 @@ export default function CafeTableManagementPage() {
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem 
-                                    className="text-destructive"
+                                    className="text-destructive focus:text-destructive-foreground focus:bg-destructive"
                                     onClick={() => handleDeleteClick(table)}
                                   >
                                     Hapus
@@ -346,6 +346,7 @@ export default function CafeTableManagementPage() {
   
   return (
     <SidebarProvider>
+      {!isMobile && (
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2">
@@ -412,6 +413,7 @@ export default function CafeTableManagementPage() {
           </Button>
         </SidebarFooter>
       </Sidebar>
+      )}
       <SidebarInset>
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-card px-4 md:px-6">
           <div className="flex items-center gap-2">
@@ -428,6 +430,50 @@ export default function CafeTableManagementPage() {
         </header>
         {pageContent()}
       </SidebarInset>
+      {isMobile && (
+        <Sidebar>
+            <SidebarContent>
+              <SidebarMenu>
+                 <SidebarMenuItem>
+                   <SidebarMenuButton asChild href={`/${slug}/admin`}>
+                        <Info />
+                        Dashboard
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild href={`/${slug}/admin/orders`}>
+                    <ClipboardList />
+                    Pesanan
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                 <SidebarMenuItem>
+                  <SidebarMenuButton asChild href={`/${slug}/admin/menu`}>
+                    <Utensils />
+                    Menu
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                    <SidebarMenuButton asChild href={`/${slug}/admin/tables`} isActive>
+                        <Armchair />
+                        Meja
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+                 <SidebarMenuItem>
+                  <SidebarMenuButton asChild href={`/${slug}/admin/reports`}>
+                    <FileText />
+                    Laporan
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild href={`/${slug}/admin/settings`}>
+                    <Settings />
+                    Settings
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarContent>
+        </Sidebar>
+        )}
     </SidebarProvider>
   );
 }
