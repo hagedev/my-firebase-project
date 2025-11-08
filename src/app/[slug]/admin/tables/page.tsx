@@ -69,7 +69,7 @@ import Link from 'next/link';
 import { AddTableDialog } from './_components/add-table-dialog';
 import { DeleteTableDialog } from './_components/delete-table-dialog';
 
-export default function CafeTableManagementPage() {
+function TablePageContent() {
   const router = useRouter();
   const params = useParams();
   const slug = params.slug as string;
@@ -144,6 +144,7 @@ export default function CafeTableManagementPage() {
 
   // --- Handlers ---
   const handleLogout = async () => {
+    if (!auth) return;
     try {
       await signOut(auth);
       toast({ title: 'Logout Berhasil' });
@@ -221,8 +222,7 @@ export default function CafeTableManagementPage() {
     return (
       <>
         <main className="flex-1 p-4 md:p-6 lg:p-8">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
-              <p className="text-muted-foreground hidden md:block">Tambah, hapus, dan generate QR Code untuk meja di kafe Anda.</p>
+          <div className="flex items-center justify-end mb-6">
             <Button onClick={() => setIsAddTableDialogOpen(true)} className="w-full md:w-auto">
               <PlusCircle className="mr-2 h-4 w-4" />
               Tambah Meja
@@ -230,7 +230,6 @@ export default function CafeTableManagementPage() {
           </div>
           <Card>
               <CardHeader>
-                  <CardTitle  className="hidden md:block">Daftar Meja</CardTitle>
                   <CardDescription  className="hidden md:block">Berikut adalah daftar meja yang tersedia di kafe Anda.</CardDescription>
               </CardHeader>
               <CardContent className="pt-0 md:pt-6">
@@ -345,8 +344,7 @@ export default function CafeTableManagementPage() {
   };
   
   return (
-    <SidebarProvider>
-      {!isMobile && (
+    <>
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2">
@@ -357,63 +355,52 @@ export default function CafeTableManagementPage() {
         <SidebarContent>
           <SidebarMenu>
             <SidebarMenuItem>
-               <SidebarMenuButton asChild>
-                    <Link href={`/${slug}/admin`}>
-                        <Info />
-                        Dashboard
-                    </Link>
+               <SidebarMenuButton asChild href={`/${slug}/admin`}>
+                    <Info />
+                    Dashboard
                 </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <Link href={`/${slug}/admin/orders`}>
-                  <ClipboardList />
-                  Manajemen Pesanan
-                </Link>
+              <SidebarMenuButton asChild href={`/${slug}/admin/orders`}>
+                <ClipboardList />
+                Pesanan
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <Link href={`/${slug}/admin/reports`}>
-                  <FileText />
-                  Laporan Transaksi
-                </Link>
+              <SidebarMenuButton asChild href={`/${slug}/admin/reports`}>
+                <FileText />
+                Laporan
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <Link href={`/${slug}/admin/menu`}>
-                  <Utensils />
-                  Manajemen Menu
-                </Link>
+              <SidebarMenuButton asChild href={`/${slug}/admin/menu`}>
+                <Utensils />
+                Menu
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive>
-                    <Link href={`/${slug}/admin/tables`}>
-                        <Armchair />
-                        Manajemen Meja
-                    </Link>
+                <SidebarMenuButton asChild href={`/${slug}/admin/tables`} isActive>
+                    <Armchair />
+                    Meja
                 </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <Link href={`/${slug}/admin/settings`}>
-                  <Settings />
-                  Setting Profil Kafe
-                </Link>
+              <SidebarMenuButton asChild href={`/${slug}/admin/settings`}>
+                <Settings />
+                Settings
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarContent>
+        {!isMobile && (
         <SidebarFooter>
           <Button variant="ghost" onClick={handleLogout} className="w-full justify-start gap-2">
             <LogOut />
             <span>Logout</span>
           </Button>
         </SidebarFooter>
+        )}
       </Sidebar>
-      )}
       <SidebarInset>
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-card px-4 md:px-6">
           <div className="flex items-center gap-2">
@@ -430,50 +417,15 @@ export default function CafeTableManagementPage() {
         </header>
         {pageContent()}
       </SidebarInset>
-      {isMobile && (
-        <Sidebar>
-            <SidebarContent>
-              <SidebarMenu>
-                 <SidebarMenuItem>
-                   <SidebarMenuButton asChild href={`/${slug}/admin`}>
-                        <Info />
-                        Dashboard
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild href={`/${slug}/admin/orders`}>
-                    <ClipboardList />
-                    Pesanan
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild href={`/${slug}/admin/menu`}>
-                    <Utensils />
-                    Menu
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                    <SidebarMenuButton asChild href={`/${slug}/admin/tables`} isActive>
-                        <Armchair />
-                        Meja
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild href={`/${slug}/admin/reports`}>
-                    <FileText />
-                    Laporan
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild href={`/${slug}/admin/settings`}>
-                    <Settings />
-                    Settings
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarContent>
-        </Sidebar>
-        )}
-    </SidebarProvider>
+    </>
   );
+}
+
+
+export default function CafeTableManagementPage() {
+  return (
+    <SidebarProvider>
+      <TablePageContent />
+    </SidebarProvider>
+  )
 }

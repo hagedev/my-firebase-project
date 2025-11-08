@@ -40,7 +40,7 @@ import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { formatRupiah } from '@/lib/utils';
 
-export default function CafeAdminDashboardPage() {
+function DashboardContent() {
   const router = useRouter();
   const params = useParams();
   const slug = params.slug as string;
@@ -151,6 +151,7 @@ export default function CafeAdminDashboardPage() {
   }, [user, isUserLoading, firestore, slug, router]);
 
   const handleLogout = async () => {
+    if (!auth) return;
     try {
       await signOut(auth);
       toast({
@@ -196,75 +197,63 @@ export default function CafeAdminDashboardPage() {
   }
   
   return (
-    <SidebarProvider>
-        {!isMobile && (
-          <Sidebar>
-            <SidebarHeader>
-              <div className="flex items-center gap-2">
-                <Store className="size-6 text-primary" />
-                <h2 className="font-headline text-lg">{tenant?.name || 'Admin Kafe'}</h2>
-              </div>
-            </SidebarHeader>
-            <SidebarContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive>
-                        <Link href={`/${slug}/admin`}>
-                            <Info />
-                            Dashboard
-                        </Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <Link href={`/${slug}/admin/orders`}>
-                      <ClipboardList />
-                      Manajemen Pesanan
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <Link href={`/${slug}/admin/reports`}>
-                      <FileText />
-                      Laporan Transaksi
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <Link href={`/${slug}/admin/menu`}>
-                      <Utensils />
-                      Manajemen Menu
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                        <Link href={`/${slug}/admin/tables`}>
-                            <Armchair />
-                            Manajemen Meja
-                        </Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <Link href={`/${slug}/admin/settings`}>
-                      <Settings />
-                      Setting Profil Kafe
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarContent>
-            <SidebarFooter>
-              <Button variant="ghost" onClick={handleLogout} className="w-full justify-start gap-2">
-                <LogOut />
-                <span>Logout</span>
-              </Button>
-            </SidebarFooter>
-          </Sidebar>
-        )}
+    <>
+      <Sidebar>
+        <SidebarHeader>
+          <div className="flex items-center gap-2">
+            <Store className="size-6 text-primary" />
+            <h2 className="font-headline text-lg">{tenant?.name || 'Admin Kafe'}</h2>
+          </div>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarMenu>
+            <SidebarMenuItem>
+                <SidebarMenuButton asChild href={`/${slug}/admin`} isActive>
+                    <Info />
+                    Dashboard
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild href={`/${slug}/admin/orders`}>
+                <ClipboardList />
+                Pesanan
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild href={`/${slug}/admin/reports`}>
+                <FileText />
+                Laporan
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild href={`/${slug}/admin/menu`}>
+                <Utensils />
+                Menu
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+                <SidebarMenuButton asChild href={`/${slug}/admin/tables`}>
+                    <Armchair />
+                    Meja
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild href={`/${slug}/admin/settings`}>
+                <Settings />
+                Settings
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarContent>
+         {!isMobile && (
+        <SidebarFooter>
+          <Button variant="ghost" onClick={handleLogout} className="w-full justify-start gap-2">
+            <LogOut />
+            <span>Logout</span>
+          </Button>
+        </SidebarFooter>
+         )}
+      </Sidebar>
       <SidebarInset>
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-card px-4 md:px-6">
           <div className="flex items-center gap-2">
@@ -354,50 +343,14 @@ export default function CafeAdminDashboardPage() {
             </div>
         </main>
       </SidebarInset>
-      {isMobile && (
-        <Sidebar>
-            <SidebarContent>
-              <SidebarMenu>
-                 <SidebarMenuItem>
-                   <SidebarMenuButton asChild href={`/${slug}/admin`} isActive>
-                        <Info />
-                        Dashboard
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild href={`/${slug}/admin/orders`}>
-                    <ClipboardList />
-                    Pesanan
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild href={`/${slug}/admin/menu`}>
-                    <Utensils />
-                    Menu
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                    <SidebarMenuButton asChild href={`/${slug}/admin/tables`}>
-                        <Armchair />
-                        Meja
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild href={`/${slug}/admin/reports`}>
-                    <FileText />
-                    Laporan
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild href={`/${slug}/admin/settings`}>
-                    <Settings />
-                    Settings
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarContent>
-        </Sidebar>
-        )}
-    </SidebarProvider>
+    </>
   );
+}
+
+export default function CafeAdminDashboardPage() {
+    return (
+        <SidebarProvider>
+            <DashboardContent />
+        </SidebarProvider>
+    )
 }

@@ -54,8 +54,7 @@ import { id as idLocale } from 'date-fns/locale';
 import { formatRupiah } from '@/lib/utils';
 import { startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 
-
-export default function CafeReportsPage() {
+function ReportsPageContent() {
   const router = useRouter();
   const params = useParams();
   const slug = params.slug as string;
@@ -173,6 +172,7 @@ export default function CafeReportsPage() {
 
   // --- Handlers ---
   const handleLogout = async () => {
+    if (!auth) return;
     try {
       await signOut(auth);
       toast({ title: 'Logout Berhasil' });
@@ -444,8 +444,7 @@ export default function CafeReportsPage() {
   };
   
   return (
-    <SidebarProvider>
-      {!isMobile && (
+    <>
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2">
@@ -456,63 +455,52 @@ export default function CafeReportsPage() {
         <SidebarContent>
           <SidebarMenu>
             <SidebarMenuItem>
-               <SidebarMenuButton asChild>
-                    <Link href={`/${slug}/admin`}>
-                        <Info />
-                        Dashboard
-                    </Link>
+               <SidebarMenuButton asChild href={`/${slug}/admin`}>
+                    <Info />
+                    Dashboard
                 </SidebarMenuButton>
             </SidebarMenuItem>
              <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <Link href={`/${slug}/admin/orders`}>
-                  <ClipboardList />
-                  Manajemen Pesanan
-                </Link>
+              <SidebarMenuButton asChild href={`/${slug}/admin/orders`}>
+                <ClipboardList />
+                Pesanan
               </SidebarMenuButton>
             </SidebarMenuItem>
              <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive>
-                <Link href={`/${slug}/admin/reports`}>
-                  <FileText />
-                  Laporan Transaksi
-                </Link>
+              <SidebarMenuButton asChild href={`/${slug}/admin/reports`} isActive>
+                <FileText />
+                Laporan
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <Link href={`/${slug}/admin/menu`}>
-                  <Utensils />
-                  Manajemen Menu
-                </Link>
+              <SidebarMenuButton asChild href={`/${slug}/admin/menu`}>
+                <Utensils />
+                Menu
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                    <Link href={`/${slug}/admin/tables`}>
-                        <Armchair />
-                        Manajemen Meja
-                    </Link>
+                <SidebarMenuButton asChild href={`/${slug}/admin/tables`}>
+                    <Armchair />
+                    Meja
                 </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <Link href={`/${slug}/admin/settings`}>
-                  <Settings />
-                  Setting Profil Kafe
-                </Link>
+              <SidebarMenuButton asChild href={`/${slug}/admin/settings`}>
+                <Settings />
+                Settings
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarContent>
+        {!isMobile && (
         <SidebarFooter>
           <Button variant="ghost" onClick={handleLogout} className="w-full justify-start gap-2">
             <LogOut />
             <span>Logout</span>
           </Button>
         </SidebarFooter>
+        )}
       </Sidebar>
-      )}
       <SidebarInset>
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-card px-4 md:px-6">
           <div className="flex items-center gap-2">
@@ -529,50 +517,15 @@ export default function CafeReportsPage() {
         </header>
         {pageContent()}
       </SidebarInset>
-      {isMobile && (
-        <Sidebar>
-            <SidebarContent>
-              <SidebarMenu>
-                 <SidebarMenuItem>
-                   <SidebarMenuButton asChild href={`/${slug}/admin`}>
-                        <Info />
-                        Dashboard
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild href={`/${slug}/admin/orders`}>
-                    <ClipboardList />
-                    Pesanan
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild href={`/${slug}/admin/menu`}>
-                    <Utensils />
-                    Menu
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                    <SidebarMenuButton asChild href={`/${slug}/admin/tables`}>
-                        <Armchair />
-                        Meja
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild href={`/${slug}/admin/reports`} isActive>
-                    <FileText />
-                    Laporan
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild href={`/${slug}/admin/settings`}>
-                    <Settings />
-                    Settings
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarContent>
-        </Sidebar>
-        )}
-    </SidebarProvider>
+    </>
   );
+}
+
+
+export default function CafeReportsPage() {
+  return (
+    <SidebarProvider>
+      <ReportsPageContent />
+    </SidebarProvider>
+  )
 }

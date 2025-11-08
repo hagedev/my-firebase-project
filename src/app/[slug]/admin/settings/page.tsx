@@ -73,8 +73,7 @@ const createSlug = (name: string) => {
       .replace(/-+/g, '-'); 
 };
 
-
-export default function CafeSettingsPage() {
+function SettingsPageContent() {
   const router = useRouter();
   const params = useParams();
   const slug = params.slug as string;
@@ -246,7 +245,6 @@ export default function CafeSettingsPage() {
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                      <Card>
                         <CardHeader>
-                            <CardTitle>Informasi Umum & Branding</CardTitle>
                             <CardDescription className="hidden md:block">
                                 Perbarui detail kontak, informasi, dan gambar untuk kafe Anda.
                             </CardDescription>
@@ -413,8 +411,7 @@ export default function CafeSettingsPage() {
   }
   
   return (
-    <SidebarProvider>
-      {!isMobile && (
+    <>
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2">
@@ -425,63 +422,52 @@ export default function CafeSettingsPage() {
         <SidebarContent>
           <SidebarMenu>
             <SidebarMenuItem>
-               <SidebarMenuButton asChild>
-                    <Link href={`/${slug}/admin`}>
-                        <Info />
-                        Dashboard
-                    </Link>
+               <SidebarMenuButton asChild href={`/${slug}/admin`}>
+                    <Info />
+                    Dashboard
                 </SidebarMenuButton>
             </SidebarMenuItem>
              <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <Link href={`/${slug}/admin/orders`}>
-                  <ClipboardList />
-                  Manajemen Pesanan
-                </Link>
+              <SidebarMenuButton asChild href={`/${slug}/admin/orders`}>
+                <ClipboardList />
+                Pesanan
               </SidebarMenuButton>
             </SidebarMenuItem>
              <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <Link href={`/${slug}/admin/reports`}>
-                  <FileText />
-                  Laporan Transaksi
-                </Link>
+              <SidebarMenuButton asChild href={`/${slug}/admin/reports`}>
+                <FileText />
+                Laporan
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <Link href={`/${slug}/admin/menu`}>
-                  <Utensils />
-                  Manajemen Menu
-                </Link>
+              <SidebarMenuButton asChild href={`/${slug}/admin/menu`}>
+                <Utensils />
+                Menu
               </SidebarMenuButton>
             </SidebarMenuItem>
              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                    <Link href={`/${slug}/admin/tables`}>
-                        <Armchair />
-                        Manajemen Meja
-                    </Link>
+                <SidebarMenuButton asChild href={`/${slug}/admin/tables`}>
+                    <Armchair />
+                    Meja
                 </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive>
-                <Link href={`/${slug}/admin/settings`}>
-                  <Settings />
-                  Setting Profil Kafe
-                </Link>
+              <SidebarMenuButton asChild href={`/${slug}/admin/settings`} isActive>
+                <Settings />
+                Settings
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarContent>
+        {!isMobile && (
         <SidebarFooter>
           <Button variant="ghost" onClick={handleLogout} className="w-full justify-start gap-2">
             <LogOut />
             <span>Logout</span>
           </Button>
         </SidebarFooter>
+        )}
       </Sidebar>
-      )}
       <SidebarInset>
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-card px-4 md:px-6">
           <div className="flex items-center gap-2">
@@ -498,50 +484,15 @@ export default function CafeSettingsPage() {
         </header>
         {pageContent()}
       </SidebarInset>
-      {isMobile && (
-        <Sidebar>
-            <SidebarContent>
-              <SidebarMenu>
-                 <SidebarMenuItem>
-                   <SidebarMenuButton asChild href={`/${slug}/admin`}>
-                        <Info />
-                        Dashboard
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild href={`/${slug}/admin/orders`}>
-                    <ClipboardList />
-                    Pesanan
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild href={`/${slug}/admin/menu`}>
-                    <Utensils />
-                    Menu
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                    <SidebarMenuButton asChild href={`/${slug}/admin/tables`}>
-                        <Armchair />
-                        Meja
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild href={`/${slug}/admin/reports`}>
-                    <FileText />
-                    Laporan
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild href={`/${slug}/admin/settings`} isActive>
-                    <Settings />
-                    Settings
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarContent>
-        </Sidebar>
-        )}
-    </SidebarProvider>
+    </>
   );
+}
+
+
+export default function CafeSettingsPage() {
+  return (
+    <SidebarProvider>
+      <SettingsPageContent />
+    </SidebarProvider>
+  )
 }

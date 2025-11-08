@@ -30,6 +30,7 @@ import {
   SidebarInset,
   SidebarTrigger,
   SidebarFooter,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import {
   Table,
@@ -53,8 +54,7 @@ import { id as idLocale } from 'date-fns/locale';
 import { formatRupiah } from '@/lib/utils';
 import { startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 
-
-export default function CafeReportsPage() {
+function ReportsPageContent() {
   const router = useRouter();
   const params = useParams();
   const slug = params.slug as string;
@@ -63,6 +63,7 @@ export default function CafeReportsPage() {
   const firestore = useFirestore();
   const auth = useAuth();
   const { toast } = useToast();
+  const { isMobile } = useSidebar();
 
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -171,6 +172,7 @@ export default function CafeReportsPage() {
 
   // --- Handlers ---
   const handleLogout = async () => {
+    if (!auth) return;
     try {
       await signOut(auth);
       toast({ title: 'Logout Berhasil' });
@@ -344,10 +346,7 @@ export default function CafeReportsPage() {
     return (
       <main className="flex-1 p-4 md:p-6 lg:p-8">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
-          <div>
-            <h1 className="font-headline text-2xl md:text-3xl font-bold">Laporan Transaksi</h1>
-            <p className="text-muted-foreground">Analisis penjualan dan transaksi kafe Anda.</p>
-          </div>
+            <p className="text-muted-foreground hidden md:block">Analisis penjualan dan transaksi kafe Anda.</p>
           <div className="flex w-full md:w-auto flex-col md:flex-row md:items-center gap-4">
             <RadioGroup defaultValue="date" value={filterMode} onValueChange={(value: 'date' | 'month') => setFilterMode(value)} className="flex items-center">
               <div className="flex items-center space-x-2">
@@ -394,7 +393,7 @@ export default function CafeReportsPage() {
               <CardDescription>Daftar semua transaksi yang tercatat pada periode yang dipilih.</CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
-            <div className="border rounded-md">
+            <div className="border rounded-md overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -445,7 +444,7 @@ export default function CafeReportsPage() {
   };
   
   return (
-    <SidebarProvider>
+    <>
       <Sidebar>
         <SidebarHeader>
           <div className="flex items-center gap-2">
@@ -456,61 +455,51 @@ export default function CafeReportsPage() {
         <SidebarContent>
           <SidebarMenu>
             <SidebarMenuItem>
-               <SidebarMenuButton asChild>
-                    <Link href={`/${slug}/admin`}>
-                        <Info />
-                        Dashboard
-                    </Link>
-                </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <Link href={`/${slug}/admin/menu`}>
-                  <Utensils />
-                  Manajemen Menu
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                    <Link href={`/${slug}/admin/tables`}>
-                        <Armchair />
-                        Manajemen Meja
-                    </Link>
+               <SidebarMenuButton asChild href={`/${slug}/admin`}>
+                    <Info />
+                    Dashboard
                 </SidebarMenuButton>
             </SidebarMenuItem>
              <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <Link href={`/${slug}/admin/orders`}>
-                  <ClipboardList />
-                  Manajemen Pesanan
-                </Link>
+              <SidebarMenuButton asChild href={`/${slug}/admin/orders`}>
+                <ClipboardList />
+                Pesanan
               </SidebarMenuButton>
             </SidebarMenuItem>
              <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive>
-                <Link href={`/${slug}/admin/reports`}>
-                  <FileText />
-                  Laporan Transaksi
-                </Link>
+              <SidebarMenuButton asChild href={`/${slug}/admin/reports`} isActive>
+                <FileText />
+                Laporan
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <Link href={`/${slug}/admin/settings`}>
-                  <Settings />
-                  Setting Profil Kafe
-                </Link>
+              <SidebarMenuButton asChild href={`/${slug}/admin/menu`}>
+                <Utensils />
+                Menu
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+                <SidebarMenuButton asChild href={`/${slug}/admin/tables`}>
+                    <Armchair />
+                    Meja
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild href={`/${slug}/admin/settings`}>
+                <Settings />
+                Settings
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarContent>
+        {!isMobile && (
         <SidebarFooter>
           <Button variant="ghost" onClick={handleLogout} className="w-full justify-start gap-2">
             <LogOut />
             <span>Logout</span>
           </Button>
         </SidebarFooter>
+        )}
       </Sidebar>
       <SidebarInset>
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-card px-4 md:px-6">
@@ -528,6 +517,14 @@ export default function CafeReportsPage() {
         </header>
         {pageContent()}
       </SidebarInset>
-    </SidebarProvider>
+    </>
   );
+}
+
+export default function CafeReportsPage() {
+  return (
+    <SidebarProvider>
+      <ReportsPageContent />
+    </SidebarProvider>
+  )
 }
