@@ -307,11 +307,14 @@ function OrdersPageContent() {
     return (
       <>
         <main className="flex-1 p-2 md:p-6 lg:p-8">
+             <div className="flex items-center justify-between mb-6">
+                <div className='hidden md:block'>
+                    <h1 className="font-headline text-2xl font-semibold">Daftar Pesanan Hari Ini</h1>
+                    <p className="text-muted-foreground">Pantau dan kelola semua pesanan yang masuk untuk hari ini. Klik kartu untuk melihat detail.</p>
+                </div>
+            </div>
             <Card>
-                <CardHeader>
-                    <CardDescription className="hidden md:block">Pantau dan kelola semua pesanan yang masuk untuk hari ini. Klik kartu untuk melihat detail.</CardDescription>
-                </CardHeader>
-                <CardContent>
+                <CardContent className="pt-6">
                     {isOrdersLoading ? (
                          <div className="flex h-48 w-full items-center justify-center">
                             <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -423,38 +426,50 @@ function OrdersPageContent() {
           <SidebarMenu>
             <SidebarMenuItem>
                <SidebarMenuButton asChild href={`/${slug}/admin`}>
-                    <Info />
-                    <span>Dashboard</span>
+                    <Link href={`/${slug}/admin`}>
+                        <Info />
+                        <span>Dashboard</span>
+                    </Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/orders`} isActive>
-                <ClipboardList />
-                <span>Pesanan</span>
+                <Link href={`/${slug}/admin/orders`}>
+                    <ClipboardList />
+                    <span>Pesanan</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/reports`}>
-                <FileText />
-                <span>Laporan</span>
+                <Link href={`/${slug}/admin/reports`}>
+                    <FileText />
+                    <span>Laporan</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/menu`}>
-                <Utensils />
-                <span>Menu</span>
+                <Link href={`/${slug}/admin/menu`}>
+                    <Utensils />
+                    <span>Menu</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
                 <SidebarMenuButton asChild href={`/${slug}/admin/tables`}>
-                    <Armchair />
-                    <span>Meja</span>
+                    <Link href={`/${slug}/admin/tables`}>
+                        <Armchair />
+                        <span>Meja</span>
+                    </Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/settings`}>
-                <Settings />
-                <span>Settings</span>
+                <Link href={`/${slug}/admin/settings`}>
+                    <Settings />
+                    <span>Settings</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -472,7 +487,7 @@ function OrdersPageContent() {
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-card px-4 md:px-6">
           <div className="flex items-center gap-2">
             <SidebarTrigger className="md:hidden" />
-            <h1 className="font-headline text-xl font-semibold">
+            <h1 className="font-headline text-xl font-semibold md:hidden">
               Manajemen Pesanan
             </h1>
           </div>

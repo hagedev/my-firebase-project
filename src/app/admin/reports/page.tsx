@@ -346,7 +346,10 @@ function ReportsPageContent() {
     return (
       <main className="flex-1 p-4 md:p-6 lg:p-8">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
-            <p className="text-muted-foreground hidden md:block">Analisis penjualan dan transaksi kafe Anda.</p>
+          <div className="hidden md:block">
+            <h1 className="font-headline text-2xl font-semibold">Laporan Transaksi</h1>
+            <p className="text-muted-foreground">Analisis penjualan dan transaksi kafe Anda.</p>
+          </div>
           <div className="flex w-full md:w-auto flex-col md:flex-row md:items-center gap-4">
             <RadioGroup defaultValue="date" value={filterMode} onValueChange={(value: 'date' | 'month') => setFilterMode(value)} className="flex items-center">
               <div className="flex items-center space-x-2">
@@ -456,38 +459,50 @@ function ReportsPageContent() {
           <SidebarMenu>
             <SidebarMenuItem>
                <SidebarMenuButton asChild href={`/${slug}/admin`}>
-                    <Info />
-                    Dashboard
+                    <Link href={`/${slug}/admin`}>
+                        <Info />
+                        <span>Dashboard</span>
+                    </Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
              <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/orders`}>
-                <ClipboardList />
-                Pesanan
+                <Link href={`/${slug}/admin/orders`}>
+                    <ClipboardList />
+                    <span>Pesanan</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
              <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/reports`} isActive>
-                <FileText />
-                Laporan
+                <Link href={`/${slug}/admin/reports`}>
+                    <FileText />
+                    <span>Laporan</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/menu`}>
-                <Utensils />
-                Menu
+                <Link href={`/${slug}/admin/menu`}>
+                    <Utensils />
+                    <span>Menu</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
                 <SidebarMenuButton asChild href={`/${slug}/admin/tables`}>
-                    <Armchair />
-                    Meja
+                    <Link href={`/${slug}/admin/tables`}>
+                        <Armchair />
+                        <span>Meja</span>
+                    </Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/settings`}>
-                <Settings />
-                Settings
+                <Link href={`/${slug}/admin/settings`}>
+                    <Settings />
+                    <span>Settings</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -505,7 +520,7 @@ function ReportsPageContent() {
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-card px-4 md:px-6">
           <div className="flex items-center gap-2">
             <SidebarTrigger className="md:hidden" />
-            <h1 className="font-headline text-xl font-semibold">
+            <h1 className="font-headline text-xl font-semibold md:hidden">
               Laporan Transaksi
             </h1>
           </div>
@@ -520,6 +535,7 @@ function ReportsPageContent() {
     </>
   );
 }
+
 
 export default function CafeReportsPage() {
   return (

@@ -202,21 +202,21 @@ function MenuPageContent() {
       <>
         <main className="flex-1 p-4 md:p-6 lg:p-8">
           <div className="flex items-center justify-between mb-6">
-            <h1 className="font-headline text-2xl font-semibold hidden md:block">
-              Manajemen Menu
-            </h1>
+            <div className='hidden md:block'>
+                <h1 className="font-headline text-2xl font-semibold">
+                Manajemen Menu
+                </h1>
+                <CardDescription>
+                    Kelola semua item yang tersedia di kafe Anda.
+                </CardDescription>
+            </div>
             <Button onClick={() => setIsAddMenuDialogOpen(true)} className="w-full md:w-auto">
               <PlusCircle className="mr-2 h-4 w-4" />
               Tambah Menu
             </Button>
           </div>
           <Card>
-            <CardHeader>
-                <CardDescription className="hidden md:block">
-                    Kelola semua item yang tersedia di kafe Anda.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0 md:pt-6">
+            <CardContent className="pt-6">
               <div className="border rounded-md overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -322,38 +322,50 @@ function MenuPageContent() {
           <SidebarMenu>
             <SidebarMenuItem>
                <SidebarMenuButton asChild href={`/${slug}/admin`}>
-                  <Info />
-                  <span>Dashboard</span>
+                  <Link href={`/${slug}/admin`}>
+                    <Info />
+                    <span>Dashboard</span>
+                  </Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
              <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/orders`}>
-                <ClipboardList />
-                <span>Pesanan</span>
+                <Link href={`/${slug}/admin/orders`}>
+                    <ClipboardList />
+                    <span>Pesanan</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/reports`}>
-                <FileText />
-                <span>Laporan</span>
+                <Link href={`/${slug}/admin/reports`}>
+                    <FileText />
+                    <span>Laporan</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/menu`} isActive>
-                <Utensils />
-                <span>Menu</span>
+                <Link href={`/${slug}/admin/menu`}>
+                    <Utensils />
+                    <span>Menu</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
                 <SidebarMenuButton asChild href={`/${slug}/admin/tables`}>
-                  <Armchair />
-                  <span>Meja</span>
+                    <Link href={`/${slug}/admin/tables`}>
+                        <Armchair />
+                        <span>Meja</span>
+                    </Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/settings`}>
-                <Settings />
-                <span>Settings</span>
+                <Link href={`/${slug}/admin/settings`}>
+                    <Settings />
+                    <span>Settings</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -371,7 +383,7 @@ function MenuPageContent() {
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-card px-4 md:px-6">
           <div className="flex items-center gap-2">
             <SidebarTrigger className="md:hidden" />
-            <h1 className="font-headline text-xl font-semibold">
+            <h1 className="font-headline text-xl font-semibold md:hidden">
               Manajemen Menu
             </h1>
           </div>

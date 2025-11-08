@@ -241,15 +241,16 @@ function SettingsPageContent() {
 
     return (
         <main className="flex-1 p-4 md:p-6 lg:p-8">
+            <div className="mb-6 hidden md:block">
+                <h1 className="font-headline text-2xl font-semibold">Setting Profil Kafe</h1>
+                 <CardDescription>
+                    Perbarui detail kontak, informasi, dan gambar untuk kafe Anda.
+                </CardDescription>
+            </div>
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                      <Card>
-                        <CardHeader>
-                            <CardDescription className="hidden md:block">
-                                Perbarui detail kontak, informasi, dan gambar untuk kafe Anda.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
+                        <CardContent className="space-y-6 pt-6">
                             <FormField
                                 control={form.control}
                                 name="name"
@@ -423,38 +424,50 @@ function SettingsPageContent() {
           <SidebarMenu>
             <SidebarMenuItem>
                <SidebarMenuButton asChild href={`/${slug}/admin`}>
-                    <Info />
-                    <span>Dashboard</span>
+                    <Link href={`/${slug}/admin`}>
+                        <Info />
+                        <span>Dashboard</span>
+                    </Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
              <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/orders`}>
-                <ClipboardList />
-                <span>Pesanan</span>
+                <Link href={`/${slug}/admin/orders`}>
+                    <ClipboardList />
+                    <span>Pesanan</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
              <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/reports`}>
-                <FileText />
-                <span>Laporan</span>
+                <Link href={`/${slug}/admin/reports`}>
+                    <FileText />
+                    <span>Laporan</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/menu`}>
-                <Utensils />
-                <span>Menu</span>
+                <Link href={`/${slug}/admin/menu`}>
+                    <Utensils />
+                    <span>Menu</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
              <SidebarMenuItem>
                 <SidebarMenuButton asChild href={`/${slug}/admin/tables`}>
-                    <Armchair />
-                    <span>Meja</span>
+                    <Link href={`/${slug}/admin/tables`}>
+                        <Armchair />
+                        <span>Meja</span>
+                    </Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/settings`} isActive>
-                <Settings />
-                <span>Settings</span>
+                <Link href={`/${slug}/admin/settings`}>
+                    <Settings />
+                    <span>Settings</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -472,7 +485,7 @@ function SettingsPageContent() {
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-card px-4 md:px-6">
           <div className="flex items-center gap-2">
             <SidebarTrigger className="md:hidden" />
-            <h1 className="font-headline text-xl font-semibold">
+            <h1 className="font-headline text-xl font-semibold md:hidden">
               Setting Profil Kafe
             </h1>
           </div>

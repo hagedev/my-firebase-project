@@ -209,38 +209,50 @@ function DashboardContent() {
           <SidebarMenu>
             <SidebarMenuItem>
                 <SidebarMenuButton asChild href={`/${slug}/admin`} isActive>
-                    <Info />
-                    <span>Dashboard</span>
+                    <Link href={`/${slug}/admin`}>
+                        <Info />
+                        <span>Dashboard</span>
+                    </Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/orders`}>
-                <ClipboardList />
-                <span>Pesanan</span>
+                <Link href={`/${slug}/admin/orders`}>
+                    <ClipboardList />
+                    <span>Pesanan</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/reports`}>
-                <FileText />
-                <span>Laporan</span>
+                <Link href={`/${slug}/admin/reports`}>
+                    <FileText />
+                    <span>Laporan</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/menu`}>
-                <Utensils />
-                <span>Menu</span>
+                <Link href={`/${slug}/admin/menu`}>
+                    <Utensils />
+                    <span>Menu</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
                 <SidebarMenuButton asChild href={`/${slug}/admin/tables`}>
-                    <Armchair />
-                    <span>Meja</span>
+                    <Link href={`/${slug}/admin/tables`}>
+                        <Armchair />
+                        <span>Meja</span>
+                    </Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/settings`}>
-                <Settings />
-                <span>Settings</span>
+                <Link href={`/${slug}/admin/settings`}>
+                    <Settings />
+                    <span>Settings</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -258,9 +270,6 @@ function DashboardContent() {
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-card px-4 md:px-6">
           <div className="flex items-center gap-2">
             <SidebarTrigger className="md:hidden" />
-            <h1 className="font-headline text-xl font-semibold">
-              Dashboard
-            </h1>
           </div>
            <div className="flex items-center gap-2">
             <p className="text-sm text-muted-foreground hidden md:block">
@@ -270,6 +279,7 @@ function DashboardContent() {
         </header>
         <main className="flex-1 p-4 md:p-6 lg:p-8">
             <div className="mb-8">
+                 <h1 className="font-headline text-2xl font-semibold">Dashboard</h1>
                 <p className="mt-1 text-lg text-muted-foreground">
                     Ringkasan untuk <span className="font-semibold text-primary">{tenant?.name}</span> hari ini.
                 </p>
