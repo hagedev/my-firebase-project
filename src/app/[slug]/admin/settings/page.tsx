@@ -240,7 +240,7 @@ function SettingsPageContent() {
     }
 
     return (
-        <main className="flex-1 p-4 md:p-6 lg:p-8">
+        <main className="flex-1 p-4 md:p-6 lg:p-8 pb-20 md:pb-8">
             <div className="mb-6 hidden md:block">
                 <h1 className="font-headline text-2xl font-semibold">Setting Profil Kafe</h1>
                  <CardDescription>

@@ -277,7 +277,7 @@ function DashboardContent() {
             </p>
           </div>
         </header>
-        <main className="flex-1 p-4 md:p-6 lg:p-8">
+        <main className="flex-1 p-4 md:p-6 lg:p-8 pb-20 md:pb-8">
             <div className="mb-8">
                  <h1 className="font-headline text-2xl font-semibold">Dashboard</h1>
                 <p className="mt-1 text-lg text-muted-foreground">

@@ -163,7 +163,6 @@ type BottomNavItem = {
     href: string;
     isActive?: boolean;
     asChild?: boolean;
-    component: React.ReactNode;
 };
 
 interface BottomNavProps extends React.HTMLAttributes<"div"> {
@@ -185,9 +184,14 @@ const BottomNav = React.forwardRef<HTMLDivElement, BottomNavProps>(
       >
         <div className="grid h-full grid-cols-5 max-w-lg mx-auto">
           {items.map((item, index) => (
-            <Slot key={index} data-active={item.isActive}>
-                {item.component}
-            </Slot>
+             <SidebarMenuButton
+                key={index}
+                asChild
+                href={item.href}
+                isActive={item.isActive}
+                icon={item.icon}
+                label={item.label}
+              />
           ))}
           {moreItems && moreItems.length > 0 && (
             <Sheet>
@@ -204,7 +208,13 @@ const BottomNav = React.forwardRef<HTMLDivElement, BottomNavProps>(
                             {moreItems.map((item, index) => (
                                 <li key={index}>
                                     <SheetClose asChild>
-                                        {item.component}
+                                        <SidebarMenuButton
+                                            asChild
+                                            href={item.href}
+                                            isActive={item.isActive}
+                                            icon={item.icon}
+                                            label={item.label}
+                                        />
                                     </SheetClose>
                                 </li>
                             ))}
@@ -271,17 +281,17 @@ const Sidebar = React.forwardRef<
         )
          .map(child => {
             if (React.isValidElement(child) && child.type === SidebarMenuItem) {
-                const button = React.Children.only(child.props.children);
-                if (React.isValidElement(button)) {
-                    // Extract icon and label from the button's children
-                    const [icon, label] = React.Children.toArray(button.props.children);
+                // The child of SidebarMenuItem is SidebarMenuButton which holds the Link
+                const menuButton = React.Children.only(child.props.children) as React.ReactElement;
+                if (React.isValidElement(menuButton) && menuButton.props.asChild) {
+                     const link = React.Children.only(menuButton.props.children) as React.ReactElement;
+                     const [icon, label] = React.Children.toArray(link.props.children);
                     return {
                         icon: icon,
-                        label: label,
-                        href: button.props.href,
-                        isActive: button.props.isActive,
+                        label: (label as React.ReactElement)?.props.children,
+                        href: link.props.href,
+                        isActive: menuButton.props.isActive,
                         asChild: true,
-                        component: button
                     };
                 }
             }
@@ -632,6 +642,8 @@ const SidebarMenuButton = React.forwardRef<
     asChild?: boolean
     isActive?: boolean
     tooltip?: string | React.ComponentProps<typeof TooltipContent>
+    icon?: React.ReactNode
+    label?: React.ReactNode
   } & VariantProps<typeof sidebarMenuButtonVariants>
 >(
   (
@@ -643,6 +655,8 @@ const SidebarMenuButton = React.forwardRef<
       tooltip,
       className,
       children,
+      icon, // new prop
+      label, // new prop
       ...props
     },
     ref
@@ -651,13 +665,29 @@ const SidebarMenuButton = React.forwardRef<
     const { isMobile, state } = useSidebar()
     
     if (isMobile) {
-        const [icon, label] = React.Children.toArray(children);
+      const mobileIcon = React.Children.only(icon) as React.ReactElement;
+      
+      const buttonContent = (
+          <>
+            {React.isValidElement(mobileIcon) && React.cloneElement(mobileIcon, { className: cn('w-6 h-6 mb-1', isActive ? 'text-primary' : 'text-gray-500 group-hover:text-primary') })}
+            <span className={cn("text-xs", isActive ? 'text-primary' : 'text-gray-500 group-hover:text-primary')}>{label}</span>
+          </>
+      );
+      
+      if (asChild) {
+        // When asChild is true, we expect `children` to be a single Link component
         return (
-             <Comp ref={ref} data-active={isActive} className={cn(sidebarMenuButtonVariants({ variant: 'mobile' }), className)} {...props}>
-                {React.isValidElement(icon) && React.cloneElement(icon as React.ReactElement, { className: cn('w-6 h-6 mb-1', isActive ? 'text-primary' : 'text-gray-500 group-hover:text-primary') })}
-                <span className={cn("text-xs", isActive ? 'text-primary' : 'text-gray-500 group-hover:text-primary')}>{label}</span>
-            </Comp>
+          <Slot className={cn(sidebarMenuButtonVariants({ variant: 'mobile' }), className)} data-active={isActive} {...props}>
+            {React.isValidElement(children) ? React.cloneElement(children, { children: buttonContent } as any) : children}
+          </Slot>
         )
+      }
+
+      return (
+        <button ref={ref} data-active={isActive} className={cn(sidebarMenuButtonVariants({ variant: 'mobile' }), className)} {...props}>
+          {buttonContent}
+        </button>
+      )
     }
 
     const button = (
