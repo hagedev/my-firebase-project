@@ -347,8 +347,7 @@ function ReportsPageContent() {
       <main className="flex-1 p-4 md:p-6 lg:p-8">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
           <div className="flex-1">
-            <h1 className="font-headline text-2xl font-semibold">Laporan Transaksi</h1>
-            <p className="text-muted-foreground">Analisis penjualan dan transaksi kafe Anda.</p>
+             <p className="text-muted-foreground">Analisis penjualan dan transaksi kafe Anda.</p>
           </div>
           <div className="w-full md:w-auto flex flex-col sm:flex-row items-center gap-4">
             <RadioGroup defaultValue="date" value={filterMode} onValueChange={(value: 'date' | 'month') => setFilterMode(value)} className="flex items-center gap-4">
@@ -368,7 +367,7 @@ function ReportsPageContent() {
         </div>
 
         {/* Summary Cards */}
-         <div className="grid gap-4 sm:grid-cols-2 mb-6">
+         <div className="grid gap-4 md:grid-cols-2 mb-6">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Pendapatan</CardTitle>
@@ -403,10 +402,10 @@ function ReportsPageContent() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Waktu</TableHead>
-                    <TableHead>Meja</TableHead>
+                    <TableHead className="hidden md:table-cell">Meja</TableHead>
                     <TableHead>Total</TableHead>
                     <TableHead>Pembayaran</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead className="hidden md:table-cell">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -422,14 +421,14 @@ function ReportsPageContent() {
                         <TableCell className="font-medium">
                             {order.createdAt ? format(order.createdAt.toDate(), 'dd/MM/yy HH:mm') : 'N/A'}
                         </TableCell>
-                        <TableCell>Meja {order.tableNumber}</TableCell>
+                        <TableCell className="hidden md:table-cell">Meja {order.tableNumber}</TableCell>
                         <TableCell>{formatRupiah(order.totalAmount)}</TableCell>
                         <TableCell>
                           <Badge variant={order.paymentVerified ? 'secondary' : 'default'}>
                             {(order.paymentMethod || 'N/A').toUpperCase()} - {order.paymentVerified ? 'Lunas' : 'Belum'}
                           </Badge>
                         </TableCell>
-                        <TableCell><Badge variant="outline">{order.status}</Badge></TableCell>
+                        <TableCell className="hidden md:table-cell"><Badge variant="outline">{order.status}</Badge></TableCell>
                       </TableRow>
                     ))
                   ) : (
@@ -522,7 +521,7 @@ function ReportsPageContent() {
         <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-card px-4 md:px-6">
           <div className="flex items-center gap-2">
             <SidebarTrigger className="md:hidden" />
-            <h1 className="font-headline text-xl font-semibold md:hidden">
+            <h1 className="font-headline text-xl font-semibold">
               Laporan Transaksi
             </h1>
           </div>
