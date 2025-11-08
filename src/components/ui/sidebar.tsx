@@ -163,6 +163,7 @@ type BottomNavItem = {
     href: string;
     isActive?: boolean;
     asChild?: boolean;
+    children?: React.ReactNode;
 };
 
 interface BottomNavProps extends React.HTMLAttributes<"div"> {
@@ -183,16 +184,19 @@ const BottomNav = React.forwardRef<HTMLDivElement, BottomNavProps>(
         {...props}
       >
         <div className="grid h-full grid-cols-5 max-w-lg mx-auto">
-          {items.map((item, index) => (
-             <SidebarMenuButton
-                key={index}
-                asChild
-                href={item.href}
-                isActive={item.isActive}
-                icon={item.icon}
-                label={item.label}
-              />
-          ))}
+          {items.map((item, index) => {
+             const button = React.Children.only(item.children) as React.ReactElement;
+              return (
+                <SidebarMenuButton
+                    key={index}
+                    asChild
+                    variant="mobile"
+                    isActive={button.props.isActive}
+                >
+                    {button.props.children}
+                </SidebarMenuButton>
+              )
+          })}
           {moreItems && moreItems.length > 0 && (
             <Sheet>
                 <SheetTrigger asChild>
@@ -205,19 +209,20 @@ const BottomNav = React.forwardRef<HTMLDivElement, BottomNavProps>(
                     <SheetTitle className="sr-only">Menu Lainnya</SheetTitle>
                     <div className="p-2">
                         <ul className="space-y-1">
-                            {moreItems.map((item, index) => (
+                            {moreItems.map((item, index) => {
+                                const button = React.Children.only(item.children) as React.ReactElement;
+                                return (
                                 <li key={index}>
                                     <SheetClose asChild>
                                         <SidebarMenuButton
                                             asChild
-                                            href={item.href}
-                                            isActive={item.isActive}
-                                            icon={item.icon}
-                                            label={item.label}
-                                        />
+                                            isActive={button.props.isActive}
+                                        >
+                                           {button.props.children}
+                                        </SidebarMenuButton>
                                     </SheetClose>
                                 </li>
-                            ))}
+                            )})}
                         </ul>
                     </div>
                 </SheetContent>
@@ -268,41 +273,29 @@ const Sidebar = React.forwardRef<
     }
 
     if (isMobile) {
-      const menuItems = React.Children.toArray(children)
-        .flatMap(child => 
-            React.isValidElement(child) && child.type === SidebarContent 
-            ? React.Children.toArray(child.props.children)
-            : []
-        )
-        .flatMap(child => 
-            React.isValidElement(child) && child.type === SidebarMenu
-            ? React.Children.toArray(child.props.children)
-            : []
-        )
-         .map(child => {
+        const menuItems = React.Children.toArray(children)
+          .flatMap(child => 
+              React.isValidElement(child) && child.type === SidebarContent 
+              ? React.Children.toArray(child.props.children)
+              : []
+          )
+          .flatMap(child => 
+              React.isValidElement(child) && child.type === SidebarMenu
+              ? React.Children.toArray(child.props.children)
+              : []
+          )
+          .map(child => {
             if (React.isValidElement(child) && child.type === SidebarMenuItem) {
-                // The child of SidebarMenuItem is SidebarMenuButton which holds the Link
-                const menuButton = React.Children.only(child.props.children) as React.ReactElement;
-                if (React.isValidElement(menuButton) && menuButton.props.asChild) {
-                     const link = React.Children.only(menuButton.props.children) as React.ReactElement;
-                     const [icon, label] = React.Children.toArray(link.props.children);
-                    return {
-                        icon: icon,
-                        label: (label as React.ReactElement)?.props.children,
-                        href: link.props.href,
-                        isActive: menuButton.props.isActive,
-                        asChild: true,
-                    };
-                }
+              return child.props.children; // This is the SidebarMenuButton
             }
             return null;
-        })
-        .filter((item): item is BottomNavItem => item !== null);
+          })
+          .filter(Boolean);
 
-        const mainItems = menuItems.slice(0, 4);
-        const moreItems = menuItems.slice(4);
+        const mainItems = menuItems.slice(0, 4).map(item => ({ children: item })) as BottomNavItem[];
+        const moreItems = menuItems.slice(4).map(item => ({ children: item })) as BottomNavItem[];
 
-      return <BottomNav items={mainItems} moreItems={moreItems} />;
+        return <BottomNav items={mainItems} moreItems={moreItems} />;
     }
 
     // Desktop sidebar logic (remains unchanged)
@@ -642,8 +635,6 @@ const SidebarMenuButton = React.forwardRef<
     asChild?: boolean
     isActive?: boolean
     tooltip?: string | React.ComponentProps<typeof TooltipContent>
-    icon?: React.ReactNode
-    label?: React.ReactNode
   } & VariantProps<typeof sidebarMenuButtonVariants>
 >(
   (
@@ -655,8 +646,6 @@ const SidebarMenuButton = React.forwardRef<
       tooltip,
       className,
       children,
-      icon, // new prop
-      label, // new prop
       ...props
     },
     ref
@@ -665,27 +654,16 @@ const SidebarMenuButton = React.forwardRef<
     const { isMobile, state } = useSidebar()
     
     if (isMobile) {
-      const mobileIcon = React.Children.only(icon) as React.ReactElement;
-      
-      const buttonContent = (
-          <>
-            {React.isValidElement(mobileIcon) && React.cloneElement(mobileIcon, { className: cn('w-6 h-6 mb-1', isActive ? 'text-primary' : 'text-gray-500 group-hover:text-primary') })}
-            <span className={cn("text-xs", isActive ? 'text-primary' : 'text-gray-500 group-hover:text-primary')}>{label}</span>
-          </>
-      );
-      
       if (asChild) {
-        // When asChild is true, we expect `children` to be a single Link component
         return (
           <Slot className={cn(sidebarMenuButtonVariants({ variant: 'mobile' }), className)} data-active={isActive} {...props}>
-            {React.isValidElement(children) ? React.cloneElement(children, { children: buttonContent } as any) : children}
+             {children}
           </Slot>
         )
       }
-
       return (
         <button ref={ref} data-active={isActive} className={cn(sidebarMenuButtonVariants({ variant: 'mobile' }), className)} {...props}>
-          {buttonContent}
+          {children}
         </button>
       )
     }

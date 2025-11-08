@@ -200,7 +200,7 @@ function MenuPageContent() {
 
     return (
       <>
-        <main className="flex-1 p-4 md:p-6 lg:p-8 pb-20 md:pb-8">
+        <main className="flex-1 p-4 md:p-6 lg:p-8">
           <div className="flex items-center justify-between mb-6">
             <div className='hidden md:block'>
                 <h1 className="font-headline text-2xl font-semibold">
@@ -321,7 +321,7 @@ function MenuPageContent() {
         <SidebarContent>
           <SidebarMenu>
             <SidebarMenuItem>
-               <SidebarMenuButton asChild href={`/${slug}/admin`}>
+               <SidebarMenuButton asChild>
                   <Link href={`/${slug}/admin`}>
                     <Info />
                     <span>Dashboard</span>
@@ -329,7 +329,7 @@ function MenuPageContent() {
                 </SidebarMenuButton>
             </SidebarMenuItem>
              <SidebarMenuItem>
-              <SidebarMenuButton asChild href={`/${slug}/admin/orders`}>
+              <SidebarMenuButton asChild>
                 <Link href={`/${slug}/admin/orders`}>
                     <ClipboardList />
                     <span>Pesanan</span>
@@ -337,7 +337,7 @@ function MenuPageContent() {
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild href={`/${slug}/admin/reports`}>
+              <SidebarMenuButton asChild>
                 <Link href={`/${slug}/admin/reports`}>
                     <FileText />
                     <span>Laporan</span>
@@ -345,7 +345,7 @@ function MenuPageContent() {
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild href={`/${slug}/admin/menu`} isActive>
+              <SidebarMenuButton asChild isActive>
                 <Link href={`/${slug}/admin/menu`}>
                     <Utensils />
                     <span>Menu</span>
@@ -353,7 +353,7 @@ function MenuPageContent() {
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-                <SidebarMenuButton asChild href={`/${slug}/admin/tables`}>
+                <SidebarMenuButton asChild>
                   <Link href={`/${slug}/admin/tables`}>
                       <Armchair />
                       <span>Meja</span>
@@ -361,7 +361,7 @@ function MenuPageContent() {
                 </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild href={`/${slug}/admin/settings`}>
+              <SidebarMenuButton asChild>
                 <Link href={`/${slug}/admin/settings`}>
                     <Settings />
                     <span>Settings</span>
