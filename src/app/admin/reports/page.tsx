@@ -344,26 +344,24 @@ function ReportsPageContent() {
     );
 
     return (
-      <main className="flex-1 p-4 md:p-6 lg:p-8">
+      <main className="flex flex-1 flex-col p-4 md:p-6 lg:p-8">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
-          <div className="flex-1">
-             <p className="text-muted-foreground">Analisis penjualan dan transaksi kafe Anda.</p>
-          </div>
-          <div className="w-full md:w-auto flex flex-col sm:flex-row items-center gap-4">
-            <RadioGroup defaultValue="date" value={filterMode} onValueChange={(value: 'date' | 'month') => setFilterMode(value)} className="flex items-center gap-4">
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="date" id="r-date" />
-                <Label htmlFor="r-date">Per Tanggal</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="month" id="r-month" />
-                <Label htmlFor="r-month">Per Bulan</Label>
-              </div>
-            </RadioGroup>
-            <div className='w-full sm:w-[240px]'>
-              {filterMode === 'date' ? <DatePicker /> : <MonthPicker />}
+            <div className="md:hidden">
+                 <p className="text-muted-foreground">Analisis penjualan dan transaksi kafe Anda.</p>
             </div>
-          </div>
+            <RadioGroup defaultValue="date" value={filterMode} onValueChange={(value: 'date' | 'month') => setFilterMode(value)} className="flex items-center gap-4">
+                <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="date" id="r-date" />
+                    <Label htmlFor="r-date">Per Tanggal</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="month" id="r-month" />
+                    <Label htmlFor="r-month">Per Bulan</Label>
+                </div>
+            </RadioGroup>
+            <div className='w-full md:w-[240px]'>
+                {filterMode === 'date' ? <DatePicker /> : <MonthPicker />}
+            </div>
         </div>
 
         {/* Summary Cards */}
@@ -402,16 +400,15 @@ function ReportsPageContent() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Waktu</TableHead>
-                    <TableHead className="hidden md:table-cell">Meja</TableHead>
                     <TableHead>Total</TableHead>
                     <TableHead>Pembayaran</TableHead>
-                    <TableHead className="hidden md:table-cell">Status</TableHead>
+                    <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isOrdersLoading ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center h-24">
+                      <TableCell colSpan={4} className="text-center h-24">
                         <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
                       </TableCell>
                     </TableRow>
@@ -421,19 +418,18 @@ function ReportsPageContent() {
                         <TableCell className="font-medium">
                             {order.createdAt ? format(order.createdAt.toDate(), 'dd/MM/yy HH:mm') : 'N/A'}
                         </TableCell>
-                        <TableCell className="hidden md:table-cell">Meja {order.tableNumber}</TableCell>
                         <TableCell>{formatRupiah(order.totalAmount)}</TableCell>
                         <TableCell>
                           <Badge variant={order.paymentVerified ? 'secondary' : 'default'}>
                             {(order.paymentMethod || 'N/A').toUpperCase()} - {order.paymentVerified ? 'Lunas' : 'Belum'}
                           </Badge>
                         </TableCell>
-                        <TableCell className="hidden md:table-cell"><Badge variant="outline">{order.status}</Badge></TableCell>
+                        <TableCell><Badge variant="outline">{order.status}</Badge></TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center h-24">
+                      <TableCell colSpan={4} className="text-center h-24">
                         Tidak ada transaksi pada periode yang dipilih.
                       </TableCell>
                     </TableRow>
@@ -545,3 +541,5 @@ export default function CafeReportsPage() {
     </SidebarProvider>
   )
 }
+
+    
