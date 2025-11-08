@@ -149,7 +149,7 @@ export default function OrderStatusPage() {
 
 
     return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 sm:p-6">
             <Card className="w-full max-w-md mx-auto shadow-2xl">
                 <CardHeader className="text-center">
                      {validLogoUrl && (
@@ -177,11 +177,11 @@ export default function OrderStatusPage() {
 
                     <div>
                         <h3 className="font-semibold mb-2">Ringkasan Pesanan</h3>
-                        <div className="space-y-2 text-sm border rounded-md p-3">
+                        <div className="space-y-2 text-sm border rounded-md p-3 max-h-48 overflow-y-auto">
                             {order.orderItems.map(item => (
                                 <div key={item.id} className="flex justify-between">
-                                    <span className="text-muted-foreground">{item.quantity}x {item.name}</span>
-                                    <span>{formatRupiah(item.price * item.quantity)}</span>
+                                    <span className="text-muted-foreground pr-2">{item.quantity}x {item.name}</span>
+                                    <span className="text-right shrink-0">{formatRupiah(item.price * item.quantity)}</span>
                                 </div>
                             ))}
                              <Separator className="my-2"/>

@@ -71,23 +71,23 @@ export function OrderUI({ tenant, table, menuItems }: OrderUIProps) {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 container mx-auto p-4 pb-32">
-        <Accordion type="multiple" defaultValue={Object.keys(groupedMenu)}>
+      <main className="flex-1 container mx-auto p-4 pb-36">
+        <Accordion type="multiple" defaultValue={Object.keys(groupedMenu)} className="w-full">
             {Object.entries(groupedMenu).map(([category, items]) => (
                 <AccordionItem value={category} key={category} className="mb-4 border-b-0 rounded-lg bg-background shadow-sm">
-                    <AccordionTrigger className="px-6 py-4 font-headline text-xl">
+                    <AccordionTrigger className="px-4 md:px-6 py-4 font-headline text-xl text-left">
                         {category}
                     </AccordionTrigger>
-                    <AccordionContent className="px-6 pb-4">
+                    <AccordionContent className="px-4 md:px-6 pb-4">
                         <div className="flex flex-col divide-y">
                             {items.map((item) => (
-                               <div key={item.id} className="flex items-center justify-between py-3">
+                               <div key={item.id} className="flex items-start md:items-center justify-between py-3 gap-2">
                                    <div className="flex-1 pr-4">
                                        <h4 className="font-semibold">{item.name}</h4>
                                        {item.description && <p className="text-sm text-muted-foreground mt-1">{item.description}</p>}
                                        <p className="font-semibold text-primary mt-1">{formatRupiah(item.price)}</p>
                                    </div>
-                                   <Button onClick={() => addToCart(item)} size="sm">
+                                   <Button onClick={() => addToCart(item)} size="sm" className="shrink-0">
                                      Pesan
                                    </Button>
                                </div>
@@ -105,7 +105,7 @@ export function OrderUI({ tenant, table, menuItems }: OrderUIProps) {
               <div className="container mx-auto p-4">
                   <div className="flex justify-between items-center">
                       <div>
-                          <p className="font-bold text-lg">{totalItems} item di keranjang</p>
+                          <p className="font-bold text-base md:text-lg">{totalItems} item di keranjang</p>
                           <p className="text-primary font-semibold">{formatRupiah(totalAmount)}</p>
                       </div>
                       <Button size="lg" onClick={() => setIsCheckoutOpen(true)}>
