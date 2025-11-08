@@ -30,8 +30,9 @@ import {
   Info,
   ClipboardList,
   FileText,
+  Clock,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import {
   SidebarProvider,
   Sidebar,
@@ -45,14 +46,6 @@ import {
   SidebarFooter,
 } from '@/components/ui/sidebar';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
     Pagination,
     PaginationContent,
     PaginationItem,
@@ -65,6 +58,7 @@ import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { formatRupiah } from '@/lib/utils';
+import { format } from 'date-fns';
 import {
   Select,
   SelectContent,
@@ -309,107 +303,100 @@ export default function CafeOrdersManagementPage() {
 
     return (
       <>
-        <main className="flex-1 p-4 md:p-6 lg:p-8">
-          <Card>
-            <CardHeader>
-                <CardTitle>Daftar Pesanan Hari Ini</CardTitle>
-                <CardDescription>Pantau dan kelola semua pesanan yang masuk untuk hari ini. Klik baris untuk melihat detail.</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="border rounded-md overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Meja</TableHead>
-                      <TableHead>Total</TableHead>
-                      <TableHead>Metode</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-center">Lunas</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+        <main className="flex-1 p-2 md:p-6 lg:p-8">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Daftar Pesanan Hari Ini</CardTitle>
+                    <CardDescription>Pantau dan kelola semua pesanan yang masuk untuk hari ini. Klik kartu untuk melihat detail.</CardDescription>
+                </CardHeader>
+                <CardContent>
                     {isOrdersLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center h-24">
-                          <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
-                        </TableCell>
-                      </TableRow>
+                         <div className="flex h-48 w-full items-center justify-center">
+                            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                         </div>
                     ) : orders && orders.length > 0 ? (
-                      orders.map((order) => (
-                        <TableRow key={order.id} onClick={() => handleRowClick(order)} className="cursor-pointer">
-                          <TableCell className="font-medium">Meja {order.tableNumber}</TableCell>
-                          <TableCell>{formatRupiah(order.totalAmount || 0)}</TableCell>
-                          <TableCell>
-                            <Badge variant={'outline'}>
-                              {(order.paymentMethod || 'N/A').toUpperCase()}
-                            </Badge>
-                          </TableCell>
-                          <TableCell onClick={(e) => e.stopPropagation()}>
-                             <Select
-                                value={order.status}
-                                onValueChange={(value: Order['status']) => handleStatusChange(order.id, value)}
-                                >
-                                <SelectTrigger className="w-full min-w-[160px]">
-                                    <SelectValue placeholder="Ubah status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="received">Diterima</SelectItem>
-                                    <SelectItem value="preparing">Disiapkan</SelectItem>
-                                    <SelectItem value="ready">Siap Diambil</SelectItem>
-                                    <SelectItem value="delivered">Selesai</SelectItem>
-                                    <SelectItem value="cancelled">Dibatalkan</SelectItem>
-                                </SelectContent>
-                                </Select>
-                          </TableCell>
-                          <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex flex-col items-center justify-center space-y-2">
-                                <Switch
-                                    id={`payment-switch-${order.id}`}
-                                    checked={order.paymentVerified}
-                                    onCheckedChange={(isChecked) => handlePaymentVerifiedChange(order.id, isChecked)}
-                                />
-                                 <Label htmlFor={`payment-switch-${order.id}`} className="text-xs text-muted-foreground">
-                                    {order.paymentVerified ? 'Lunas' : 'Belum Lunas'}
-                                 </Label>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                            {orders.map((order) => (
+                                <Card key={order.id} onClick={() => handleRowClick(order)} className="cursor-pointer flex flex-col hover:bg-muted/50 transition-colors">
+                                    <CardHeader className="flex-row items-center justify-between pb-2">
+                                        <div>
+                                            <CardTitle className="text-lg">Meja {order.tableNumber}</CardTitle>
+                                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                                                <Clock className="h-3 w-3"/>
+                                                <span>{order.createdAt ? format(order.createdAt.toDate(), 'HH:mm') : 'N/A'}</span>
+                                                <Badge variant={'outline'} className="ml-auto">
+                                                    {(order.paymentMethod || 'N/A').toUpperCase()}
+                                                </Badge>
+                                            </div>
+                                        </div>
+                                        <p className="text-lg font-bold text-primary">{formatRupiah(order.totalAmount || 0)}</p>
+                                    </CardHeader>
+                                    <CardContent className="flex-1">
+                                        <Select
+                                            value={order.status}
+                                            onValueChange={(value: Order['status']) => handleStatusChange(order.id, value)}
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue placeholder="Ubah status" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="received">Diterima</SelectItem>
+                                                <SelectItem value="preparing">Disiapkan</SelectItem>
+                                                <SelectItem value="ready">Siap Diambil</SelectItem>
+                                                <SelectItem value="delivered">Selesai</SelectItem>
+                                                <SelectItem value="cancelled">Dibatalkan</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </CardContent>
+                                    <CardFooter className="flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
+                                         <Label htmlFor={`payment-switch-${order.id}`} className="text-sm text-muted-foreground">
+                                            {order.paymentVerified ? 'Lunas' : 'Belum Lunas'}
+                                         </Label>
+                                         <Switch
+                                            id={`payment-switch-${order.id}`}
+                                            checked={order.paymentVerified}
+                                            onCheckedChange={(isChecked) => handlePaymentVerifiedChange(order.id, isChecked)}
+                                        />
+                                    </CardFooter>
+                                </Card>
+                            ))}
+                        </div>
                     ) : (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center h-24">
-                          Belum ada pesanan yang masuk hari ini.
-                        </TableCell>
-                      </TableRow>
+                         <div className="flex flex-col items-center justify-center text-center h-48 rounded-md border border-dashed">
+                             <p className="font-semibold">Belum ada pesanan hari ini</p>
+                             <p className="text-sm text-muted-foreground">Pesanan yang masuk akan muncul di sini.</p>
+                         </div>
                     )}
-                  </TableBody>
-                </Table>
-              </div>
-               <div className="flex items-center justify-end space-x-2 py-4">
-                    <Pagination>
-                        <PaginationContent>
-                            <PaginationItem>
-                                <PaginationPrevious 
-                                    onClick={() => fetchOrders('prev')} 
-                                    aria-disabled={page <= 1}
-                                    className={page <= 1 ? "pointer-events-none opacity-50" : undefined}
-                                />
-                            </PaginationItem>
-                             <PaginationItem>
-                                <span className="p-2 text-sm font-medium">Halaman {page}</span>
-                            </PaginationItem>
-                            <PaginationItem>
-                                <PaginationNext 
-                                    onClick={() => fetchOrders('next')} 
-                                    aria-disabled={isLastPage}
-                                    className={isLastPage ? "pointer-events-none opacity-50" : undefined}
-                                />
-                            </PaginationItem>
-                        </PaginationContent>
-                    </Pagination>
-                </div>
-            </CardContent>
-          </Card>
+
+                    {/* Pagination */}
+                    {orders && orders.length > 0 && (
+                        <div className="flex items-center justify-end space-x-2 py-4">
+                            <Pagination>
+                                <PaginationContent>
+                                    <PaginationItem>
+                                        <PaginationPrevious 
+                                            onClick={() => fetchOrders('prev')} 
+                                            aria-disabled={page <= 1}
+                                            className={page <= 1 ? "pointer-events-none opacity-50" : undefined}
+                                        />
+                                    </PaginationItem>
+                                     <PaginationItem>
+                                        <span className="p-2 text-sm font-medium">Halaman {page}</span>
+                                    </PaginationItem>
+                                    <PaginationItem>
+                                        <PaginationNext 
+                                            onClick={() => fetchOrders('next')} 
+                                            aria-disabled={isLastPage}
+                                            className={isLastPage ? "pointer-events-none opacity-50" : undefined}
+                                        />
+                                    </PaginationItem>
+                                </PaginationContent>
+                            </Pagination>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
         </main>
         
         <OrderDetailsDialog 
