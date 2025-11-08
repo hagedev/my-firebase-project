@@ -215,7 +215,7 @@ function ReportsPageContent() {
         <PopoverTrigger asChild>
           <Button
             variant={"outline"}
-            className="w-full md:w-[280px] justify-start text-left font-normal"
+            className="w-full justify-start text-left font-normal"
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
             {selectedDate ? format(selectedDate, "PPP", { locale: idLocale }) : <span>Pilih tanggal</span>}
@@ -237,7 +237,7 @@ function ReportsPageContent() {
         <PopoverTrigger asChild>
           <Button
             variant={"outline"}
-            className="w-full md:w-[280px] justify-start text-left font-normal"
+            className="w-full justify-start text-left font-normal"
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
             {selectedMonth ? format(selectedMonth, "MMMM yyyy", { locale: idLocale }) : <span>Pilih bulan</span>}
@@ -346,9 +346,9 @@ function ReportsPageContent() {
     return (
       <main className="flex-1 p-4 md:p-6 lg:p-8">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
-          <div className="hidden md:block">
+          <div>
             <h1 className="font-headline text-2xl font-semibold">Laporan Transaksi</h1>
-            <p className="text-muted-foreground">Analisis penjualan dan transaksi kafe Anda.</p>
+            <p className="text-muted-foreground hidden md:block">Analisis penjualan dan transaksi kafe Anda.</p>
           </div>
           <div className="flex w-full md:w-auto flex-col md:flex-row md:items-center gap-4">
             <RadioGroup defaultValue="date" value={filterMode} onValueChange={(value: 'date' | 'month') => setFilterMode(value)} className="flex items-center">
@@ -361,7 +361,9 @@ function ReportsPageContent() {
                 <Label htmlFor="r-month">Per Bulan</Label>
               </div>
             </RadioGroup>
-            {filterMode === 'date' ? <DatePicker /> : <MonthPicker />}
+            <div className='w-full md:w-[280px]'>
+              {filterMode === 'date' ? <DatePicker /> : <MonthPicker />}
+            </div>
           </div>
         </div>
 
@@ -458,10 +460,10 @@ function ReportsPageContent() {
         <SidebarContent>
           <SidebarMenu>
             <SidebarMenuItem>
-               <SidebarMenuButton asChild>
+                <SidebarMenuButton asChild>
                   <Link href={`/${slug}/admin`}>
-                      <Info />
-                      <span>Dashboard</span>
+                    <Info />
+                    <span>Dashboard</span>
                   </Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
