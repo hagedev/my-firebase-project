@@ -159,7 +159,7 @@ SidebarProvider.displayName = "SidebarProvider"
 
 type BottomNavItem = {
     icon: React.ReactNode;
-    label: string;
+    label: React.ReactNode;
     href: string;
     isActive?: boolean;
     asChild?: boolean;
@@ -240,7 +240,7 @@ const Sidebar = React.forwardRef<
     },
     ref
   ) => {
-    const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+    const { isMobile, state } = useSidebar()
 
     if (collapsible === "none") {
       return (
@@ -258,8 +258,6 @@ const Sidebar = React.forwardRef<
     }
 
     if (isMobile) {
-      // In mobile view, we render the BottomNav instead of the Sheet-based sidebar.
-      // We still need to extract the items from the children.
       const menuItems = React.Children.toArray(children)
         .flatMap(child => 
             React.isValidElement(child) && child.type === SidebarContent 
@@ -275,9 +273,11 @@ const Sidebar = React.forwardRef<
             if (React.isValidElement(child) && child.type === SidebarMenuItem) {
                 const button = React.Children.only(child.props.children);
                 if (React.isValidElement(button)) {
+                    // Extract icon and label from the button's children
+                    const [icon, label] = React.Children.toArray(button.props.children);
                     return {
-                        icon: button.props.children[0],
-                        label: button.props.children[1],
+                        icon: icon,
+                        label: label,
                         href: button.props.href,
                         isActive: button.props.isActive,
                         asChild: true,

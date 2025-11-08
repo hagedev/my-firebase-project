@@ -424,37 +424,37 @@ function SettingsPageContent() {
             <SidebarMenuItem>
                <SidebarMenuButton asChild href={`/${slug}/admin`}>
                     <Info />
-                    Dashboard
+                    <span>Dashboard</span>
                 </SidebarMenuButton>
             </SidebarMenuItem>
              <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/orders`}>
                 <ClipboardList />
-                Pesanan
+                <span>Pesanan</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
              <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/reports`}>
                 <FileText />
-                Laporan
+                <span>Laporan</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/menu`}>
                 <Utensils />
-                Menu
+                <span>Menu</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
              <SidebarMenuItem>
                 <SidebarMenuButton asChild href={`/${slug}/admin/tables`}>
                     <Armchair />
-                    Meja
+                    <span>Meja</span>
                 </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/settings`} isActive>
                 <Settings />
-                Settings
+                <span>Settings</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

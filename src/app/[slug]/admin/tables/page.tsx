@@ -222,7 +222,10 @@ function TablePageContent() {
     return (
       <>
         <main className="flex-1 p-4 md:p-6 lg:p-8">
-          <div className="flex items-center justify-end mb-6">
+          <div className="flex items-center justify-between mb-6">
+             <h1 className="font-headline text-2xl font-semibold hidden md:block">
+                Manajemen Meja
+            </h1>
             <Button onClick={() => setIsAddTableDialogOpen(true)} className="w-full md:w-auto">
               <PlusCircle className="mr-2 h-4 w-4" />
               Tambah Meja
@@ -357,37 +360,37 @@ function TablePageContent() {
             <SidebarMenuItem>
                <SidebarMenuButton asChild href={`/${slug}/admin`}>
                     <Info />
-                    Dashboard
+                    <span>Dashboard</span>
                 </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/orders`}>
                 <ClipboardList />
-                Pesanan
+                <span>Pesanan</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/reports`}>
                 <FileText />
-                Laporan
+                <span>Laporan</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/menu`}>
                 <Utensils />
-                Menu
+                <span>Menu</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
                 <SidebarMenuButton asChild href={`/${slug}/admin/tables`} isActive>
                     <Armchair />
-                    Meja
+                    <span>Meja</span>
                 </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/settings`}>
                 <Settings />
-                Settings
+                <span>Settings</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

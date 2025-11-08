@@ -124,7 +124,7 @@ export default function CafeManagementPage() {
             <SidebarMenuButton asChild isActive>
               <Link href="/admin/cafe-management">
                 <Store />
-                Manajemen Kafe
+                <span>Manajemen Kafe</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -132,7 +132,7 @@ export default function CafeManagementPage() {
             <SidebarMenuButton asChild>
               <Link href="/admin/user-management">
                 <Users />
-                Manajemen User
+                <span>Manajemen User</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
