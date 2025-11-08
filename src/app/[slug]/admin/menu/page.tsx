@@ -354,10 +354,10 @@ function MenuPageContent() {
             </SidebarMenuItem>
             <SidebarMenuItem>
                 <SidebarMenuButton asChild href={`/${slug}/admin/tables`}>
-                    <Link href={`/${slug}/admin/tables`}>
-                        <Armchair />
-                        <span>Meja</span>
-                    </Link>
+                  <Link href={`/${slug}/admin/tables`}>
+                      <Armchair />
+                      <span>Meja</span>
+                  </Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>

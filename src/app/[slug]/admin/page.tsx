@@ -209,10 +209,10 @@ function DashboardContent() {
           <SidebarMenu>
             <SidebarMenuItem>
                 <SidebarMenuButton asChild href={`/${slug}/admin`} isActive>
-                    <Link href={`/${slug}/admin`}>
-                        <Info />
-                        <span>Dashboard</span>
-                    </Link>
+                  <Link href={`/${slug}/admin`}>
+                    <Info />
+                    <span>Dashboard</span>
+                  </Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
@@ -241,10 +241,10 @@ function DashboardContent() {
             </SidebarMenuItem>
             <SidebarMenuItem>
                 <SidebarMenuButton asChild href={`/${slug}/admin/tables`}>
-                    <Link href={`/${slug}/admin/tables`}>
-                        <Armchair />
-                        <span>Meja</span>
-                    </Link>
+                  <Link href={`/${slug}/admin/tables`}>
+                      <Armchair />
+                      <span>Meja</span>
+                  </Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>

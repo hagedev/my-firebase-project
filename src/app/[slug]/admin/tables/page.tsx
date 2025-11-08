@@ -359,10 +359,10 @@ function TablePageContent() {
           <SidebarMenu>
             <SidebarMenuItem>
                <SidebarMenuButton asChild href={`/${slug}/admin`}>
-                    <Link href={`/${slug}/admin`}>
-                        <Info />
-                        <span>Dashboard</span>
-                    </Link>
+                  <Link href={`/${slug}/admin`}>
+                      <Info />
+                      <span>Dashboard</span>
+                  </Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
@@ -391,10 +391,10 @@ function TablePageContent() {
             </SidebarMenuItem>
             <SidebarMenuItem>
                 <SidebarMenuButton asChild href={`/${slug}/admin/tables`} isActive>
-                    <Link href={`/${slug}/admin/tables`}>
-                        <Armchair />
-                        <span>Meja</span>
-                    </Link>
+                  <Link href={`/${slug}/admin/tables`}>
+                      <Armchair />
+                      <span>Meja</span>
+                  </Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>

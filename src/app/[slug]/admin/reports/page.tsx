@@ -455,38 +455,50 @@ function ReportsPageContent() {
           <SidebarMenu>
             <SidebarMenuItem>
                <SidebarMenuButton asChild href={`/${slug}/admin`}>
-                    <Info />
-                    <span>Dashboard</span>
+                  <Link href={`/${slug}/admin`}>
+                      <Info />
+                      <span>Dashboard</span>
+                  </Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
              <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/orders`}>
-                <ClipboardList />
-                <span>Pesanan</span>
+                <Link href={`/${slug}/admin/orders`}>
+                  <ClipboardList />
+                  <span>Pesanan</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
              <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/reports`} isActive>
-                <FileText />
-                <span>Laporan</span>
+                <Link href={`/${slug}/admin/reports`}>
+                  <FileText />
+                  <span>Laporan</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/menu`}>
-                <Utensils />
-                <span>Menu</span>
+                <Link href={`/${slug}/admin/menu`}>
+                  <Utensils />
+                  <span>Menu</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
                 <SidebarMenuButton asChild href={`/${slug}/admin/tables`}>
-                    <Armchair />
-                    <span>Meja</span>
+                  <Link href={`/${slug}/admin/tables`}>
+                      <Armchair />
+                      <span>Meja</span>
+                  </Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton asChild href={`/${slug}/admin/settings`}>
-                <Settings />
-                <span>Settings</span>
+                <Link href={`/${slug}/admin/settings`}>
+                  <Settings />
+                  <span>Settings</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
