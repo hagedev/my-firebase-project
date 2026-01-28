@@ -1,17 +1,21 @@
 
-# Prompt untuk AI Android Studio: Aplikasi Login Admin AirCafe
+# Prompt untuk AI Android Studio: Aplikasi Admin Kafe Native AirCafe
 
 ## 1. Tujuan Utama Aplikasi
 
-Buat sebuah aplikasi Android **native** menggunakan **Kotlin** dan **Jetpack Compose**. Aplikasi ini berfungsi sebagai gerbang login yang aman untuk **Admin Kafe** platform "AirCafe".
+Buat sebuah aplikasi Android **100% native** menggunakan **Kotlin** dan **Jetpack Compose**. Aplikasi ini berfungsi sebagai **dasbor admin yang lengkap dan fungsional** untuk Admin Kafe dari platform "AirCafe".
 
 Tujuan utama aplikasi ini adalah:
 1.  Mengautentikasi Admin Kafe menggunakan Firebase Authentication (Email & Password).
-2.  Setelah login berhasil, verifikasi peran pengguna di Firestore.
-3.  Mengambil slug unik kafe yang dikelola oleh admin tersebut dari Firestore.
-4.  Membuka dasbor admin **web** yang sudah ada di dalam **WebView** menggunakan slug yang telah diambil.
+2.  Setelah login berhasil, verifikasi peran pengguna dan ambil `tenantId` dari Firestore.
+3.  Menyediakan antarmuka **native** yang kaya untuk mengelola semua aspek operasional kafe, mencakup:
+    *   **Dashboard**: Melihat statistik penjualan dan pesanan harian.
+    *   **Manajemen Pesanan**: Memantau dan memperbarui status pesanan masuk secara *real-time*.
+    *   **Manajemen Menu**: Fungsi penuh (Create, Read, Update, Delete) untuk semua item menu.
+    *   **Manajemen Meja**: Fungsi penuh (CRUD) untuk meja-meja di kafe.
+    *   **Pengaturan Kafe**: Mengonfigurasi dan memperbarui detail profil kafe.
 
-Aplikasi ini **TIDAK** membuat ulang dasbor admin secara native, melainkan hanya sebagai *launcher* yang aman menuju dasbor web yang ada.
+Aplikasi ini **sepenuhnya native** dan **TIDAK menggunakan WebView**.
 
 ---
 
@@ -19,112 +23,125 @@ Aplikasi ini **TIDAK** membuat ulang dasbor admin secara native, melainkan hanya
 
 *   **Bahasa**: Kotlin
 *   **UI Toolkit**: Jetpack Compose
-*   **Arsitektur**: MVVM (ViewModel untuk setiap layar)
-*   **Asynchronous**: Gunakan Coroutines dan Flow untuk operasi asynchronous.
+*   **Arsitektur**: MVVM (Gunakan `ViewModel` untuk setiap layar atau grup fitur).
+*   **Asynchronous**: Gunakan Coroutines dan `StateFlow` untuk mengelola state UI.
+*   **Navigasi**: Gunakan Jetpack Navigation for Compose (`androidx.navigation:navigation-compose`).
 *   **Dependensi (sertakan di `build.gradle.kts`):**
     *   Jetpack Compose (Activity, UI, Material3, Tooling Preview)
-    *   Lifecycle & ViewModel (`androidx.lifecycle:lifecycle-viewmodel-ktx`)
+    *   Lifecycle & ViewModel (`androidx.lifecycle:lifecycle-viewmodel-ktx`, `androidx.lifecycle:lifecycle-runtime-compose`)
+    *   Navigation Compose (`androidx.navigation:navigation-compose`)
     *   Firebase Bill of Materials (`com.google.firebase:firebase-bom`)
     *   Firebase Authentication (`com.google.firebase:firebase-auth-ktx`)
     *   Firebase Firestore (`com.google.firebase:firebase-firestore-ktx`)
-    *   Accompanist WebView (`com.google.accompanist:accompanist-webview`) - *Catatan: Jika Accompanist sudah tidak relevan, gunakan alternatif `WebView` di dalam Jetpack Compose.*
 
 ---
 
-## 3. Fitur dan Alur Kerja
+## 3. Fitur, Layar, dan Alur Kerja
 
-### Layar 1: Halaman Login (`LoginScreen.kt`)
+Gunakan komponen `MaterialTheme` (Material 3) dengan warna primer `#FF9800` dan latar `#FFF3E0`.
 
-#### A. Komponen UI (Jetpack Compose):
+### A. Alur Navigasi Utama
 
-*   **Logo AirCafe**: Tampilkan di bagian atas.
-*   **Judul**: Teks "Login Admin Kafe".
-*   **Email Field**: `OutlinedTextField` dengan label "Email".
-*   **Password Field**: `OutlinedTextField` dengan label "Password" dan input visual tersembunyi.
-*   **Login Button**: `Button` dengan teks "Masuk". Tombol ini harus menampilkan `CircularProgressIndicator` dan dinonaktifkan selama proses login.
-*   **Error Message**: Sebuah `Text` untuk menampilkan pesan error (misal: "Email atau password salah").
+*   **`MainActivity.kt`**: Mengatur `NavHost` utama dengan dua rute: `"login"` dan `"main/{tenantId}"`. Rute awal adalah `"login"`.
+*   **`LoginScreen.kt`**: Setelah login berhasil dan `tenantId` didapat, navigasi ke `"main/{tenantId}"` dan pastikan untuk membersihkan *back stack* agar pengguna tidak bisa kembali ke halaman login dengan tombol kembali.
 
-#### B. Gaya Desain:
+### B. Layar Login (`LoginScreen.kt` & `LoginViewModel.kt`)
 
-*   Gunakan komponen `MaterialTheme` (Material 3).
-*   **Warna Primer**: `#FF9800` (Gunakan untuk warna utama tombol, aksen, dan fokus).
-*   **Warna Latar**: `#FFF3E0`.
-*   **Font Judul**: 'Playfair Display' (Jika memungkinkan untuk menambah font custom, jika tidak, gunakan font serif sistem).
-*   **Font Isi**: 'PT Sans' (Jika memungkinkan, jika tidak, gunakan font sans-serif sistem).
+*   **UI**: Sama seperti permintaan sebelumnya (Logo, Judul, Email, Password, Tombol Login, Pesan Error).
+*   **Logic**:
+    1.  ViewModel menangani state untuk `email`, `password`, `isLoading`, dan `errorMessage`.
+    2.  Saat tombol "Masuk" diklik, panggil `signInWithEmailAndPassword`.
+    3.  Jika berhasil, panggil `UserRepository` untuk memverifikasi peran "admin_kafe" dan mendapatkan `tenantId`.
+    4.  Jika valid, navigasi ke rute `"main/{tenantId}"`.
+    5.  Jika gagal (baik auth maupun verifikasi peran), tampilkan pesan error yang sesuai.
 
-#### C. Logika (`LoginViewModel.kt`):
+### C. Layout Utama Setelah Login (`MainScreen.kt`)
 
-1.  ViewModel harus memiliki state untuk `email`, `password`, `isLoading`, dan `errorMessage`.
-2.  Ketika tombol "Masuk" diklik, panggil fungsi di ViewModel.
-3.  Gunakan `firebaseAuth.signInWithEmailAndPassword(email, password)`.
-4.  Jika berhasil:
-    *   Dapatkan `FirebaseUser`.
-    *   Panggil fungsi dari `UserRepository` (lihat di bawah) untuk memverifikasi peran dan mendapatkan `tenantSlug`.
-    *   Navigasi ke Layar Dasbor (WebView) dengan `tenantSlug` sebagai argumen.
-5.  Jika gagal (misal: `auth/invalid-credential`):
-    *   Update `errorMessage` state untuk ditampilkan di UI.
-    *   Set `isLoading` menjadi `false`.
+*   Layar ini berfungsi sebagai *host* untuk fitur-fitur utama.
+*   Gunakan `Scaffold` yang berisi `BottomNavigationBar`.
+*   `BottomNavigationBar` memiliki 5 item: **Dashboard**, **Pesanan**, **Menu**, **Meja**, dan **Settings**.
+*   Gunakan `NavHost` *nested* di dalam `Scaffold` untuk menavigasi antar kelima layar fitur tersebut.
 
-### Layar 2: Halaman Dasbor WebView (`DashboardScreen.kt`)
+### D. Layar-Layar Fitur (Native)
 
-#### A. Komponen UI:
+#### 1. Dashboard (`DashboardScreen.kt` & `DashboardViewModel.kt`)
+*   **UI**: Tampilkan beberapa komponen `Card` untuk statistik utama: "Pendapatan Hari Ini", "Total Pesanan Hari Ini", dan "Status Menu (Tersedia/Habis)". Gunakan `CircularProgressIndicator` saat data sedang dimuat.
+*   **Logic**: ViewModel mengambil `tenantId`. Lakukan query ke koleksi `orders` untuk hari ini, hitung total pendapatan dan jumlahnya. Lakukan query ke koleksi `menus` untuk menghitung status ketersediaan.
 
-*   Layar ini harus berisi komponen `WebView` (dari Accompanist atau alternatifnya) yang memenuhi seluruh layar.
-*   Tampilkan `CircularProgressIndicator` saat halaman web sedang dimuat.
+#### 2. Manajemen Pesanan (`OrdersScreen.kt` & `OrdersViewModel.kt`)
+*   **UI**: Gunakan `LazyColumn` untuk menampilkan daftar `Card` pesanan secara *real-time* untuk hari ini. Setiap `Card` menampilkan nomor meja, total harga, jam pesanan, dan status saat ini.
+*   Setiap `Card` harus memiliki:
+    *   `ExposedDropdownMenuBox` atau komponen sejenis untuk mengubah status pesanan (`diterima`, `disiapkan`, `siap diambil`, `selesai`).
+    *   Sebuah `Switch` untuk menandai status pembayaran ("Lunas" / "Belum Lunas").
+*   **Logic**: ViewModel menggunakan `snapshotFlow` atau `addSnapshotListener` untuk mendengarkan perubahan pada koleksi `/tenants/{tenantId}/orders` (dengan filter tanggal hari ini). Sediakan fungsi untuk `updateDoc` guna mengubah status pesanan dan status pembayaran.
 
-#### B. Logika (`DashboardViewModel.kt`):
+#### 3. Manajemen Menu (`MenuScreen.kt` & `MenuViewModel.kt`)
+*   **UI**: Gunakan `LazyColumn` untuk menampilkan daftar menu. Setiap item menampilkan nama, harga, dan ketersediaan. Gunakan `FloatingActionButton` (FAB) untuk membuka dialog "Tambah Menu Baru".
+*   Setiap item menu di daftar memiliki opsi (misal: ikon titik tiga) untuk "Edit" dan "Hapus".
+*   Dialog "Tambah/Edit" akan menjadi `AlertDialog` atau layar baru yang berisi form untuk mengisi detail menu (nama, harga, kategori, deskripsi, ketersediaan).
+*   **Logic**: ViewModel mendengarkan koleksi `/tenants/{tenantId}/menus`. Sediakan fungsi untuk `addDoc`, `updateDoc`, dan `deleteDoc`.
 
-1.  ViewModel menerima `tenantSlug` sebagai argumen dari navigasi.
-2.  Buat URL lengkap untuk dasbor web: `https://<YOUR_DOMAIN_HERE>/${tenantSlug}/admin`. **Gunakan placeholder `<YOUR_DOMAIN_HERE>` jika domain asli tidak diketahui.**
-3.  URL ini diberikan ke komponen `WebView` untuk dimuat.
+#### 4. Manajemen Meja (`TablesScreen.kt` & `TablesViewModel.kt`)
+*   **UI**: Serupa dengan `MenuScreen`, gunakan `LazyColumn` untuk menampilkan daftar meja beserta statusnya ('tersedia'/'terisi'). Gunakan FAB untuk menambah meja baru.
+*   Setiap item meja memiliki opsi untuk "Hapus".
+*   **Logic**: ViewModel mendengarkan koleksi `/tenants/{tenantId}/tables`. Sediakan fungsi untuk `addDoc` dan `deleteDoc`.
+
+#### 5. Pengaturan (`SettingsScreen.kt` & `SettingsViewModel.kt`)
+*   **UI**: Buat sebuah form menggunakan `Column` dan `OutlinedTextField` untuk mengedit data tenant seperti: Nama Kafe, Alamat, Nama Pemilik, No. Telepon, Pesan Struk, dan Token Harian.
+*   **Logic**: ViewModel mengambil data tenant saat ini. Sediakan fungsi `saveSettings` yang akan melakukan `updateDoc` pada dokumen `/tenants/{tenantId}`.
 
 ---
 
-## 4. Interaksi dengan Firebase (Firestore)
+## 4. Interaksi dengan Firebase & Model Data
 
-Buat sebuah `UserRepository` class untuk menangani logika Firestore.
-
-#### A. Data Model (Kotlin Data Classes):
-
-Buat data class yang sesuai dengan skema JSON berikut:
+Buat **Data Class** Kotlin untuk setiap entitas Firestore agar parsing data menjadi *type-safe*.
 
 ```kotlin
-// Untuk /users/{userId}
+// /users/{userId}
 data class User(
     val authUid: String = "",
     val email: String = "",
-    val role: String = "",
+    val role: String = "", // "admin_kafe" atau "superadmin"
     val tenantId: String? = null
 )
 
-// Untuk /tenants/{tenantId}
+// /tenants/{tenantId}
 data class Tenant(
     val name: String = "",
-    val slug: String = ""
+    val slug: String = "",
+    val address: String? = null,
+    val ownerName: String? = null,
+    val phoneNumber: String? = null,
+    val receiptMessage: String? = null,
+    val tokenHarian: String = ""
+)
+
+// /tenants/{tenantId}/menus/{menuId}
+data class Menu(
+    val name: String = "",
+    val description: String? = null,
+    val price: Double = 0.0,
+    val category: String = "",
+    val available: Boolean = true
+)
+
+// /tenants/{tenantId}/orders/{orderId}
+data class Order(
+    val tableNumber: Int = 0,
+    val totalAmount: Double = 0.0,
+    val status: String = "received",
+    val paymentVerified: Boolean = false,
+    val createdAt: com.google.firebase.Timestamp = com.google.firebase.Timestamp.now()
+    // Sertakan field lain yang relevan
+)
+
+// /tenants/{tenantId}/tables/{tableId}
+data class Table(
+    val tableNumber: Int = 0,
+    val status: String = "available" // "available" atau "occupied"
 )
 ```
 
-#### B. Logika `UserRepository`:
+Gunakan **Repository Pattern** (`UserRepository`, `TenantRepository`, `MenuRepository`, dll.) untuk memisahkan logika akses data dari `ViewModel`. Setiap fungsi di repository yang berinteraksi dengan Firestore harus berupa `suspend fun`.
 
-Buat fungsi `suspend fun getTenantSlugForAdmin(user: FirebaseUser): Result<String>`:
-
-1.  Dapatkan referensi dokumen user: `firestore.collection("users").document(user.uid)`.
-2.  Lakukan `get()` pada dokumen tersebut.
-3.  Jika dokumen tidak ada, kembalikan `Result.failure` dengan pesan "Profil user tidak ditemukan."
-4.  Deserialisasi data dokumen menjadi data class `User`.
-5.  Periksa apakah `user.role == "admin_kafe"` dan `user.tenantId` tidak null. Jika tidak, kembalikan `Result.failure` dengan pesan "Anda bukan admin kafe."
-6.  Jika valid, gunakan `tenantId` untuk mendapatkan dokumen tenant: `firestore.collection("tenants").document(tenantId)`.
-7.  Lakukan `get()` pada dokumen tenant.
-8.  Jika dokumen tenant ada, deserialisasi menjadi data class `Tenant` dan kembalikan `Result.success(tenant.slug)`.
-9.  Jika dokumen tenant tidak ada, kembalikan `Result.failure` dengan pesan "Data kafe tidak ditemukan."
-10. Tangani semua kemungkinan `Exception` (misal: permission denied) dan kembalikan `Result.failure`.
-
----
-
-## 5. Konfigurasi Proyek
-
-*   **`AndroidManifest.xml`**: Pastikan izin `INTERNET` ditambahkan.
-*   **Struktur Proyek**: Buat package terpisah untuk `ui` (screens, viewmodels), `data` (repository, models), dan `di` (jika menggunakan dependency injection).
-*   **Navigasi**: Gunakan `NavHost` dari Jetpack Compose untuk navigasi antar `LoginScreen` dan `DashboardScreen`.
-
-Silakan hasilkan kode berdasarkan spesifikasi di atas. Mulai dari `MainActivity.kt` yang mengatur `NavHost`.
+Silakan hasilkan kode berdasarkan spesifikasi di atas, dimulai dari struktur navigasi di `MainActivity.kt`.
