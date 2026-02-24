@@ -12,6 +12,13 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v4
 
+      # --- INI BAGIAN YANG BARU DITAMBAHKAN BRO 👇 ---
+      - name: Install Dependencies & Build
+        run: |
+          npm install
+          npm run build
+      # --- INI BAGIAN YANG BARU DITAMBAHKAN BRO 👆 ---
+
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
