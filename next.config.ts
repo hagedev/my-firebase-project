@@ -9,7 +9,7 @@ const pwaConfig = {
 };
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  output: 'export', // Wajib untuk deploy ke Firebase Hosting statis
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -17,6 +17,7 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
+    unoptimized: true, // Wajib agar tidak error saat di-build statis
     remotePatterns: [
       {
         protocol: 'https',
